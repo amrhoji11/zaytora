@@ -6,7 +6,11 @@ Point it at a URL, run `/clone-website`, and Claude Code will inspect the site v
 
 ## Demo
 
-[![Watch the demo](docs/design-references/comparison.png)](https://youtu.be/O669pVZ_qr0)
+<img width="1664" height="936" alt="image" src="https://github.com/user-attachments/assets/efaad635-d56e-41db-b69c-cfd1c19ace83" /> 
+
+<img width="1664" height="936" alt="image" src="https://github.com/user-attachments/assets/39f28453-a20a-4580-8352-ccac82dacec8" />
+
+
 
 > Click the image above to watch the full demo on YouTube.
 
