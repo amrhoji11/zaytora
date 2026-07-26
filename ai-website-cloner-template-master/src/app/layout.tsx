@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Cinzel } from "next/font/google";
 import "./globals.css";
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
+import { WhatsAppButton } from "@/components/WhatsAppButton";
 
 const cinzel = Cinzel({
   variable: "--font-cinzel",
@@ -24,7 +27,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ar" dir="rtl" className={`${cinzel.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col bg-white">{children}</body>
+      <body className="min-h-full flex flex-col bg-white">
+        <Header />
+        <main className="flex-1 pt-20 pb-16 md:pb-0">{children}</main>
+        <Footer />
+        <WhatsAppButton />
+      </body>
     </html>
   );
 }
