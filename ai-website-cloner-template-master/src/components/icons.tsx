@@ -1,0 +1,37 @@
+export {
+  House as HomeIcon,
+  BookDashed as TemplatesIcon,
+  WandSparkles as StudioIcon,
+  LayoutDashboard as DashboardIcon,
+  Globe as GlobeIcon,
+  User as UserIcon,
+  Menu as MenuIcon,
+  Eye as EyeIcon,
+  CalendarDays as CalendarIcon,
+  Mail as MailIcon,
+  Phone as PhoneIcon,
+  Heart as HeartIcon,
+  Music as MusicIcon,
+  Camera as CameraIcon,
+  QrCode as QrCodeIcon,
+  Gem as GemIcon,
+  Leaf as LeafIcon,
+  Sparkles as SparklesIcon,
+  Star as StarIcon,
+  Baby as BabyIcon,
+  GraduationCap as GraduationCapIcon,
+  Cake as CakeIcon,
+  ArrowRight as ArrowRightIcon,
+  MapPin as MapPinIcon,
+  PenLine as PenLineIcon,
+  ChevronDown as ChevronDownIcon,
+} from "lucide-react";
+
+export function WhatsAppIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.272-.099-.47-.148-.669.15-.198.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+      <path d="M12.004 2.003c-5.514 0-9.997 4.483-9.997 9.997 0 1.763.463 3.483 1.343 4.997l-1.425 5.201 5.328-1.397a9.96 9.96 0 004.751 1.21h.004c5.514 0 9.997-4.483 9.997-9.997 0-2.671-1.04-5.182-2.929-7.071a9.93 9.93 0 00-7.072-2.94zm0 18.176a8.18 8.18 0 01-4.169-1.144l-.299-.177-3.161.829.844-3.083-.194-.316a8.161 8.161 0 01-1.256-4.372c0-4.508 3.669-8.176 8.18-8.176 2.184 0 4.238.851 5.783 2.397a8.13 8.13 0 012.393 5.784c0 4.508-3.668 8.176-8.121 8.176z" />
+    </svg>
+  );
+}
