@@ -148,3 +148,8 @@
     border: 1.2px solid rgba(200, 162, 74, 0.15);
   }
 }
+
+@keyframes partnersScroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
