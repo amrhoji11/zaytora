@@ -62,23 +62,23 @@ export function TemplatesGrid() {
                 type="button"
                 className={cn(
                   "flex items-center justify-center gap-1 flex-1",
-                  "bg-white border border-gray-200 text-gray-700 rounded-lg px-3 py-1.5 text-xs",
-                  "hover:bg-gray-50 transition-colors"
+                  "bg-[#C8A24A] text-white rounded-full px-3 py-1.5 text-xs font-medium",
+                  "hover:bg-[#B8923A] transition-colors shadow-sm"
                 )}
               >
-                <ArrowRightIcon className="size-3.5" />
-                Select
+                <EyeIcon className="size-3.5" />
+                Preview
               </button>
               <button
                 type="button"
                 className={cn(
                   "flex items-center justify-center gap-1 flex-1",
-                  "bg-transparent border border-gray-200 text-gray-700 rounded-lg px-3 py-1.5 text-xs",
-                  "hover:bg-gray-50 transition-colors"
+                  "bg-white border border-gray-200 text-gray-900 rounded-full px-3 py-1.5 text-xs font-medium",
+                  "hover:bg-gray-100 transition-colors shadow-sm"
                 )}
               >
-                <EyeIcon className="size-3.5" />
-                Preview
+                <ArrowRightIcon className="size-3.5" />
+                Select
               </button>
             </div>
           </div>

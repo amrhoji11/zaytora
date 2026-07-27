@@ -22,7 +22,8 @@ interface FloatingBadge {
   iconColorClass: string;
   bgClass: string;
   borderClass: string;
-  topClass: string;
+  top: number;
+  baseOffset: number;
 }
 
 const LEFT_BADGES: FloatingBadge[] = [
@@ -31,28 +32,32 @@ const LEFT_BADGES: FloatingBadge[] = [
     iconColorClass: "text-[#25D366]",
     bgClass: "bg-[#25D366]/10",
     borderClass: "border-[#25D366]/20",
-    topClass: "top-[12.5%]",
+    top: 10,
+    baseOffset: -5,
   },
   {
     icon: CalendarIcon,
     iconColorClass: "text-[#C8A24A]",
     bgClass: "bg-[#C8A24A]/10",
     borderClass: "border-[#C8A24A]/20",
-    topClass: "top-[37.5%]",
+    top: 32,
+    baseOffset: 5,
   },
   {
     icon: MailIcon,
     iconColorClass: "text-[#C8A24A]",
     bgClass: "bg-[#C8A24A]/10",
     borderClass: "border-[#C8A24A]/20",
-    topClass: "top-[62.5%]",
+    top: 54,
+    baseOffset: -5,
   },
   {
     icon: PhoneIcon,
     iconColorClass: "text-[#C8A24A]",
     bgClass: "bg-[#C8A24A]/10",
     borderClass: "border-[#C8A24A]/20",
-    topClass: "top-[87.5%]",
+    top: 76,
+    baseOffset: 5,
   },
 ];
 
@@ -62,28 +67,32 @@ const RIGHT_BADGES: FloatingBadge[] = [
     iconColorClass: "text-[#C8A24A]",
     bgClass: "bg-[#C8A24A]/10",
     borderClass: "border-[#C8A24A]/20",
-    topClass: "top-[12.5%]",
+    top: 10,
+    baseOffset: 4,
   },
   {
     icon: MusicIcon,
     iconColorClass: "text-[#C8A24A]",
     bgClass: "bg-[#C8A24A]/10",
     borderClass: "border-[#C8A24A]/20",
-    topClass: "top-[37.5%]",
+    top: 32,
+    baseOffset: -4,
   },
   {
     icon: CameraIcon,
     iconColorClass: "text-[#C8A24A]",
     bgClass: "bg-[#C8A24A]/10",
     borderClass: "border-[#C8A24A]/20",
-    topClass: "top-[62.5%]",
+    top: 54,
+    baseOffset: 4,
   },
   {
     icon: QrCodeIcon,
     iconColorClass: "text-[#C8A24A]",
     bgClass: "bg-[#C8A24A]/10",
     borderClass: "border-[#C8A24A]/20",
-    topClass: "top-[87.5%]",
+    top: 76,
+    baseOffset: -4,
   },
 ];
 
@@ -103,7 +112,13 @@ function FloatingBadgeStack({
         return (
           <div
             key={index}
-            className={`absolute ${sideClass} ${badge.topClass} -translate-y-1/2 w-12 h-12 rounded-2xl backdrop-blur-sm border flex items-center justify-center shadow-lg ${badge.bgClass} ${badge.borderClass}`}
+            className={`absolute ${sideClass} float-badge w-12 h-12 rounded-2xl backdrop-blur-sm border flex items-center justify-center shadow-lg ${badge.bgClass} ${badge.borderClass}`}
+            style={{
+              top: `${badge.top}%`,
+              // @ts-expect-error -- CSS custom properties aren't in the style typings
+              "--float-base-y": `${badge.baseOffset}px`,
+              animationDelay: `${index * 0.3}s`,
+            }}
           >
             <Icon className={`w-5 h-5 ${badge.iconColorClass}`} />
           </div>
@@ -182,7 +197,7 @@ export function Hero() {
 
         {/* Col 2: phone mockup */}
         <div className="flex justify-center lg:justify-start">
-          <div className="relative">
+          <div className="relative mx-14">
             {/* Outer glow */}
             <div className="absolute inset-0 bg-[#C8A24A]/20 rounded-[3rem] blur-3xl scale-110" />
 

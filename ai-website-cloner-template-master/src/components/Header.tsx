@@ -36,7 +36,30 @@ function isActiveHref(pathname: string, href: string) {
   return !href.includes("#") && pathname === href;
 }
 
-const ACCOUNT_MENU_ITEMS = ["الملف الشخصي", "دعواتي", "الإعدادات", "تسجيل الخروج"];
+const ACCOUNT_MENU_ITEMS = [
+  {
+    label: "لوحة التحكم",
+    emoji: "🗂️",
+    href: "/dashboard",
+    className: "text-gray-700 hover:bg-[#C8A24A]/8 hover:text-[#C8A24A]",
+  },
+  {
+    label: "Business Mode",
+    emoji: "🤝",
+    className: "text-gray-700 hover:bg-[#C8A24A]/8 hover:text-[#C8A24A]",
+  },
+  { divider: true },
+  {
+    label: "تسجيل الخروج",
+    emoji: "🚪",
+    className: "text-red-500 hover:bg-red-50",
+  },
+  {
+    label: "Delete Account",
+    emoji: "🗑️",
+    className: "text-red-600 hover:bg-red-50",
+  },
+] as const;
 
 const LANGUAGES = ["AR", "EN"] as const;
 type Language = (typeof LANGUAGES)[number];
@@ -123,19 +146,40 @@ export function Header() {
               {accountOpen && (
                 <div
                   role="menu"
-                  className="absolute left-0 top-[calc(100%+0.5rem)] w-44 overflow-hidden rounded-xl border border-gray-100 bg-white py-1.5 shadow-xl"
+                  className="absolute left-0 top-[calc(100%+0.5rem)] w-52 overflow-hidden rounded-xl border border-gray-100 bg-white p-1 shadow-xl"
                 >
-                  {ACCOUNT_MENU_ITEMS.map((item) => (
-                    <button
-                      key={item}
-                      type="button"
-                      role="menuitem"
-                      onClick={() => setAccountOpen(false)}
-                      className="block w-full px-4 py-2 text-right text-sm text-gray-700 hover:bg-gray-50 hover:text-gold"
-                    >
-                      {item}
-                    </button>
-                  ))}
+                  {ACCOUNT_MENU_ITEMS.map((item, index) =>
+                    "divider" in item ? (
+                      <div key={index} className="my-1 h-px bg-gray-200/60" />
+                    ) : "href" in item && item.href ? (
+                      <Link
+                        key={item.label}
+                        href={item.href}
+                        onClick={() => setAccountOpen(false)}
+                        className={cn(
+                          "flex items-center gap-2 rounded-xl px-2.5 py-2 text-sm font-medium transition-colors",
+                          item.className
+                        )}
+                      >
+                        <span>{item.emoji}</span>
+                        {item.label}
+                      </Link>
+                    ) : (
+                      <button
+                        key={item.label}
+                        type="button"
+                        role="menuitem"
+                        onClick={() => setAccountOpen(false)}
+                        className={cn(
+                          "flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-right text-sm font-medium transition-colors",
+                          item.className
+                        )}
+                      >
+                        <span>{item.emoji}</span>
+                        {item.label}
+                      </button>
+                    )
+                  )}
                 </div>
               )}
             </div>

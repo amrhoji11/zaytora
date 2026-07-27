@@ -155,3 +155,12 @@
   0%   { transform: translateX(0); }
   100% { transform: translateX(-50%); }
 }
+
+@keyframes floatBadge {
+  0%, 100% { transform: translateY(var(--float-base-y, 0px)); }
+  50% { transform: translateY(calc(var(--float-base-y, 0px) - 6px)); }
+}
+
+.float-badge {
+  animation: floatBadge 3.6s ease-in-out infinite;
+}
