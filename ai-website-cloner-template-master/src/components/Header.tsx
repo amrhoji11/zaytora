@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -14,7 +15,7 @@ import {
 } from "@/components/icons";
 
 const NAV_LINKS = [
-  { label: "الرئيسية", href: "/", active: true },
+  { label: "الرئيسية", href: "/" },
   { label: "القوالب", href: "/#templates" },
   { label: "الاستوديو", href: "/studio" },
   { label: "الدليل", href: "/guide" },
@@ -22,12 +23,18 @@ const NAV_LINKS = [
   { label: "شركاؤنا", href: "/#partners" },
 ];
 
-const MOBILE_NAV_ITEMS: { label: string; icon: LucideIcon; href: string; active?: boolean }[] = [
-  { label: "الرئيسية", icon: HomeIcon, href: "/", active: true },
+const MOBILE_NAV_ITEMS: { label: string; icon: LucideIcon; href: string }[] = [
+  { label: "الرئيسية", icon: HomeIcon, href: "/" },
   { label: "القوالب", icon: TemplatesIcon, href: "/#templates" },
   { label: "الاستوديو", icon: StudioIcon, href: "/studio" },
   { label: "لوحة التحكم", icon: DashboardIcon, href: "/dashboard" },
 ];
+
+// Hash links (e.g. "/#templates") point at sections of the home page rather
+// than a distinct route, so they never register as the active page.
+function isActiveHref(pathname: string, href: string) {
+  return !href.includes("#") && pathname === href;
+}
 
 const ACCOUNT_MENU_ITEMS = ["الملف الشخصي", "دعواتي", "الإعدادات", "تسجيل الخروج"];
 
@@ -35,6 +42,7 @@ const LANGUAGES = ["AR", "EN"] as const;
 type Language = (typeof LANGUAGES)[number];
 
 export function Header() {
+  const pathname = usePathname();
   const [accountOpen, setAccountOpen] = useState(false);
   const [language, setLanguage] = useState<Language>("AR");
   const accountRef = useRef<HTMLDivElement>(null);
@@ -82,7 +90,7 @@ export function Header() {
                 href={link.href}
                 className={cn(
                   "text-sm transition-colors duration-200 hover:text-gold",
-                  link.active ? "text-gold font-medium" : "text-gray-700"
+                  isActiveHref(pathname, link.href) ? "text-gold font-medium" : "text-gray-700"
                 )}
               >
                 {link.label}
@@ -152,7 +160,7 @@ export function Header() {
             href={item.href}
             className={cn(
               "flex flex-col items-center justify-center gap-1 text-xs",
-              item.active ? "text-gold" : "text-gray-600"
+              isActiveHref(pathname, item.href) ? "text-gold" : "text-gray-600"
             )}
           >
             <item.icon className="size-5" />
