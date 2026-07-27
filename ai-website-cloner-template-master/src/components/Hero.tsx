@@ -16,6 +16,7 @@ import {
   EyeIcon,
 } from "@/components/icons";
 import { InvitationPreviewModal } from "@/components/InvitationPreviewModal";
+import { createInvitation } from "@/lib/services/invitations.service";
 
 interface FloatingBadge {
   icon: ComponentType<{ className?: string }>;
@@ -131,9 +132,25 @@ function FloatingBadgeStack({
 export function Hero() {
   const router = useRouter();
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
 
   function scrollToTemplates() {
     document.getElementById("templates")?.scrollIntoView({ behavior: "smooth" });
+  }
+
+  async function handleCreateInvitation() {
+    setIsCreating(true);
+    try {
+      const invitation = await createInvitation();
+      router.push(`/studio?invitationId=${invitation.id}`);
+    } catch (error) {
+      // API not reachable yet during frontend development — still let the
+      // user reach the studio instead of dead-ending the CTA.
+      console.error("[invitations] create invitation failed, continuing without an id:", error);
+      router.push("/studio");
+    } finally {
+      setIsCreating(false);
+    }
   }
 
   return (
@@ -167,13 +184,14 @@ export function Hero() {
           <div className="flex flex-col sm:flex-row items-center gap-3">
             <button
               type="button"
-              onClick={() => router.push("/studio")}
-              className="w-full sm:w-auto rounded-2xl px-7 py-3.5 text-sm font-semibold text-white transition-all duration-200 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.97]"
+              onClick={handleCreateInvitation}
+              disabled={isCreating}
+              className="w-full sm:w-auto rounded-2xl px-7 py-3.5 text-sm font-semibold text-white transition-all duration-200 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.97] disabled:opacity-60 disabled:pointer-events-none"
               style={{
                 background: "linear-gradient(135deg, #1a1a1a, #2d2d2d)",
               }}
             >
-              ✨ إنشاء دعوة
+              {isCreating ? "جارٍ الإنشاء..." : "✨ إنشاء دعوة"}
             </button>
 
             <button

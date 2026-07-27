@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { ArrowRightIcon, EyeIcon, StarIcon } from "@/components/icons";
+import { getTemplates } from "@/lib/services/templates.service";
 
 interface Template {
   code: string;
@@ -9,14 +10,34 @@ interface Template {
   image: string;
 }
 
-const templates: Template[] = [
+const FALLBACK_TEMPLATES: Template[] = [
   { code: "W024", category: "wedding", popular: true, image: "/images/templates/w024.png" },
   { code: "W031", category: "wedding", popular: false, image: "/images/templates/w031.jpeg" },
   { code: "W029", category: "wedding", popular: false, image: "/images/templates/w029.png" },
   { code: "W019", category: "wedding", popular: false, image: "/images/templates/w019.png" },
 ];
 
-export function TemplatesGrid() {
+async function loadTemplates(): Promise<Template[]> {
+  try {
+    const dtos = await getTemplates();
+    if (!dtos.length) return FALLBACK_TEMPLATES;
+    return dtos.map((dto) => ({
+      code: dto.code,
+      category: dto.category,
+      popular: dto.isPopular,
+      image: dto.imageUrl,
+    }));
+  } catch (error) {
+    // API not reachable yet during frontend development — fall back to the
+    // curated demo set instead of breaking the section.
+    console.warn("[templates] falling back to static demo data:", error);
+    return FALLBACK_TEMPLATES;
+  }
+}
+
+export async function TemplatesGrid() {
+  const templates = await loadTemplates();
+
   return (
     <section>
       <div className="text-center mb-14">

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -13,6 +13,7 @@ import {
   TemplatesIcon,
   UserIcon,
 } from "@/components/icons";
+import { deleteAccount, logout } from "@/lib/services/account.service";
 
 const NAV_LINKS = [
   { label: "الرئيسية", href: "/" },
@@ -38,23 +39,27 @@ function isActiveHref(pathname: string, href: string) {
 
 const ACCOUNT_MENU_ITEMS = [
   {
+    id: "dashboard",
     label: "لوحة التحكم",
     emoji: "🗂️",
     href: "/dashboard",
     className: "text-gray-700 hover:bg-[#C8A24A]/8 hover:text-[#C8A24A]",
   },
   {
+    id: "business-mode",
     label: "Business Mode",
     emoji: "🤝",
     className: "text-gray-700 hover:bg-[#C8A24A]/8 hover:text-[#C8A24A]",
   },
-  { divider: true },
+  { id: "divider", divider: true },
   {
+    id: "logout",
     label: "تسجيل الخروج",
     emoji: "🚪",
     className: "text-red-500 hover:bg-red-50",
   },
   {
+    id: "delete-account",
     label: "Delete Account",
     emoji: "🗑️",
     className: "text-red-600 hover:bg-red-50",
@@ -66,8 +71,10 @@ type Language = (typeof LANGUAGES)[number];
 
 export function Header() {
   const pathname = usePathname();
+  const router = useRouter();
   const [accountOpen, setAccountOpen] = useState(false);
   const [language, setLanguage] = useState<Language>("AR");
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
   const accountRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -93,6 +100,41 @@ export function Header() {
 
   function toggleLanguage() {
     setLanguage((current) => LANGUAGES[(LANGUAGES.indexOf(current) + 1) % LANGUAGES.length]);
+  }
+
+  async function handleMenuAction(id: string) {
+    if (id === "logout") {
+      setPendingAction("logout");
+      try {
+        await logout();
+      } catch (error) {
+        console.error("[account] logout request failed:", error);
+      } finally {
+        setPendingAction(null);
+        setAccountOpen(false);
+        router.push("/");
+      }
+      return;
+    }
+
+    if (id === "delete-account") {
+      if (!window.confirm("هل أنت متأكد من حذف حسابك؟ لا يمكن التراجع عن هذا الإجراء.")) {
+        return;
+      }
+      setPendingAction("delete-account");
+      try {
+        await deleteAccount();
+        router.push("/");
+      } catch (error) {
+        console.error("[account] delete account request failed:", error);
+      } finally {
+        setPendingAction(null);
+        setAccountOpen(false);
+      }
+      return;
+    }
+
+    setAccountOpen(false);
   }
 
   return (
@@ -148,12 +190,12 @@ export function Header() {
                   role="menu"
                   className="absolute left-0 top-[calc(100%+0.5rem)] w-52 overflow-hidden rounded-xl border border-gray-100 bg-white p-1 shadow-xl"
                 >
-                  {ACCOUNT_MENU_ITEMS.map((item, index) =>
+                  {ACCOUNT_MENU_ITEMS.map((item) =>
                     "divider" in item ? (
-                      <div key={index} className="my-1 h-px bg-gray-200/60" />
+                      <div key={item.id} className="my-1 h-px bg-gray-200/60" />
                     ) : "href" in item && item.href ? (
                       <Link
-                        key={item.label}
+                        key={item.id}
                         href={item.href}
                         onClick={() => setAccountOpen(false)}
                         className={cn(
@@ -166,17 +208,18 @@ export function Header() {
                       </Link>
                     ) : (
                       <button
-                        key={item.label}
+                        key={item.id}
                         type="button"
                         role="menuitem"
-                        onClick={() => setAccountOpen(false)}
+                        disabled={pendingAction === item.id}
+                        onClick={() => handleMenuAction(item.id)}
                         className={cn(
-                          "flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-right text-sm font-medium transition-colors",
+                          "flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-right text-sm font-medium transition-colors disabled:opacity-50",
                           item.className
                         )}
                       >
                         <span>{item.emoji}</span>
-                        {item.label}
+                        {pendingAction === item.id ? "..." : item.label}
                       </button>
                     )
                   )}
