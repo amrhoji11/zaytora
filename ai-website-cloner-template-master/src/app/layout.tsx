@@ -9,6 +9,12 @@ const cinzel = Cinzel({
   variable: "--font-cinzel",
   subsets: ["latin"],
   weight: ["400", "600", "700"],
+  // Cinzel has no Arabic glyphs; Next's auto-generated Latin-metric
+  // fallback substitutes unpredictably for Arabic text (causing extra
+  // line wraps). Fall back to a plain "serif" instead, matching the
+  // reference site's font stack.
+  adjustFontFallback: false,
+  fallback: ["serif"],
 });
 
 export const metadata: Metadata = {

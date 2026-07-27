@@ -112,15 +112,15 @@ function FloatingBadgeStack({
         return (
           <div
             key={index}
-            className={`absolute ${sideClass} float-badge w-12 h-12 rounded-2xl backdrop-blur-sm border flex items-center justify-center shadow-lg ${badge.bgClass} ${badge.borderClass}`}
-            style={{
-              top: `${badge.top}%`,
-              // @ts-expect-error -- CSS custom properties aren't in the style typings
-              "--float-base-y": `${badge.baseOffset}px`,
-              animationDelay: `${index * 0.3}s`,
-            }}
+            className={`absolute ${sideClass}`}
+            style={{ top: `${badge.top}%`, transform: `translateY(${badge.baseOffset}px)` }}
           >
-            <Icon className={`w-5 h-5 ${badge.iconColorClass}`} />
+            <div
+              className={`float-badge w-12 h-12 rounded-2xl backdrop-blur-sm border flex items-center justify-center shadow-lg ${badge.bgClass} ${badge.borderClass}`}
+              style={{ animationDelay: `${index * 0.3}s` }}
+            >
+              <Icon className={`w-5 h-5 ${badge.iconColorClass}`} />
+            </div>
           </div>
         );
       })}
