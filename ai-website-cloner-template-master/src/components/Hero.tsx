@@ -1,4 +1,8 @@
+"use client";
+
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import type { ComponentType } from "react";
 import {
   WhatsAppIcon,
@@ -11,6 +15,7 @@ import {
   QrCodeIcon,
   EyeIcon,
 } from "@/components/icons";
+import { InvitationPreviewModal } from "@/components/InvitationPreviewModal";
 
 interface FloatingBadge {
   icon: ComponentType<{ className?: string }>;
@@ -109,6 +114,13 @@ function FloatingBadgeStack({
 }
 
 export function Hero() {
+  const router = useRouter();
+  const [previewOpen, setPreviewOpen] = useState(false);
+
+  function scrollToTemplates() {
+    document.getElementById("templates")?.scrollIntoView({ behavior: "smooth" });
+  }
+
   return (
     <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
       {/* Faint grid/dot pattern layer */}
@@ -140,6 +152,7 @@ export function Hero() {
           <div className="flex flex-col sm:flex-row items-center gap-3">
             <button
               type="button"
+              onClick={() => router.push("/studio")}
               className="w-full sm:w-auto rounded-2xl px-7 py-3.5 text-sm font-semibold text-white transition-all duration-200 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.97]"
               style={{
                 background: "linear-gradient(135deg, #1a1a1a, #2d2d2d)",
@@ -150,6 +163,7 @@ export function Hero() {
 
             <button
               type="button"
+              onClick={scrollToTemplates}
               className="w-full sm:w-auto rounded-2xl px-6 py-3.5 text-sm font-semibold text-gray-800 bg-white/72 border border-[#C8A24A]/30"
             >
               تصفح القوالب
@@ -157,6 +171,7 @@ export function Hero() {
 
             <button
               type="button"
+              onClick={() => setPreviewOpen(true)}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-3.5 text-sm text-gray-600"
             >
               <EyeIcon className="w-4 h-4" />
@@ -193,6 +208,8 @@ export function Hero() {
           </div>
         </div>
       </div>
+
+      <InvitationPreviewModal open={previewOpen} onClose={() => setPreviewOpen(false)} />
     </section>
   );
 }

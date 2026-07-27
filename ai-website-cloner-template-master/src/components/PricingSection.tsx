@@ -41,7 +41,7 @@ export function PricingSection() {
     CURRENCY_OPTIONS[0];
 
   return (
-    <section className="py-28 bg-white relative overflow-hidden">
+    <section id="pricing" className="py-28 bg-white relative overflow-hidden">
       <div className="absolute rounded-full blur-3xl opacity-5 w-[600px] h-[600px] top-0 right-0 bg-[#C8A24A]" />
       <div className="absolute rounded-full blur-3xl opacity-5 w-[500px] h-[500px] bottom-0 left-0 bg-[#C8A24A]" />
 

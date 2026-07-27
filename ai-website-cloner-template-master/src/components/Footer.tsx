@@ -20,7 +20,7 @@ const paymentBadges = ["VISA", "Pay", "G Pay", "Samsung Pay"];
 
 export function Footer() {
   return (
-    <footer className="py-16 border-t border-gray-100">
+    <footer id="contact" className="py-16 border-t border-gray-100">
       <div className="max-w-7xl mx-auto px-4">
         <div className="grid md:grid-cols-4 gap-10 mb-12">
           <div className="md:col-span-1">

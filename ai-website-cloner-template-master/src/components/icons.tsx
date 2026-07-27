@@ -25,6 +25,7 @@ export {
   MapPin as MapPinIcon,
   PenLine as PenLineIcon,
   ChevronDown as ChevronDownIcon,
+  X as XIcon,
 } from "lucide-react";
 
 export function WhatsAppIcon(props: React.SVGProps<SVGSVGElement>) {

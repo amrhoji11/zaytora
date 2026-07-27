@@ -14,7 +14,7 @@ export default function Home() {
     <div className="min-h-screen bg-white">
       <Hero />
 
-      <section className="py-24 overflow-hidden">
+      <section id="templates" className="py-24 overflow-hidden">
         <div className="max-w-7xl mx-auto px-4">
           <CategoryPills />
           <div className="mb-12">

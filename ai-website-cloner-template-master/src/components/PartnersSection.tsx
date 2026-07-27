@@ -26,7 +26,7 @@ const MARQUEE_LOGOS = [...PARTNER_LOGOS, ...PARTNER_LOGOS]
 
 export function PartnersSection() {
   return (
-    <section className="py-20 bg-white overflow-hidden">
+    <section id="partners" className="py-20 bg-white overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 mb-10 text-center">
         <p className="text-sm text-[#C8A24A] font-medium tracking-widest uppercase mb-3">
           شبكة الشركاء
