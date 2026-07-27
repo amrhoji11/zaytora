@@ -1,0 +1,13 @@
+## .NET
+bin/
+obj/
+*.user
+
+## EF Core local SQLite dev databases
+*.db
+*.db-shm
+*.db-wal
+
+## IDE
+.vs/
+.idea/
