@@ -26,6 +26,23 @@ export {
   PenLine as PenLineIcon,
   ChevronDown as ChevronDownIcon,
   X as XIcon,
+  Image as ImageIcon,
+  Users as UsersIcon,
+  Settings as SettingsIcon,
+  MessageCircle as MessageCircleIcon,
+  Gift as GiftIcon,
+  LayoutGrid as LayoutGridIcon,
+  Play as PlayIcon,
+  Trash2 as TrashIcon,
+  Plus as PlusIcon,
+  Lightbulb as LightbulbIcon,
+  ClipboardList as ClipboardListIcon,
+  Building2 as BuildingIcon,
+  Loader2 as LoaderIcon,
+  Check as CheckIcon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
+  BedDouble as BedDoubleIcon,
 } from "lucide-react";
 
 export function WhatsAppIcon(props: React.SVGProps<SVGSVGElement>) {

@@ -1,0 +1,68 @@
+import { PlusIcon, TrashIcon } from "@/components/icons";
+
+export function ListEditor<T>({
+  items,
+  onChange,
+  createItem,
+  renderItem,
+  addLabel,
+  emptyLabel,
+  max,
+}: {
+  items: T[];
+  onChange: (items: T[]) => void;
+  createItem: () => T;
+  renderItem: (item: T, update: (patch: Partial<T>) => void, index: number) => React.ReactNode;
+  addLabel: string;
+  emptyLabel?: string;
+  max?: number;
+}) {
+  function addItem() {
+    onChange([...items, createItem()]);
+  }
+
+  function removeItem(index: number) {
+    onChange(items.filter((_, i) => i !== index));
+  }
+
+  function updateItem(index: number, patch: Partial<T>) {
+    onChange(items.map((item, i) => (i === index ? { ...item, ...patch } : item)));
+  }
+
+  const atMax = max !== undefined && items.length >= max;
+
+  return (
+    <div className="space-y-3">
+      {items.length === 0 && emptyLabel && (
+        <p className="rounded-xl border border-dashed border-gray-200 py-6 text-center text-sm text-gray-400">
+          {emptyLabel}
+        </p>
+      )}
+
+      {items.map((item, index) => (
+        <div key={index} className="relative rounded-xl border border-gray-200 p-3">
+          <button
+            type="button"
+            onClick={() => removeItem(index)}
+            aria-label="حذف"
+            className="absolute left-3 top-3 text-gray-300 transition-colors hover:text-rose-500"
+          >
+            <TrashIcon className="size-4" />
+          </button>
+          <div className="space-y-2 pl-8">{renderItem(item, (patch) => updateItem(index, patch), index)}</div>
+        </div>
+      ))}
+
+      {!atMax && (
+        <button
+          type="button"
+          onClick={addItem}
+          className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-gold/40 py-3 text-sm font-medium text-gold transition-colors hover:bg-gold/5"
+        >
+          <PlusIcon className="size-4" />
+          {addLabel}
+        </button>
+      )}
+    </div>
+  );
+}

@@ -1,29 +1,25 @@
-namespace Numinds.Api.Models.Entities;
+namespace Numinds.Api.Models.Dtos;
 
-public class Invitation
+// Full read shape for GET /api/invitations/{id} — everything the studio
+// wizard needs to resume editing a draft, plus what the live phone
+// preview renders.
+public class InvitationDetailDto
 {
-    public Guid Id { get; set; }
-    public Guid? UserId { get; set; }
-    public ApplicationUser? User { get; set; }
-    public Guid? TemplateId { get; set; }
-    public Template? Template { get; set; }
-
-    // draft -> preview -> paid -> shared
-    public string Status { get; set; } = "draft";
+    public string Id { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public string EditUrl { get; set; } = string.Empty;
+    public string? TemplateId { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 
-    // Step 1 — Invitation Language
     public string? Language { get; set; }
 
-    // Step 2 — Occasion Type
     public string? OccasionType { get; set; }
     public bool IsCoupleEvent { get; set; }
 
-    // Step 4 — Basic Information
     public string? EventTitle { get; set; }
     public string? EventTitleFont { get; set; }
-    public string InvitationType { get; set; } = "couple"; // "individual" | "couple"
+    public string InvitationType { get; set; } = "couple";
     public string? FirstName { get; set; }
     public string? SecondName { get; set; }
     public string? NamesFont { get; set; }
@@ -34,65 +30,51 @@ public class Invitation
     public string? ThankYouText { get; set; }
     public string? ThankYouTextColor { get; set; }
 
-    // Step 5 — The Invitation (family names + text)
     public bool HideFamilyNames { get; set; }
     public string? FamilyName1 { get; set; }
     public string? FamilyName2 { get; set; }
     public string? FamilyNamesFont { get; set; }
     public string? InvitationText { get; set; }
 
-    // Step 6 — Location (JSON array of { name, address, mapUrl })
-    public string VenuesJson { get; set; } = "[]";
+    public List<VenueItemDto> Venues { get; set; } = [];
 
-    // Step 7 — Event Program (JSON array of { time, title })
     public bool ShowEventProgram { get; set; }
-    public string ProgramItemsJson { get; set; } = "[]";
+    public List<ProgramItemDto> ProgramItems { get; set; } = [];
 
-    // Step 8 — Event Rules / Notes
     public bool ShowEventRules { get; set; }
     public string? EventRulesText { get; set; }
 
-    // Step 9 — Accommodation (JSON array of { name, address, mapUrl })
     public bool ShowAccommodation { get; set; }
-    public string AccommodationsJson { get; set; } = "[]";
+    public List<VenueItemDto> Accommodations { get; set; } = [];
 
-    // Step 10 — Photo Gallery (JSON array of image URLs, up to 6)
-    public string GalleryImagesJson { get; set; } = "[]";
+    public List<string> GalleryImages { get; set; } = [];
 
-    // Step 11 — Personal Message
     public bool ShowPersonalMessage { get; set; }
     public string? PersonalMessageTitle { get; set; }
     public string? PersonalMessageText { get; set; }
     public string? PersonalMessageSignature { get; set; }
 
-    // Step 12 — Contacts (JSON array of { name, role, phone }, up to 5)
-    public string ContactsJson { get; set; } = "[]";
+    public List<ContactItemDto> Contacts { get; set; } = [];
 
-    // Step 13 — Music
     public string? MusicUrl { get; set; }
     public string? MusicTitle { get; set; }
 
-    // Step 14 — Gift
     public bool EnableGifts { get; set; }
     public string? GiftIban { get; set; }
 
-    // Step 15 — Camera controls
     public bool HideCameraButton { get; set; }
     public bool HideSaveButton { get; set; }
     public bool HideCapturedGallery { get; set; }
 
-    // Step 16 — QR guest entry
     public bool EnableQrEntry { get; set; }
 
-    // Step 17 — RSVP settings
-    public bool EnableRsvp { get; set; } = true;
-    public bool RsvpShowAttendance { get; set; } = true;
-    public bool RsvpShowGuestCount { get; set; } = true;
-    public bool RsvpShowMessage { get; set; } = true;
-    public bool RsvpShowLiveCount { get; set; } = true;
+    public bool EnableRsvp { get; set; }
+    public bool RsvpShowAttendance { get; set; }
+    public bool RsvpShowGuestCount { get; set; }
+    public bool RsvpShowMessage { get; set; }
+    public bool RsvpShowLiveCount { get; set; }
     public int? GuestLimit { get; set; }
 
-    // Step 18 — Additional settings
     public string? GeneralTextFont { get; set; }
     public string? EnvelopeNameFont { get; set; }
 }
