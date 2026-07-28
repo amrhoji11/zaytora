@@ -150,14 +150,10 @@ export function StudioWizard() {
       <DraftBanner previousDraftId={previousDraftId} currentInvitationId={form.id} />
 
       {/* Grid column order follows the page's dir attribute (rtl by default):
-          PhonePreview, listed first, lands on the visual right with the form
-          on the left — matching numinds.me. This flips automatically if a
-          parent ever sets dir="ltr" for a non-Arabic locale. */}
-      <div className="grid gap-8 lg:grid-cols-[auto_1fr]">
-        <div className="flex justify-center lg:justify-start">
-          <PhonePreview value={form} />
-        </div>
-
+          the form, listed first, lands on the visual right with the phone
+          preview on the left — matching numinds.me. This flips automatically
+          if a parent ever sets dir="ltr" for a non-Arabic locale. */}
+      <div className="grid gap-8 lg:grid-cols-[1fr_auto]">
         <div className="rounded-2xl border border-gray-100 shadow-sm">
           {finished ? (
             <div className="flex flex-col items-center gap-4 px-6 py-16 text-center">
@@ -270,6 +266,10 @@ export function StudioWizard() {
               </div>
             </>
           )}
+        </div>
+
+        <div className="flex justify-center lg:justify-end">
+          <PhonePreview value={form} />
         </div>
       </div>
     </div>
