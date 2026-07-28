@@ -72,6 +72,7 @@ export interface InvitationDetail {
 
   musicUrl?: string | null;
   musicTitle?: string | null;
+  musicStartSeconds?: number | null;
 
   enableGifts: boolean;
   giftIban?: string | null;

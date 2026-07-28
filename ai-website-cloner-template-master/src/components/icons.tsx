@@ -35,6 +35,8 @@ export {
   Play as PlayIcon,
   Pause as PauseIcon,
   Volume2 as VolumeIcon,
+  Upload as UploadIcon,
+  Link as LinkIcon,
   Trash2 as TrashIcon,
   Plus as PlusIcon,
   Lightbulb as LightbulbIcon,

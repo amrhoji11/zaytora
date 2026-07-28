@@ -1,6 +1,42 @@
+import { useRef, useState } from "react";
 import { TextField } from "@/components/studio/fields/TextField";
 import { HintBox } from "@/components/studio/fields/HintBox";
+import { CheckIcon, LinkIcon, MusicIcon, PauseIcon, PlayIcon, TrashIcon, UploadIcon } from "@/components/icons";
+import { cn } from "@/lib/utils";
 import type { InvitationDetail } from "@/types/studio";
+
+// Placeholder preview URLs — this template ships no licensed audio, so each
+// preset points at a stand-in file rather than hotlinking a real copy of a
+// commercial track. Swap these for actual hosted/licensed files in
+// production.
+const PRESET_TRACKS = [
+  { id: "wildest-dreams", title: "Wildest Dreams", artist: "Taylor Swift" },
+  { id: "eid-milad", title: "Eid Milad", artist: "Nancy Ajram" },
+  { id: "birthday-piano", title: "Birthday Song", artist: "Piano" },
+  { id: "happy-birthday", title: "Happy Birthday", artist: "Khalid Assiri" },
+  { id: "ahlan-ya-mama", title: "Ahlan Ya Mama", artist: "Balqees" },
+  { id: "hassa-be-saada", title: "Hassa Be Sa'ada", artist: "Carmen Soliman" },
+  { id: "huda-arabi", title: "Huda Arabi" },
+  { id: "river-flows", title: "River Flows in You", artist: "Yiruma" },
+  { id: "elissa", title: "Elissa" },
+].map((track) => ({ ...track, url: `https://example.com/audio/${track.id}.mp3` }));
+
+function trackLabel(track: { title: string; artist?: string }) {
+  return track.artist ? `${track.title} - ${track.artist}` : track.title;
+}
+
+function secondsToHms(total: number) {
+  const clamped = Math.max(0, Math.floor(total || 0));
+  return {
+    h: Math.floor(clamped / 3600),
+    m: Math.floor((clamped % 3600) / 60),
+    s: clamped % 60,
+  };
+}
+
+function hmsToSeconds(h: number, m: number, s: number) {
+  return Math.max(0, h) * 3600 + Math.max(0, m) * 60 + Math.max(0, s);
+}
 
 export function Step13Music({
   value,
@@ -9,21 +45,208 @@ export function Step13Music({
   value: InvitationDetail;
   onChange: (patch: Partial<InvitationDetail>) => void;
 }) {
+  const [playingId, setPlayingId] = useState<string | null>(null);
+  const [showLinkInput, setShowLinkInput] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { h, m, s } = secondsToHms(value.musicStartSeconds ?? 0);
+
+  function selectTrack(track: (typeof PRESET_TRACKS)[number]) {
+    onChange({ musicUrl: track.url, musicTitle: trackLabel(track) });
+  }
+
+  function togglePreview(track: (typeof PRESET_TRACKS)[number]) {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (playingId === track.id) {
+      audio.pause();
+      setPlayingId(null);
+      return;
+    }
+    audio.src = track.url;
+    audio.play().catch(() => {});
+    setPlayingId(track.id);
+  }
+
+  function updateStart(next: Partial<{ h: number; m: number; s: number }>) {
+    const merged = { h, m, s, ...next };
+    onChange({ musicStartSeconds: hmsToSeconds(merged.h, merged.m, merged.s) });
+  }
+
+  async function handleFileSelected(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+    onChange({ musicUrl: dataUrl, musicTitle: value.musicTitle || file.name.replace(/\.[^.]+$/, "") });
+  }
+
+  function removeMusic() {
+    if (playingId) audioRef.current?.pause();
+    setPlayingId(null);
+    setShowLinkInput(false);
+    onChange({ musicUrl: null, musicTitle: null, musicStartSeconds: null });
+  }
+
   return (
     <div className="space-y-5">
-      <HintBox>الصق رابط يوتيوب أو ملف MP3 مباشر — تعزف الموسيقى عند فتح الدعوة.</HintBox>
-      <TextField
-        label="رابط الموسيقى"
-        value={value.musicUrl ?? ""}
-        placeholder="https://youtube.com/watch?v=..."
-        onChange={(musicUrl) => onChange({ musicUrl })}
-      />
-      <TextField
-        label="عنوان المقطع"
-        value={value.musicTitle ?? ""}
-        placeholder="Can't Help Falling in Love"
-        onChange={(musicTitle) => onChange({ musicTitle })}
-      />
+      <audio ref={audioRef} onEnded={() => setPlayingId(null)} className="hidden" />
+
+      <HintBox>اختر مقطوعة من المكتبة أو ارفع ملفك الخاص — تعزف الموسيقى عند فتح الدعوة.</HintBox>
+
+      {/* Preset library */}
+      <div>
+        <p className="mb-2 text-sm text-gray-700">مكتبة الموسيقى</p>
+        <div className="space-y-2">
+          {PRESET_TRACKS.map((track) => {
+            const selected = value.musicUrl === track.url;
+            const playing = playingId === track.id;
+            return (
+              <div
+                key={track.id}
+                onClick={() => selectTrack(track)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") selectTrack(track);
+                }}
+                className={cn(
+                  "flex items-center gap-3 rounded-xl border-2 px-3.5 py-2.5 text-sm transition-colors",
+                  selected ? "border-gold bg-gold/5" : "border-gray-200 hover:border-gold/40"
+                )}
+              >
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-gold/10 text-gold">
+                  <MusicIcon className="size-4" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-medium text-gray-800">{track.title}</span>
+                  {track.artist && <span className="block truncate text-xs text-gray-400">{track.artist}</span>}
+                </span>
+                {selected && (
+                  <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-gold text-white">
+                    <CheckIcon className="size-3" />
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    togglePreview(track);
+                  }}
+                  aria-label={playing ? "إيقاف مؤقت" : "تشغيل"}
+                  className="flex size-8 shrink-0 items-center justify-center rounded-full border border-gray-200 text-gray-600 transition-colors hover:border-gold/40 hover:text-gold"
+                >
+                  {playing ? <PauseIcon className="size-3.5" /> : <PlayIcon className="size-3.5 ms-0.5" />}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Custom upload / link */}
+      <div className="space-y-3 border-t border-gray-100 pt-4">
+        <TextField
+          label="اسم المقطوعة / الفنان"
+          value={value.musicTitle ?? ""}
+          placeholder="مثال: Can't Help Falling in Love"
+          onChange={(musicTitle) => onChange({ musicTitle })}
+        />
+
+        <div className="grid grid-cols-2 gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="audio/*"
+            className="hidden"
+            onChange={handleFileSelected}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-gold/40 py-2.5 text-sm font-medium text-gold transition-colors hover:bg-gold/5"
+          >
+            <UploadIcon className="size-4" />
+            رفع ملف
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowLinkInput((open) => !open)}
+            className={cn(
+              "flex items-center justify-center gap-1.5 rounded-xl border py-2.5 text-sm font-medium transition-colors",
+              showLinkInput ? "border-gold bg-gold/5 text-gold" : "border-gray-200 text-gray-600 hover:border-gold/40"
+            )}
+          >
+            <LinkIcon className="size-4" />
+            يوتيوب / رابط
+          </button>
+        </div>
+
+        {showLinkInput && (
+          <TextField
+            value={value.musicUrl ?? ""}
+            placeholder="https://youtube.com/watch?v=..."
+            onChange={(musicUrl) => onChange({ musicUrl })}
+          />
+        )}
+      </div>
+
+      {/* Start time */}
+      <div className="space-y-2 border-t border-gray-100 pt-4">
+        <p className="text-sm text-gray-700">وقت بدء الموسيقى</p>
+        <div className="grid grid-cols-3 gap-2">
+          <div>
+            <input
+              type="number"
+              min={0}
+              value={h}
+              onChange={(event) => updateStart({ h: Number(event.target.value) })}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-center text-sm outline-none focus:border-gold"
+            />
+            <p className="mt-1 text-center text-[11px] text-gray-400">ساعات (H)</p>
+          </div>
+          <div>
+            <input
+              type="number"
+              min={0}
+              max={59}
+              value={m}
+              onChange={(event) => updateStart({ m: Number(event.target.value) })}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-center text-sm outline-none focus:border-gold"
+            />
+            <p className="mt-1 text-center text-[11px] text-gray-400">دقائق (M)</p>
+          </div>
+          <div>
+            <input
+              type="number"
+              min={0}
+              max={59}
+              value={s}
+              onChange={(event) => updateStart({ s: Number(event.target.value) })}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-center text-sm outline-none focus:border-gold"
+            />
+            <p className="mt-1 text-center text-[11px] text-gray-400">ثواني (S)</p>
+          </div>
+        </div>
+        <p className="text-xs text-gray-400">ستبدأ الموسيقى من هذه النقطة ({value.musicStartSeconds ?? 0}s)</p>
+      </div>
+
+      {value.musicUrl && (
+        <button
+          type="button"
+          onClick={removeMusic}
+          className="flex w-full items-center justify-center gap-1.5 rounded-xl py-2 text-sm font-medium text-rose-500 transition-colors hover:bg-rose-50"
+        >
+          <TrashIcon className="size-3.5" />
+          إزالة الموسيقى
+        </button>
+      )}
     </div>
   );
 }
