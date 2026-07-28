@@ -1,3 +1,4 @@
+import { CheckIcon } from "@/components/icons";
 import { cn } from "@/lib/utils";
 
 const PHASES = [
@@ -20,24 +21,27 @@ export function WizardStepper({ activePhase }: { activePhase: (typeof PHASES)[nu
               <span
                 className={cn(
                   "flex size-8 items-center justify-center rounded-full text-sm font-semibold transition-colors",
-                  state === "active" && "bg-gold text-white",
-                  state === "done" && "bg-gold/20 text-gold",
+                  (state === "active" || state === "done") && "bg-gold text-white",
                   state === "upcoming" && "bg-gray-100 text-gray-400"
                 )}
               >
-                {index + 1}
+                {state === "done" ? <CheckIcon className="size-4" /> : index + 1}
               </span>
               <span
                 className={cn(
                   "text-xs font-medium",
-                  state === "active" ? "text-gold" : "text-gray-400"
+                  state === "upcoming" ? "text-gray-400" : "text-gold"
                 )}
               >
                 {phase.label}
               </span>
             </div>
             {index < PHASES.length - 1 && (
-              <div className={cn("mx-2 h-px flex-1", state === "done" ? "bg-gold/40" : "bg-gray-200")} />
+              // Solid gold once the step this segment starts from is done —
+              // i.e. the whole Design->Preview->Payment run behind the
+              // active phase renders as a fully filled progress line, not a
+              // faded one.
+              <div className={cn("mx-2 h-px flex-1", state === "done" ? "bg-gold" : "bg-gray-200")} />
             )}
           </div>
         );

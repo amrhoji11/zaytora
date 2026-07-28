@@ -2,15 +2,19 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { ChevronLeftIcon, ChevronRightIcon, CheckIcon, LoaderIcon } from "@/components/icons";
+import { ChevronLeftIcon, ChevronRightIcon, LoaderIcon } from "@/components/icons";
 import { createInvitation, getInvitation, updateInvitation } from "@/lib/services/invitations.service";
 import type { InvitationDetail, UpdateInvitationPatch } from "@/types/studio";
 import { WizardStepper } from "./WizardStepper";
 import { DraftBanner, readLastInvitationId, rememberInvitation } from "./DraftBanner";
 import { PhonePreview } from "./PhonePreview";
+import { PreviewPhase } from "./PreviewPhase";
+import { PaymentPhase } from "./PaymentPhase";
+import { FullPreviewOverlay } from "./FullPreviewOverlay";
 import { WIZARD_STEPS } from "./stepsConfig";
+
+type Phase = "design" | "preview" | "payment";
 
 function buildPatch(detail: InvitationDetail): UpdateInvitationPatch {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -37,8 +41,9 @@ export function StudioWizard() {
   // Initialized from the URL's ?step= (1-indexed) so a page reload resumes
   // on the same step instead of always restarting at step 1.
   const [stepIndex, setStepIndexState] = useState(() => readStepIndexFromParam(searchParams.get("step")));
+  const [phase, setPhase] = useState<Phase>("design");
+  const [fullPreviewOpen, setFullPreviewOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [finished, setFinished] = useState(false);
   const [loadError, setLoadError] = useState(false);
   // Captured on first render, before this page load's own rememberInvitation()
   // call (below) can overwrite it — this is what makes it possible to detect
@@ -111,7 +116,7 @@ export function StudioWizard() {
   async function handleNext() {
     await saveProgress();
     if (stepIndex === WIZARD_STEPS.length - 1) {
-      setFinished(true);
+      setPhase("preview");
     } else {
       goToStep(stepIndex + 1);
     }
@@ -146,7 +151,7 @@ export function StudioWizard() {
     <div className="mx-auto max-w-6xl px-4 py-10">
       <h1 className="mb-6 text-lg font-semibold text-gray-900">إنشاء دعوة</h1>
 
-      <WizardStepper activePhase="design" />
+      <WizardStepper activePhase={phase} />
       <DraftBanner previousDraftId={previousDraftId} currentInvitationId={form.id} />
 
       {/* Grid column order follows the page's dir attribute (rtl by default):
@@ -155,34 +160,20 @@ export function StudioWizard() {
           if a parent ever sets dir="ltr" for a non-Arabic locale. */}
       <div className="grid gap-8 lg:grid-cols-2">
         <div className="rounded-2xl border border-gray-100 shadow-sm">
-          {finished ? (
-            <div className="flex flex-col items-center gap-4 px-6 py-16 text-center">
-              <span className="flex size-14 items-center justify-center rounded-full bg-gold/10 text-gold">
-                <CheckIcon className="size-7" />
-              </span>
-              <div>
-                <p className="text-lg font-semibold text-gray-900">تم حفظ دعوتك!</p>
-                <p className="mt-1 text-sm text-gray-500">
-                  المعاينة والدفع والمشاركة ستكون متاحة قريباً. يمكنك متابعة التعديل في أي وقت.
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setFinished(false)}
-                  className="rounded-xl border border-gold/30 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gold/5"
-                >
-                  متابعة التعديل
-                </button>
-                <Link
-                  href="/"
-                  className="rounded-xl bg-gold px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gold/90"
-                >
-                  العودة للرئيسية
-                </Link>
-              </div>
-            </div>
-          ) : (
+          {phase === "preview" && (
+            <PreviewPhase
+              onOpenFullPreview={() => setFullPreviewOpen(true)}
+              onContinue={async () => {
+                await saveProgress();
+                setPhase("payment");
+              }}
+              onBack={() => setPhase("design")}
+            />
+          )}
+
+          {phase === "payment" && <PaymentPhase value={form} onBack={() => setPhase("preview")} />}
+
+          {phase === "design" && (
             <>
               <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
                 <div className="flex items-center gap-2">
@@ -272,6 +263,8 @@ export function StudioWizard() {
           <PhonePreview value={form} />
         </div>
       </div>
+
+      {fullPreviewOpen && <FullPreviewOverlay value={form} onClose={() => setFullPreviewOpen(false)} />}
     </div>
   );
 }
