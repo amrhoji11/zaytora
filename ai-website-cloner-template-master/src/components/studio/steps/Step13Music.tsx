@@ -3,28 +3,8 @@ import { TextField } from "@/components/studio/fields/TextField";
 import { HintBox } from "@/components/studio/fields/HintBox";
 import { CheckIcon, LinkIcon, MusicIcon, PauseIcon, PlayIcon, RefreshIcon, TrashIcon, UploadIcon } from "@/components/icons";
 import { cn } from "@/lib/utils";
+import { PRESET_TRACKS, trackLabel } from "@/lib/musicLibrary";
 import type { InvitationDetail } from "@/types/studio";
-
-// This template ships no licensed audio, so each preset plays a short,
-// locally generated placeholder tone (public/audio/*.wav — a distinct sine
-// tone per slot, no external network dependency) rather than hotlinking a
-// real copy of the named commercial track. Swap these for actual
-// hosted/licensed files in production.
-const PRESET_TRACKS = [
-  { id: "wildest-dreams", title: "Wildest Dreams", artist: "Taylor Swift" },
-  { id: "eid-milad", title: "Eid Milad", artist: "Nancy Ajram" },
-  { id: "birthday-piano", title: "Birthday Song", artist: "Piano" },
-  { id: "happy-birthday", title: "Happy Birthday", artist: "Khalid Assiri" },
-  { id: "ahlan-ya-mama", title: "Ahlan Ya Mama", artist: "Balqees" },
-  { id: "hassa-be-saada", title: "Hassa Be Sa'ada", artist: "Carmen Soliman" },
-  { id: "huda-arabi", title: "Huda Arabi" },
-  { id: "river-flows", title: "River Flows in You", artist: "Yiruma" },
-  { id: "elissa", title: "Elissa" },
-].map((track) => ({ ...track, url: `/audio/${track.id}.wav` }));
-
-function trackLabel(track: { title: string; artist?: string }) {
-  return track.artist ? `${track.title} - ${track.artist}` : track.title;
-}
 
 function secondsToHms(total: number) {
   const clamped = Math.max(0, Math.floor(total || 0));
@@ -188,7 +168,10 @@ export function Step13Music({
                   selected ? "border-gold bg-gold/5" : "border-gray-200 hover:border-gold/40"
                 )}
               >
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-gold/10 text-gold">
+                <span
+                  className="flex size-8 shrink-0 items-center justify-center rounded-full text-white"
+                  style={{ backgroundColor: track.color }}
+                >
                   <MusicIcon className="size-4" />
                 </span>
                 <span className="min-w-0 flex-1">
