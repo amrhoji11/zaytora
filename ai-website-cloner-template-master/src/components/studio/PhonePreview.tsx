@@ -11,7 +11,6 @@ import {
   HeartIcon,
   ImageIcon,
   MapPinIcon,
-  MessageCircleIcon,
   MusicIcon,
   PhoneIcon,
   QrCodeIcon,
@@ -19,13 +18,13 @@ import {
 } from "@/components/icons";
 import { getTemplates } from "@/lib/services/templates.service";
 import type { TemplateDto } from "@/types/api";
-import type { InvitationDetail, VenueItem } from "@/types/studio";
-
-function resolveMapsHref(venue: VenueItem) {
-  if (venue.mapUrl) return venue.mapUrl;
-  const query = [venue.name, venue.address].filter(Boolean).join(", ");
-  return query ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}` : null;
-}
+import type { InvitationDetail } from "@/types/studio";
+import { BottomBar, type BottomBarItem } from "./phone-preview/BottomBar";
+import { MusicPlayerModal } from "./phone-preview/MusicPlayerModal";
+import { InteractiveRSVPModal } from "./phone-preview/InteractiveRSVPModal";
+import { LocationModal } from "./phone-preview/LocationModal";
+import { ContactModal } from "./phone-preview/ContactModal";
+import { CameraOverlay } from "./phone-preview/CameraOverlay";
 
 // Keyed by the same `value` codes Step01Language hands out (see
 // steps/Step01Language.tsx). "bilingual" reads Arabic-first, so it shares the
@@ -98,9 +97,15 @@ function useCountdown(iso?: string | null) {
 
 const RULES_DELIMITER = " · ";
 
+// Sections float as translucent cards over the persistent full-height
+// template canvas (see the scroll container below), instead of the old
+// flush border-t rows that assumed a plain white background.
+const SECTION_CARD = "mx-3 my-2 rounded-2xl border border-white/60 bg-white/85 p-4 shadow-sm backdrop-blur-sm";
+
 export function PhonePreview({ value }: { value: InvitationDetail }) {
   const [templates, setTemplates] = useState<TemplateDto[]>([]);
   const [openModal, setOpenModal] = useState<string | null>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -128,13 +133,13 @@ export function PhonePreview({ value }: { value: InvitationDetail }) {
   const countdown = useCountdown(value.eventDateTime);
   const rules = (value.eventRulesText ?? "").split(RULES_DELIMITER).map((rule) => rule.trim()).filter(Boolean);
 
-  const navItems = [
+  const navItems: BottomBarItem[] = [
     { key: "contact", icon: PhoneIcon, label: labels.contact, show: value.contacts.length > 0 },
     { key: "music", icon: MusicIcon, label: labels.music, show: Boolean(value.musicUrl) },
     { key: "capture", icon: CameraIcon, label: labels.capture, show: !value.hideCameraButton, isAction: true },
     { key: "location", icon: MapPinIcon, label: labels.location, show: value.venues.length > 0 },
     { key: "rsvp", icon: HeartIcon, label: labels.rsvp, show: value.enableRsvp },
-  ].filter((item) => item.show);
+  ];
 
   const modalTitles: Record<string, string> = {
     contact: labels.contact,
@@ -143,72 +148,31 @@ export function PhonePreview({ value }: { value: InvitationDetail }) {
     rsvp: labels.rsvp,
   };
 
+  function handleNavSelect(key: string) {
+    if (key === "capture") {
+      setCameraOpen(true);
+    } else {
+      setOpenModal(key);
+    }
+  }
+
   function renderModalBody(key: string) {
     switch (key) {
       case "contact":
-        return (
-          <div className="space-y-2.5">
-            {value.contacts.map((contact, index) => (
-              <div key={index} className="flex items-center justify-between gap-2 rounded-xl bg-gray-50 px-3 py-2.5">
-                <span className="text-xs font-medium text-gray-800">
-                  {contact.name}
-                  {contact.role ? ` (${contact.role})` : ""}
-                </span>
-                <span dir="ltr" className="text-xs text-gray-500">
-                  {contact.phone}
-                </span>
-              </div>
-            ))}
-          </div>
-        );
+        return <ContactModal contacts={value.contacts} />;
       case "location":
-        return (
-          <div className="space-y-2.5">
-            {value.venues.map((venue, index) => {
-              const href = resolveMapsHref(venue);
-              return (
-                <div key={index} className="space-y-2 rounded-xl bg-gray-50 px-3 py-2.5">
-                  <p className="text-xs font-medium text-gray-800">{venue.name || "—"}</p>
-                  {venue.address && <p className="text-[11px] text-gray-500">{venue.address}</p>}
-                  {href && (
-                    <a
-                      href={href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-1.5 rounded-lg border border-gold/40 py-1.5 text-[11px] font-medium text-gold transition-colors hover:bg-gold/5"
-                    >
-                      <MapPinIcon className="size-3" />
-                      {isRtl ? "افتح خرائط جوجل" : "Open Google Maps"}
-                    </a>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        );
+        return <LocationModal venues={value.venues} openMapsLabel={isRtl ? "افتح خرائط جوجل" : "Open Google Maps"} />;
       case "music":
         return (
-          <div className="space-y-2.5">
-            <div className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2.5">
-              <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-gold/10 text-gold">
-                <MusicIcon className="size-3.5" />
-              </span>
-              <p className="truncate text-xs text-gray-700">{value.musicTitle || value.musicUrl}</p>
-            </div>
-            {value.musicUrl && <audio src={value.musicUrl} controls className="h-8 w-full" />}
-          </div>
+          <MusicPlayerModal
+            title={value.musicTitle}
+            url={value.musicUrl}
+            coverImageUrl={template?.imageUrl}
+            fallbackLabel={labels.music}
+          />
         );
       case "rsvp":
-        return (
-          <div className="space-y-3 text-center">
-            <p className="text-xs text-gray-500">
-              <MessageCircleIcon className="mb-0.5 inline size-3.5" /> يسعدنا تأكيد حضوركم
-            </p>
-            <button type="button" className="rounded-full bg-gold px-6 py-2 text-xs font-medium text-white">
-              {labels.rsvp}
-            </button>
-          </div>
-        );
+        return <InteractiveRSVPModal value={value} isRtl={isRtl} />;
       default:
         return null;
     }
@@ -228,24 +192,21 @@ export function PhonePreview({ value }: { value: InvitationDetail }) {
               isRtl ? "text-right" : "text-left"
             )}
           >
-            <div ref={scrollRef} className="flex-1 overflow-y-auto scroll-smooth pb-20">
-              {/* Hero — min-h-full so the template background fills the entire
-                  phone viewport with no cream cutoff before other sections
-                  come into view on scroll. */}
-              <div className="relative flex min-h-full flex-col items-center justify-center gap-3 px-6 py-10 text-center">
-                {template?.imageUrl && (
-                  <>
-                    <Image
-                      src={template.imageUrl}
-                      alt=""
-                      fill
-                      sizes="256px"
-                      className="object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/35 to-black/70" />
-                  </>
-                )}
-                <div className="relative z-10 flex flex-col items-center gap-3">
+            {/* Scrollable canvas: the template image + its darkening overlay
+                are absolutely sized to match the *entire* content height
+                below (not just the hero), so the background never runs out
+                and shows a cream gap, no matter how far the user scrolls. */}
+            <div ref={scrollRef} className="relative flex-1 overflow-y-auto scroll-smooth">
+              {template?.imageUrl && (
+                <>
+                  <Image src={template.imageUrl} alt="" fill sizes="256px" className="object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/35 to-black/70" />
+                </>
+              )}
+
+              <div className="relative z-10 pb-20">
+                {/* Hero */}
+                <div className="flex min-h-full flex-col items-center justify-center gap-3 px-6 py-10 text-center">
                   {names ? (
                     <p
                       className={cn(
@@ -290,137 +251,93 @@ export function PhonePreview({ value }: { value: InvitationDetail }) {
                     <QrCodeIcon className={cn("mt-2 size-6", template?.imageUrl ? "text-white/70" : "text-gray-400")} />
                   )}
                 </div>
-              </div>
 
-              {/* Program */}
-              {value.showEventProgram && value.programItems.length > 0 && (
-                <div className="border-t border-gray-100 px-5 py-4">
-                  <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-gray-700">
-                    <ClipboardListIcon className="size-3.5 text-gold" />
-                    برنامج الحفل
-                  </p>
-                  <ul className="space-y-1.5">
-                    {value.programItems.map((item, index) => (
-                      <li key={index} className="flex items-center justify-between text-[11px] text-gray-600">
-                        <span>{item.title}</span>
-                        {item.time && <span className="text-gray-400">{item.time}</span>}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Rules */}
-              {value.showEventRules && rules.length > 0 && (
-                <div className="border-t border-gray-100 px-5 py-4">
-                  <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-gray-700">
-                    <ClipboardListIcon className="size-3.5 text-gold" />
-                    تفاصيل الحدث
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {rules.map((rule) => (
-                      <span key={rule} className="rounded-full bg-gold/10 px-2 py-0.5 text-[10px] text-gold">
-                        {rule}
-                      </span>
-                    ))}
+                {/* Program */}
+                {value.showEventProgram && value.programItems.length > 0 && (
+                  <div className={SECTION_CARD}>
+                    <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-gray-700">
+                      <ClipboardListIcon className="size-3.5 text-gold" />
+                      برنامج الحفل
+                    </p>
+                    <ul className="space-y-1.5">
+                      {value.programItems.map((item, index) => (
+                        <li key={index} className="flex items-center justify-between text-[11px] text-gray-600">
+                          <span>{item.title}</span>
+                          {item.time && <span className="text-gray-400">{item.time}</span>}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Accommodation */}
-              {value.showAccommodation && value.accommodations.length > 0 && (
-                <div className="border-t border-gray-100 px-5 py-4">
-                  <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-gray-700">
-                    <BedDoubleIcon className="size-3.5 text-gold" />
-                    أين تقيمون
-                  </p>
-                  <div className="space-y-2">
-                    {value.accommodations.map((hotel, index) => (
-                      <div key={index} className="rounded-lg bg-gray-50 px-2.5 py-2">
-                        <p className="text-[11px] font-medium text-gray-800">{hotel.name || "—"}</p>
-                      </div>
-                    ))}
+                {/* Rules */}
+                {value.showEventRules && rules.length > 0 && (
+                  <div className={SECTION_CARD}>
+                    <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-gray-700">
+                      <ClipboardListIcon className="size-3.5 text-gold" />
+                      تفاصيل الحدث
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {rules.map((rule) => (
+                        <span key={rule} className="rounded-full bg-gold/10 px-2 py-0.5 text-[10px] text-gold">
+                          {rule}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Gallery */}
-              {value.galleryImages.filter(Boolean).length > 0 && (
-                <div className="border-t border-gray-100 px-5 py-4">
-                  <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-gray-700">
-                    <ImageIcon className="size-3.5 text-gold" />
-                    معرض الصور
-                  </p>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {value.galleryImages.filter(Boolean).map((url, index) => (
-                      <div key={index} className="aspect-square overflow-hidden rounded-md bg-gray-100">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={url} alt="" className="size-full object-cover" />
-                      </div>
-                    ))}
+                {/* Accommodation */}
+                {value.showAccommodation && value.accommodations.length > 0 && (
+                  <div className={SECTION_CARD}>
+                    <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-gray-700">
+                      <BedDoubleIcon className="size-3.5 text-gold" />
+                      أين تقيمون
+                    </p>
+                    <div className="space-y-2">
+                      {value.accommodations.map((hotel, index) => (
+                        <div key={index} className="rounded-lg bg-gray-50 px-2.5 py-2">
+                          <p className="text-[11px] font-medium text-gray-800">{hotel.name || "—"}</p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Personal message */}
-              {value.showPersonalMessage && value.personalMessageText && (
-                <div className="border-t border-gray-100 px-5 py-4 text-center">
-                  {value.personalMessageTitle && (
-                    <p className="text-[11px] font-semibold text-gray-700">{value.personalMessageTitle}</p>
-                  )}
-                  <p className="mt-1 text-[11px] leading-relaxed text-gray-600">{value.personalMessageText}</p>
-                  {value.personalMessageSignature && (
-                    <p className="mt-1 text-[10px] text-gold">{value.personalMessageSignature}</p>
-                  )}
-                </div>
-              )}
-            </div>
+                {/* Gallery */}
+                {value.galleryImages.filter(Boolean).length > 0 && (
+                  <div className={SECTION_CARD}>
+                    <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-gray-700">
+                      <ImageIcon className="size-3.5 text-gold" />
+                      معرض الصور
+                    </p>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {value.galleryImages.filter(Boolean).map((url, index) => (
+                        <div key={index} className="aspect-square overflow-hidden rounded-md bg-gray-100">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={url} alt="" className="size-full object-cover" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-            {navItems.length > 0 && (
-              <div
-                className="absolute inset-x-3 bottom-3 z-30 grid items-center rounded-2xl border border-black/10 bg-white/60 px-1 py-2 shadow-sm backdrop-blur-md"
-                style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}
-              >
-                {navItems.map((item) =>
-                  item.isAction ? (
-                    <button
-                      key={item.key}
-                      type="button"
-                      className="flex min-w-0 flex-col items-center gap-0.5"
-                    >
-                      <span
-                        className="-mt-6 flex size-[52px] shrink-0 items-center justify-center rounded-full shadow-[0_6px_24px_rgba(200,162,74,0.5),0_0_0_2px_rgba(200,162,74,0.2)]"
-                        style={{ backgroundImage: "linear-gradient(135deg, #C8A24A 0%, #F0D98A 50%, #C8A24A 100%)" }}
-                      >
-                        <item.icon className="size-6 text-white drop-shadow-sm" />
-                      </span>
-                    </button>
-                  ) : (
-                    <button
-                      key={item.key}
-                      type="button"
-                      onClick={() => setOpenModal(item.key)}
-                      className={cn(
-                        "flex min-w-0 flex-col items-center gap-1 transition-colors",
-                        openModal === item.key ? "text-gold" : "text-gray-800 hover:text-gold"
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "flex size-8 shrink-0 items-center justify-center rounded-full transition-colors",
-                          openModal === item.key ? "bg-gold/15" : "bg-black/[0.06]"
-                        )}
-                      >
-                        <item.icon className="size-4" />
-                      </span>
-                      <span className="w-full truncate text-center text-[7px] font-medium uppercase leading-none">
-                        {item.label}
-                      </span>
-                    </button>
-                  )
+                {/* Personal message */}
+                {value.showPersonalMessage && value.personalMessageText && (
+                  <div className={cn(SECTION_CARD, "text-center")}>
+                    {value.personalMessageTitle && (
+                      <p className="text-[11px] font-semibold text-gray-700">{value.personalMessageTitle}</p>
+                    )}
+                    <p className="mt-1 text-[11px] leading-relaxed text-gray-600">{value.personalMessageText}</p>
+                    {value.personalMessageSignature && (
+                      <p className="mt-1 text-[10px] text-gold">{value.personalMessageSignature}</p>
+                    )}
+                  </div>
                 )}
               </div>
-            )}
+            </div>
+
+            <BottomBar items={navItems} activeKey={openModal} onSelect={handleNavSelect} />
 
             {openModal && (
               <>
@@ -430,7 +347,7 @@ export function PhonePreview({ value }: { value: InvitationDetail }) {
                   onClick={() => setOpenModal(null)}
                   className="absolute inset-0 z-40 bg-black/30"
                 />
-                <div className="absolute inset-x-3 bottom-20 z-50 flex max-h-[55%] flex-col overflow-hidden rounded-3xl border border-white/40 bg-white/95 shadow-[0_8px_40px_rgba(0,0,0,0.18)] backdrop-blur-2xl">
+                <div className="absolute inset-x-3 bottom-20 z-50 flex max-h-[70%] flex-col overflow-hidden rounded-3xl border border-white/40 bg-white/95 shadow-[0_8px_40px_rgba(0,0,0,0.18)] backdrop-blur-2xl">
                   <div className="relative flex shrink-0 items-center justify-center border-b border-gray-100/80 bg-gradient-to-r from-gray-50/60 to-white/60 px-4 py-2.5">
                     <h3 className="text-xs font-semibold tracking-wide text-gray-700">{modalTitles[openModal]}</h3>
                     <button
@@ -446,6 +363,8 @@ export function PhonePreview({ value }: { value: InvitationDetail }) {
                 </div>
               </>
             )}
+
+            {cameraOpen && <CameraOverlay isRtl={isRtl} onClose={() => setCameraOpen(false)} />}
           </div>
         </div>
       </div>

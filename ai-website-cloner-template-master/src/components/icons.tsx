@@ -33,6 +33,8 @@ export {
   Gift as GiftIcon,
   LayoutGrid as LayoutGridIcon,
   Play as PlayIcon,
+  Pause as PauseIcon,
+  Volume2 as VolumeIcon,
   Trash2 as TrashIcon,
   Plus as PlusIcon,
   Lightbulb as LightbulbIcon,
