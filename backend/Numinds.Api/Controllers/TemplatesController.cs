@@ -35,6 +35,15 @@ public class TemplatesController(NumindsDbContext db) : ControllerBase
             })
             .ToListAsync(cancellationToken);
 
+        // SQLite translates Guid.ToString() in the query above to its own hex()-style
+        // function, which emits uppercase — inconsistent with the lowercase Guid.ToString()
+        // .NET uses everywhere else (e.g. InvitationDto.TemplateId). Normalize here so
+        // template ids compare equal to the ones invitations are actually saved with.
+        foreach (var template in templates)
+        {
+            template.Id = template.Id.ToLowerInvariant();
+        }
+
         return Ok(templates);
     }
 
@@ -51,7 +60,7 @@ public class TemplatesController(NumindsDbContext db) : ControllerBase
 
         return Ok(new TemplateDto
         {
-            Id = template.Id.ToString(),
+            Id = template.Id.ToString().ToLowerInvariant(),
             Code = template.Code,
             Category = template.Category,
             ImageUrl = template.ImageUrl,
