@@ -15,10 +15,17 @@ import {
   MusicIcon,
   PhoneIcon,
   QrCodeIcon,
+  XIcon,
 } from "@/components/icons";
 import { getTemplates } from "@/lib/services/templates.service";
 import type { TemplateDto } from "@/types/api";
-import type { InvitationDetail } from "@/types/studio";
+import type { InvitationDetail, VenueItem } from "@/types/studio";
+
+function resolveMapsHref(venue: VenueItem) {
+  if (venue.mapUrl) return venue.mapUrl;
+  const query = [venue.name, venue.address].filter(Boolean).join(", ");
+  return query ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}` : null;
+}
 
 // Keyed by the same `value` codes Step01Language hands out (see
 // steps/Step01Language.tsx). "bilingual" reads Arabic-first, so it shares the
@@ -93,9 +100,8 @@ const RULES_DELIMITER = " · ";
 
 export function PhonePreview({ value }: { value: InvitationDetail }) {
   const [templates, setTemplates] = useState<TemplateDto[]>([]);
-  const [activeSection, setActiveSection] = useState<string | null>(null);
+  const [openModal, setOpenModal] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -130,32 +136,82 @@ export function PhonePreview({ value }: { value: InvitationDetail }) {
     { key: "rsvp", icon: HeartIcon, label: labels.rsvp, show: value.enableRsvp },
   ].filter((item) => item.show);
 
-  useEffect(() => {
-    const root = scrollRef.current;
-    if (!root || navItems.length === 0) return;
+  const modalTitles: Record<string, string> = {
+    contact: labels.contact,
+    location: labels.location,
+    music: labels.music,
+    rsvp: labels.rsvp,
+  };
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        if (visible) setActiveSection(visible.target.getAttribute("data-section"));
-      },
-      { root, threshold: [0.4, 0.6] }
-    );
-
-    navItems.forEach((item) => {
-      const el = sectionRefs.current[item.key];
-      if (el) observer.observe(el);
-    });
-
-    return () => observer.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navItems.map((item) => item.key).join(",")]);
-
-  function goToSection(key: string) {
-    setActiveSection(key);
-    sectionRefs.current[key]?.scrollIntoView({ behavior: "smooth", block: "start" });
+  function renderModalBody(key: string) {
+    switch (key) {
+      case "contact":
+        return (
+          <div className="space-y-2.5">
+            {value.contacts.map((contact, index) => (
+              <div key={index} className="flex items-center justify-between gap-2 rounded-xl bg-gray-50 px-3 py-2.5">
+                <span className="text-xs font-medium text-gray-800">
+                  {contact.name}
+                  {contact.role ? ` (${contact.role})` : ""}
+                </span>
+                <span dir="ltr" className="text-xs text-gray-500">
+                  {contact.phone}
+                </span>
+              </div>
+            ))}
+          </div>
+        );
+      case "location":
+        return (
+          <div className="space-y-2.5">
+            {value.venues.map((venue, index) => {
+              const href = resolveMapsHref(venue);
+              return (
+                <div key={index} className="space-y-2 rounded-xl bg-gray-50 px-3 py-2.5">
+                  <p className="text-xs font-medium text-gray-800">{venue.name || "—"}</p>
+                  {venue.address && <p className="text-[11px] text-gray-500">{venue.address}</p>}
+                  {href && (
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-1.5 rounded-lg border border-gold/40 py-1.5 text-[11px] font-medium text-gold transition-colors hover:bg-gold/5"
+                    >
+                      <MapPinIcon className="size-3" />
+                      {isRtl ? "افتح خرائط جوجل" : "Open Google Maps"}
+                    </a>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        );
+      case "music":
+        return (
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2.5">
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-gold/10 text-gold">
+                <MusicIcon className="size-3.5" />
+              </span>
+              <p className="truncate text-xs text-gray-700">{value.musicTitle || value.musicUrl}</p>
+            </div>
+            {value.musicUrl && <audio src={value.musicUrl} controls className="h-8 w-full" />}
+          </div>
+        );
+      case "rsvp":
+        return (
+          <div className="space-y-3 text-center">
+            <p className="text-xs text-gray-500">
+              <MessageCircleIcon className="mb-0.5 inline size-3.5" /> يسعدنا تأكيد حضوركم
+            </p>
+            <button type="button" className="rounded-full bg-gold px-6 py-2 text-xs font-medium text-white">
+              {labels.rsvp}
+            </button>
+          </div>
+        );
+      default:
+        return null;
+    }
   }
 
   return (
@@ -173,8 +229,10 @@ export function PhonePreview({ value }: { value: InvitationDetail }) {
             )}
           >
             <div ref={scrollRef} className="flex-1 overflow-y-auto scroll-smooth pb-20">
-              {/* Hero */}
-              <div className="relative flex min-h-[60%] flex-col items-center justify-center gap-3 px-6 py-10 text-center">
+              {/* Hero — min-h-full so the template background fills the entire
+                  phone viewport with no cream cutoff before other sections
+                  come into view on scroll. */}
+              <div className="relative flex min-h-full flex-col items-center justify-center gap-3 px-6 py-10 text-center">
                 {template?.imageUrl && (
                   <>
                     <Image
@@ -316,106 +374,6 @@ export function PhonePreview({ value }: { value: InvitationDetail }) {
                   )}
                 </div>
               )}
-
-              {/* Location */}
-              {value.venues.length > 0 && (
-                <div
-                  ref={(el) => {
-                    sectionRefs.current.location = el;
-                  }}
-                  data-section="location"
-                  className="border-t border-gray-100 px-5 py-4"
-                >
-                  <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-gray-700">
-                    <MapPinIcon className="size-3.5 text-gold" />
-                    الموقع
-                  </p>
-                  <div className="space-y-2">
-                    {value.venues.map((venue, index) => (
-                      <div key={index} className="rounded-lg bg-gray-50 px-2.5 py-2">
-                        <p className="text-[11px] font-medium text-gray-800">{venue.name || "—"}</p>
-                        {venue.address && <p className="text-[10px] text-gray-500">{venue.address}</p>}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Music */}
-              {value.musicUrl && (
-                <div
-                  ref={(el) => {
-                    sectionRefs.current.music = el;
-                  }}
-                  data-section="music"
-                  className="border-t border-gray-100 px-5 py-4"
-                >
-                  <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-gray-700">
-                    <MusicIcon className="size-3.5 text-gold" />
-                    موسيقى
-                  </p>
-                  <div className="flex items-center gap-2 rounded-lg bg-gray-50 px-2.5 py-2">
-                    <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-gold/10 text-gold">
-                      <MusicIcon className="size-3" />
-                    </span>
-                    <p className="truncate text-[11px] text-gray-700">{value.musicTitle || value.musicUrl}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Contacts */}
-              {value.contacts.length > 0 && (
-                <div
-                  ref={(el) => {
-                    sectionRefs.current.contact = el;
-                  }}
-                  data-section="contact"
-                  className="border-t border-gray-100 px-5 py-4"
-                >
-                  <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-gray-700">
-                    <PhoneIcon className="size-3.5 text-gold" />
-                    تواصل
-                  </p>
-                  <div className="space-y-1.5">
-                    {value.contacts.map((contact, index) => (
-                      <div key={index} className="flex items-center justify-between text-[11px]">
-                        <span className="text-gray-700">
-                          {contact.name}
-                          {contact.role ? ` (${contact.role})` : ""}
-                        </span>
-                        <span dir="ltr" className="text-gray-400">
-                          {contact.phone}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* RSVP */}
-              {value.enableRsvp && (
-                <div
-                  ref={(el) => {
-                    sectionRefs.current.rsvp = el;
-                  }}
-                  data-section="rsvp"
-                  className="border-t border-gray-100 px-5 py-5 text-center"
-                >
-                  <p className="mb-2 flex items-center justify-center gap-1.5 text-[11px] font-semibold text-gray-700">
-                    <HeartIcon className="size-3.5 text-gold" />
-                    تأكيد الحضور
-                  </p>
-                  <p className="mb-3 text-[10px] text-gray-500">
-                    <MessageCircleIcon className="mb-0.5 inline size-3" /> يسعدنا تأكيد حضوركم
-                  </p>
-                  <button
-                    type="button"
-                    className="rounded-full bg-gold px-5 py-1.5 text-[11px] font-medium text-white"
-                  >
-                    تأكيد الحضور
-                  </button>
-                </div>
-              )}
             </div>
 
             {navItems.length > 0 && (
@@ -428,7 +386,6 @@ export function PhonePreview({ value }: { value: InvitationDetail }) {
                     <button
                       key={item.key}
                       type="button"
-                      onClick={() => goToSection(item.key)}
                       className="flex min-w-0 flex-col items-center gap-0.5"
                     >
                       <span
@@ -442,16 +399,16 @@ export function PhonePreview({ value }: { value: InvitationDetail }) {
                     <button
                       key={item.key}
                       type="button"
-                      onClick={() => goToSection(item.key)}
+                      onClick={() => setOpenModal(item.key)}
                       className={cn(
                         "flex min-w-0 flex-col items-center gap-1 transition-colors",
-                        activeSection === item.key ? "text-gold" : "text-gray-800 hover:text-gold"
+                        openModal === item.key ? "text-gold" : "text-gray-800 hover:text-gold"
                       )}
                     >
                       <span
                         className={cn(
                           "flex size-8 shrink-0 items-center justify-center rounded-full transition-colors",
-                          activeSection === item.key ? "bg-gold/15" : "bg-black/[0.06]"
+                          openModal === item.key ? "bg-gold/15" : "bg-black/[0.06]"
                         )}
                       >
                         <item.icon className="size-4" />
@@ -463,6 +420,31 @@ export function PhonePreview({ value }: { value: InvitationDetail }) {
                   )
                 )}
               </div>
+            )}
+
+            {openModal && (
+              <>
+                <button
+                  type="button"
+                  aria-label="إغلاق"
+                  onClick={() => setOpenModal(null)}
+                  className="absolute inset-0 z-40 bg-black/30"
+                />
+                <div className="absolute inset-x-3 bottom-20 z-50 flex max-h-[55%] flex-col overflow-hidden rounded-3xl border border-white/40 bg-white/95 shadow-[0_8px_40px_rgba(0,0,0,0.18)] backdrop-blur-2xl">
+                  <div className="relative flex shrink-0 items-center justify-center border-b border-gray-100/80 bg-gradient-to-r from-gray-50/60 to-white/60 px-4 py-2.5">
+                    <h3 className="text-xs font-semibold tracking-wide text-gray-700">{modalTitles[openModal]}</h3>
+                    <button
+                      type="button"
+                      onClick={() => setOpenModal(null)}
+                      aria-label="إغلاق"
+                      className="absolute end-3 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-full transition-colors hover:bg-gray-100"
+                    >
+                      <XIcon className="size-3.5 text-gray-500" />
+                    </button>
+                  </div>
+                  <div className="min-h-0 flex-1 overflow-y-auto p-4">{renderModalBody(openModal)}</div>
+                </div>
+              </>
             )}
           </div>
         </div>
