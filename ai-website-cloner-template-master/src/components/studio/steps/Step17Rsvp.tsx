@@ -1,5 +1,4 @@
 import { ToggleField } from "@/components/studio/fields/ToggleField";
-import { TextField } from "@/components/studio/fields/TextField";
 import type { InvitationDetail } from "@/types/studio";
 
 export function Step17Rsvp({
@@ -47,14 +46,6 @@ export function Step17Rsvp({
               />
             </div>
           </div>
-
-          <TextField
-            label="الحد الأقصى لعدد الضيوف"
-            type="number"
-            value={value.guestLimit != null ? String(value.guestLimit) : ""}
-            placeholder="بدون حد"
-            onChange={(guestLimit) => onChange({ guestLimit: guestLimit ? Number(guestLimit) : null })}
-          />
         </>
       )}
     </div>

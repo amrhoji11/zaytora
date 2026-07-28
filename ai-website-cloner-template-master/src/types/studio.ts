@@ -18,6 +18,12 @@ export interface ContactItem {
   phone: string;
 }
 
+export interface WishlistItem {
+  name: string;
+  link?: string;
+  imageUrl?: string;
+}
+
 export interface InvitationDetail {
   id: string;
   status: string;
@@ -76,12 +82,29 @@ export interface InvitationDetail {
 
   enableGifts: boolean;
   giftIban?: string | null;
+  // Not yet backed by a backend column (see StudioWizard/PhonePreview notes) —
+  // persists for the editing session but won't survive a reload until the
+  // API grows matching fields.
+  giftFeeCoverage?: boolean;
+  giftMessage?: string | null;
+  giftBankTransferEnabled?: boolean;
+  giftAccountHolderName?: string | null;
+  giftQrImageUrl?: string | null;
+  giftWishlistEnabled?: boolean;
+  giftWishlistItems?: WishlistItem[];
 
   hideCameraButton: boolean;
   hideSaveButton: boolean;
   hideCapturedGallery: boolean;
 
   enableQrEntry: boolean;
+  // Not yet backed by a backend column (same as the gift-step additions
+  // above) — persists for the editing session but won't survive a reload
+  // until the API grows matching fields.
+  qrGuestCount?: number | null;
+  qrScannerCount?: number | null;
+  qrScanStart?: string | null;
+  qrScanEnd?: string | null;
 
   enableRsvp: boolean;
   rsvpShowAttendance: boolean;
