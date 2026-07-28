@@ -4,9 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { MusicIcon, PauseIcon, PlayIcon, VolumeIcon } from "@/components/icons";
 
 // Used only when a track's own URL fails to load, so the player never goes
-// completely dead — a real, freely-licensed demo file (SoundHelix hosts
-// these specifically for use in audio/video player demos).
-const FALLBACK_SAMPLE_URL = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
+// completely dead — a locally generated placeholder tone (no external
+// network dependency, so it can't fail for the same reason the original did).
+const FALLBACK_SAMPLE_URL = "/audio/fallback-sample.wav";
 
 function formatTime(seconds: number) {
   if (!Number.isFinite(seconds) || seconds < 0) return "0:00";

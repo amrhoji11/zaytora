@@ -5,25 +5,22 @@ import { CheckIcon, LinkIcon, MusicIcon, PauseIcon, PlayIcon, RefreshIcon, Trash
 import { cn } from "@/lib/utils";
 import type { InvitationDetail } from "@/types/studio";
 
-// This template ships no licensed audio, so each preset plays a freely
-// licensed demo instrumental (SoundHelix hosts these specifically for use
-// in audio/video player demos) rather than hotlinking a real copy of the
-// named commercial track. Swap these for actual hosted/licensed files in
-// production.
+// This template ships no licensed audio, so each preset plays a short,
+// locally generated placeholder tone (public/audio/*.wav — a distinct sine
+// tone per slot, no external network dependency) rather than hotlinking a
+// real copy of the named commercial track. Swap these for actual
+// hosted/licensed files in production.
 const PRESET_TRACKS = [
-  { id: "wildest-dreams", title: "Wildest Dreams", artist: "Taylor Swift", track: 1 },
-  { id: "eid-milad", title: "Eid Milad", artist: "Nancy Ajram", track: 2 },
-  { id: "birthday-piano", title: "Birthday Song", artist: "Piano", track: 3 },
-  { id: "happy-birthday", title: "Happy Birthday", artist: "Khalid Assiri", track: 4 },
-  { id: "ahlan-ya-mama", title: "Ahlan Ya Mama", artist: "Balqees", track: 5 },
-  { id: "hassa-be-saada", title: "Hassa Be Sa'ada", artist: "Carmen Soliman", track: 6 },
-  { id: "huda-arabi", title: "Huda Arabi", track: 7 },
-  { id: "river-flows", title: "River Flows in You", artist: "Yiruma", track: 8 },
-  { id: "elissa", title: "Elissa", track: 9 },
-].map(({ track, ...rest }) => ({
-  ...rest,
-  url: `https://www.soundhelix.com/examples/mp3/SoundHelix-Song-${track}.mp3`,
-}));
+  { id: "wildest-dreams", title: "Wildest Dreams", artist: "Taylor Swift" },
+  { id: "eid-milad", title: "Eid Milad", artist: "Nancy Ajram" },
+  { id: "birthday-piano", title: "Birthday Song", artist: "Piano" },
+  { id: "happy-birthday", title: "Happy Birthday", artist: "Khalid Assiri" },
+  { id: "ahlan-ya-mama", title: "Ahlan Ya Mama", artist: "Balqees" },
+  { id: "hassa-be-saada", title: "Hassa Be Sa'ada", artist: "Carmen Soliman" },
+  { id: "huda-arabi", title: "Huda Arabi" },
+  { id: "river-flows", title: "River Flows in You", artist: "Yiruma" },
+  { id: "elissa", title: "Elissa" },
+].map((track) => ({ ...track, url: `/audio/${track.id}.wav` }));
 
 function trackLabel(track: { title: string; artist?: string }) {
   return track.artist ? `${track.title} - ${track.artist}` : track.title;
