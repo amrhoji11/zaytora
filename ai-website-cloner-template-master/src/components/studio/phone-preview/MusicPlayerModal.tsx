@@ -3,6 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import { MusicIcon, PauseIcon, PlayIcon, VolumeIcon } from "@/components/icons";
 
+// Used only when a track's own URL fails to load, so the player never goes
+// completely dead — a real, freely-licensed demo file (SoundHelix hosts
+// these specifically for use in audio/video player demos).
+const FALLBACK_SAMPLE_URL = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
+
 function formatTime(seconds: number) {
   if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
   const mins = Math.floor(seconds / 60);
@@ -26,6 +31,25 @@ export function MusicPlayerModal({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
+  const [usingFallback, setUsingFallback] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+
+  const effectiveUrl = usingFallback ? FALLBACK_SAMPLE_URL : url;
+
+  // Reset per-track state whenever the selected track changes, so a new
+  // song doesn't inherit the last one's clock or fallback status. Done
+  // during render (React's sanctioned "adjust state on prop change"
+  // pattern) rather than in an effect, since it needs to happen before
+  // the reset audio element paints, not one render later.
+  const [trackedUrl, setTrackedUrl] = useState(url);
+  if (trackedUrl !== url) {
+    setTrackedUrl(url);
+    setUsingFallback(false);
+    setIsPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
+    setLoadError(false);
+  }
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -33,27 +57,48 @@ export function MusicPlayerModal({
 
     const onTime = () => setCurrentTime(audio.currentTime);
     const onMeta = () => setDuration(audio.duration || 0);
+    const onPlay = () => setIsPlaying(true);
+    const onPause = () => setIsPlaying(false);
     const onEnd = () => setIsPlaying(false);
+    const onError = () => {
+      setIsPlaying(false);
+      if (!usingFallback) {
+        setUsingFallback(true);
+      } else {
+        setLoadError(true);
+      }
+    };
 
     audio.addEventListener("timeupdate", onTime);
     audio.addEventListener("loadedmetadata", onMeta);
+    audio.addEventListener("durationchange", onMeta);
+    audio.addEventListener("play", onPlay);
+    audio.addEventListener("pause", onPause);
     audio.addEventListener("ended", onEnd);
+    audio.addEventListener("error", onError);
     return () => {
       audio.removeEventListener("timeupdate", onTime);
       audio.removeEventListener("loadedmetadata", onMeta);
+      audio.removeEventListener("durationchange", onMeta);
+      audio.removeEventListener("play", onPlay);
+      audio.removeEventListener("pause", onPause);
       audio.removeEventListener("ended", onEnd);
+      audio.removeEventListener("error", onError);
     };
-  }, [url]);
+  }, [effectiveUrl, usingFallback]);
 
   function togglePlay() {
     const audio = audioRef.current;
     if (!audio) return;
-    if (isPlaying) {
-      audio.pause();
-      setIsPlaying(false);
+    // .play()/.pause() run directly inside the click handler (a real user
+    // gesture), which is what satisfies browser autoplay policies — the
+    // isPlaying state itself is only ever set from the audio's own
+    // play/pause/ended events above, so the vinyl only spins when the
+    // element is actually producing sound.
+    if (audio.paused) {
+      audio.play().catch(() => setLoadError(true));
     } else {
-      audio.play().catch(() => {});
-      setIsPlaying(true);
+      audio.pause();
     }
   }
 
@@ -71,7 +116,7 @@ export function MusicPlayerModal({
 
   return (
     <div className="flex flex-col items-center gap-3 py-1">
-      {url && <audio ref={audioRef} src={url} preload="metadata" />}
+      {effectiveUrl && <audio key={effectiveUrl} ref={audioRef} src={effectiveUrl} preload="metadata" />}
 
       <div
         className="relative flex size-20 shrink-0 items-center justify-center rounded-full bg-[radial-gradient(circle,#2a2a2a_0%,#111_60%,#000_100%)] shadow-lg animate-spin"
@@ -95,11 +140,15 @@ export function MusicPlayerModal({
       </div>
 
       <p className="max-w-[85%] truncate text-center text-xs font-medium text-gray-700">{title || fallbackLabel}</p>
+      {usingFallback && !loadError && (
+        <p className="text-[10px] text-gray-400">تعذّر تحميل المقطع — يتم تشغيل مقطع تجريبي</p>
+      )}
+      {loadError && <p className="text-[10px] text-rose-500">تعذّر تشغيل الصوت</p>}
 
       <button
         type="button"
         onClick={togglePlay}
-        disabled={!url}
+        disabled={!effectiveUrl || loadError}
         aria-label={isPlaying ? "إيقاف مؤقت" : "تشغيل"}
         className="flex size-9 items-center justify-center rounded-full bg-gold text-white shadow transition-transform active:scale-95 disabled:opacity-40"
       >
@@ -113,7 +162,7 @@ export function MusicPlayerModal({
           max={duration || 0}
           value={Math.min(currentTime, duration || 0)}
           onChange={(event) => seek(Number(event.target.value))}
-          disabled={!url}
+          disabled={!effectiveUrl || loadError}
           className="w-full accent-gold disabled:opacity-40"
         />
         <div dir="ltr" className="flex items-center justify-between text-[10px] text-gray-400">

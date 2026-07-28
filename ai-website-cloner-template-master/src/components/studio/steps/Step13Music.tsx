@@ -1,25 +1,29 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { TextField } from "@/components/studio/fields/TextField";
 import { HintBox } from "@/components/studio/fields/HintBox";
 import { CheckIcon, LinkIcon, MusicIcon, PauseIcon, PlayIcon, TrashIcon, UploadIcon } from "@/components/icons";
 import { cn } from "@/lib/utils";
 import type { InvitationDetail } from "@/types/studio";
 
-// Placeholder preview URLs — this template ships no licensed audio, so each
-// preset points at a stand-in file rather than hotlinking a real copy of a
-// commercial track. Swap these for actual hosted/licensed files in
+// This template ships no licensed audio, so each preset plays a freely
+// licensed demo instrumental (SoundHelix hosts these specifically for use
+// in audio/video player demos) rather than hotlinking a real copy of the
+// named commercial track. Swap these for actual hosted/licensed files in
 // production.
 const PRESET_TRACKS = [
-  { id: "wildest-dreams", title: "Wildest Dreams", artist: "Taylor Swift" },
-  { id: "eid-milad", title: "Eid Milad", artist: "Nancy Ajram" },
-  { id: "birthday-piano", title: "Birthday Song", artist: "Piano" },
-  { id: "happy-birthday", title: "Happy Birthday", artist: "Khalid Assiri" },
-  { id: "ahlan-ya-mama", title: "Ahlan Ya Mama", artist: "Balqees" },
-  { id: "hassa-be-saada", title: "Hassa Be Sa'ada", artist: "Carmen Soliman" },
-  { id: "huda-arabi", title: "Huda Arabi" },
-  { id: "river-flows", title: "River Flows in You", artist: "Yiruma" },
-  { id: "elissa", title: "Elissa" },
-].map((track) => ({ ...track, url: `https://example.com/audio/${track.id}.mp3` }));
+  { id: "wildest-dreams", title: "Wildest Dreams", artist: "Taylor Swift", track: 1 },
+  { id: "eid-milad", title: "Eid Milad", artist: "Nancy Ajram", track: 2 },
+  { id: "birthday-piano", title: "Birthday Song", artist: "Piano", track: 3 },
+  { id: "happy-birthday", title: "Happy Birthday", artist: "Khalid Assiri", track: 4 },
+  { id: "ahlan-ya-mama", title: "Ahlan Ya Mama", artist: "Balqees", track: 5 },
+  { id: "hassa-be-saada", title: "Hassa Be Sa'ada", artist: "Carmen Soliman", track: 6 },
+  { id: "huda-arabi", title: "Huda Arabi", track: 7 },
+  { id: "river-flows", title: "River Flows in You", artist: "Yiruma", track: 8 },
+  { id: "elissa", title: "Elissa", track: 9 },
+].map(({ track, ...rest }) => ({
+  ...rest,
+  url: `https://www.soundhelix.com/examples/mp3/SoundHelix-Song-${track}.mp3`,
+}));
 
 function trackLabel(track: { title: string; artist?: string }) {
   return track.artist ? `${track.title} - ${track.artist}` : track.title;
@@ -52,6 +56,23 @@ export function Step13Music({
 
   const { h, m, s } = secondsToHms(value.musicStartSeconds ?? 0);
 
+  // playingId only ever reflects the audio element's own pause/ended/error
+  // events — not a manually-set flag — so the row highlight can't drift out
+  // of sync with what's actually making sound.
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const onPause = () => setPlayingId(null);
+    audio.addEventListener("pause", onPause);
+    audio.addEventListener("ended", onPause);
+    audio.addEventListener("error", onPause);
+    return () => {
+      audio.removeEventListener("pause", onPause);
+      audio.removeEventListener("ended", onPause);
+      audio.removeEventListener("error", onPause);
+    };
+  }, []);
+
   function selectTrack(track: (typeof PRESET_TRACKS)[number]) {
     onChange({ musicUrl: track.url, musicTitle: trackLabel(track) });
   }
@@ -61,12 +82,10 @@ export function Step13Music({
     if (!audio) return;
     if (playingId === track.id) {
       audio.pause();
-      setPlayingId(null);
       return;
     }
     audio.src = track.url;
-    audio.play().catch(() => {});
-    setPlayingId(track.id);
+    audio.play().then(() => setPlayingId(track.id)).catch(() => setPlayingId(null));
   }
 
   function updateStart(next: Partial<{ h: number; m: number; s: number }>) {
@@ -96,7 +115,7 @@ export function Step13Music({
 
   return (
     <div className="space-y-5">
-      <audio ref={audioRef} onEnded={() => setPlayingId(null)} className="hidden" />
+      <audio ref={audioRef} className="hidden" />
 
       <HintBox>اختر مقطوعة من المكتبة أو ارفع ملفك الخاص — تعزف الموسيقى عند فتح الدعوة.</HintBox>
 
