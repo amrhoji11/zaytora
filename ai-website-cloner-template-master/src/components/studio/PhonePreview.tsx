@@ -162,17 +162,17 @@ export function PhonePreview({ value }: { value: InvitationDetail }) {
     <div className="sticky top-24 flex flex-col items-center gap-3">
       <div className="relative w-64">
         <div className="absolute inset-0 scale-110 rounded-[3rem] bg-gold/20 blur-3xl" />
-        <div className="relative rounded-[2rem] bg-gray-900 p-[3px] shadow-2xl">
-          <div className="absolute left-1/2 top-1.5 z-20 h-3 w-16 -translate-x-1/2 rounded-full bg-gray-900" />
+        <div className="relative rounded-[2.5rem] border border-gray-300 bg-gradient-to-b from-gray-400 to-gray-500 p-2 shadow-2xl">
+          <div className="absolute left-1/2 top-2 z-20 h-3.5 w-24 -translate-x-1/2 rounded-full bg-black" />
           <div
             dir={isRtl ? "rtl" : "ltr"}
             lang={LOCALE_TAGS[language]}
             className={cn(
-              "relative flex aspect-[9/18] flex-col overflow-hidden rounded-[1.85rem] bg-gradient-to-b from-[#F5F0E8] to-white",
+              "relative flex aspect-[9/18] flex-col overflow-hidden rounded-[2.1rem] bg-gradient-to-b from-[#F5F0E8] to-white",
               isRtl ? "text-right" : "text-left"
             )}
           >
-            <div ref={scrollRef} className="flex-1 overflow-y-auto scroll-smooth">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto scroll-smooth pb-20">
               {/* Hero */}
               <div className="relative flex min-h-[60%] flex-col items-center justify-center gap-3 px-6 py-10 text-center">
                 {template?.imageUrl && (
@@ -420,7 +420,7 @@ export function PhonePreview({ value }: { value: InvitationDetail }) {
 
             {navItems.length > 0 && (
               <div
-                className="grid shrink-0 border-t border-gray-100 bg-white/90 py-2 backdrop-blur"
+                className="absolute inset-x-3 bottom-3 z-30 grid items-center rounded-2xl border border-black/10 bg-white/60 px-1 py-2 shadow-sm backdrop-blur-md"
                 style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}
               >
                 {navItems.map((item) =>
@@ -429,12 +429,14 @@ export function PhonePreview({ value }: { value: InvitationDetail }) {
                       key={item.key}
                       type="button"
                       onClick={() => goToSection(item.key)}
-                      className="flex flex-col items-center gap-0.5 text-gray-500"
+                      className="flex min-w-0 flex-col items-center gap-0.5"
                     >
-                      <span className="-mt-5 flex size-9 items-center justify-center rounded-full bg-gold text-white shadow-lg ring-4 ring-white">
-                        <item.icon className="size-4" />
+                      <span
+                        className="-mt-6 flex size-[52px] shrink-0 items-center justify-center rounded-full shadow-[0_6px_24px_rgba(200,162,74,0.5),0_0_0_2px_rgba(200,162,74,0.2)]"
+                        style={{ backgroundImage: "linear-gradient(135deg, #C8A24A 0%, #F0D98A 50%, #C8A24A 100%)" }}
+                      >
+                        <item.icon className="size-6 text-white drop-shadow-sm" />
                       </span>
-                      <span className="text-[8px]">{item.label}</span>
                     </button>
                   ) : (
                     <button
@@ -442,12 +444,21 @@ export function PhonePreview({ value }: { value: InvitationDetail }) {
                       type="button"
                       onClick={() => goToSection(item.key)}
                       className={cn(
-                        "flex flex-col items-center gap-0.5 transition-colors",
-                        activeSection === item.key ? "text-gold" : "text-gray-500 hover:text-gray-700"
+                        "flex min-w-0 flex-col items-center gap-1 transition-colors",
+                        activeSection === item.key ? "text-gold" : "text-gray-800 hover:text-gold"
                       )}
                     >
-                      <item.icon className="size-4" />
-                      <span className="text-[8px]">{item.label}</span>
+                      <span
+                        className={cn(
+                          "flex size-8 shrink-0 items-center justify-center rounded-full transition-colors",
+                          activeSection === item.key ? "bg-gold/15" : "bg-black/[0.06]"
+                        )}
+                      >
+                        <item.icon className="size-4" />
+                      </span>
+                      <span className="w-full truncate text-center text-[7px] font-medium uppercase leading-none">
+                        {item.label}
+                      </span>
                     </button>
                   )
                 )}

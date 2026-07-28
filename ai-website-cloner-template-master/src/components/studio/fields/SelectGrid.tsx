@@ -1,3 +1,4 @@
+import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CheckIcon } from "@/components/icons";
 
@@ -6,6 +7,11 @@ export interface SelectGridOption {
   label: string;
   sublabel?: string;
   emoji?: string;
+  // Prefer over `emoji` for anything that isn't a plain pictograph — country
+  // flag emoji render as literal two-letter fallback text on Windows (no
+  // flag glyphs in Segoe UI Emoji), which visually duplicates a `label` like
+  // "GB". A real icon component sidesteps that font gap entirely.
+  icon?: LucideIcon;
 }
 
 export function SelectGrid({
@@ -45,7 +51,12 @@ export function SelectGrid({
                 <CheckIcon className="size-3" />
               </span>
             )}
-            {option.emoji && (
+            {option.icon && (
+              <option.icon
+                className={cn("size-5 text-gold", layout === "row" ? "shrink-0" : "mb-1")}
+              />
+            )}
+            {!option.icon && option.emoji && (
               <span className={cn("text-lg", layout === "row" ? "shrink-0" : "mb-1 block")}>
                 {option.emoji}
               </span>

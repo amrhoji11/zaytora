@@ -153,7 +153,7 @@ export function StudioWizard() {
           the form, listed first, lands on the visual right with the phone
           preview on the left — matching numinds.me. This flips automatically
           if a parent ever sets dir="ltr" for a non-Arabic locale. */}
-      <div className="grid gap-8 lg:grid-cols-[1fr_auto]">
+      <div className="grid gap-8 lg:grid-cols-2">
         <div className="rounded-2xl border border-gray-100 shadow-sm">
           {finished ? (
             <div className="flex flex-col items-center gap-4 px-6 py-16 text-center">
@@ -268,7 +268,7 @@ export function StudioWizard() {
           )}
         </div>
 
-        <div className="flex justify-center lg:justify-end">
+        <div className="flex justify-center lg:self-start">
           <PhonePreview value={form} />
         </div>
       </div>
