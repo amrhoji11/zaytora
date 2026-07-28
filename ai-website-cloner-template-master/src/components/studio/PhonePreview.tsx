@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import {
   BedDoubleIcon,
   CalendarIcon,
+  CameraIcon,
   ClipboardListIcon,
   HeartIcon,
   ImageIcon,
@@ -19,11 +20,44 @@ import { getTemplates } from "@/lib/services/templates.service";
 import type { TemplateDto } from "@/types/api";
 import type { InvitationDetail } from "@/types/studio";
 
-function formatEventDate(iso?: string | null) {
+// Keyed by the same `value` codes Step01Language hands out (see
+// steps/Step01Language.tsx). "bilingual" reads Arabic-first, so it shares the
+// Arabic RTL treatment and labels.
+type InvitationLanguage = "en" | "ar" | "ro" | "fr" | "es" | "hi" | "id" | "bilingual";
+
+const RTL_LANGUAGES = new Set<InvitationLanguage>(["ar", "bilingual"]);
+
+const LOCALE_TAGS: Record<InvitationLanguage, string> = {
+  en: "en",
+  ar: "ar",
+  ro: "ro",
+  fr: "fr",
+  es: "es",
+  hi: "hi",
+  id: "id",
+  bilingual: "ar",
+};
+
+const NAV_LABELS: Record<InvitationLanguage, { contact: string; music: string; capture: string; location: string; rsvp: string }> = {
+  ar: { contact: "تواصل", music: "موسيقى", capture: "التقاط", location: "الموقع", rsvp: "تأكيد الحضور" },
+  bilingual: { contact: "تواصل", music: "موسيقى", capture: "التقاط", location: "الموقع", rsvp: "تأكيد الحضور" },
+  en: { contact: "Contact", music: "Music", capture: "Capture", location: "Location", rsvp: "RSVP" },
+  ro: { contact: "Contact", music: "Muzică", capture: "Captură", location: "Locație", rsvp: "Confirmare" },
+  fr: { contact: "Contact", music: "Musique", capture: "Capture", location: "Lieu", rsvp: "Confirmer" },
+  es: { contact: "Contacto", music: "Música", capture: "Captura", location: "Ubicación", rsvp: "Confirmar" },
+  hi: { contact: "संपर्क", music: "संगीत", capture: "कैप्चर", location: "स्थान", rsvp: "उपस्थिति" },
+  id: { contact: "Kontak", music: "Musik", capture: "Ambil", location: "Lokasi", rsvp: "Konfirmasi" },
+};
+
+function resolveLanguage(language?: string | null): InvitationLanguage {
+  return language && language in NAV_LABELS ? (language as InvitationLanguage) : "ar";
+}
+
+function formatEventDate(iso: string | null | undefined, locale: string) {
   if (!iso) return null;
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return null;
-  return new Intl.DateTimeFormat("ar", {
+  return new Intl.DateTimeFormat(locale, {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -77,18 +111,23 @@ export function PhonePreview({ value }: { value: InvitationDetail }) {
 
   const template = templates.find((item) => item.id === value.templateId) ?? null;
 
+  const language = resolveLanguage(value.language);
+  const isRtl = RTL_LANGUAGES.has(language);
+  const labels = NAV_LABELS[language];
+
   const names = [value.firstName, value.invitationType === "couple" ? value.secondName : null]
     .filter(Boolean)
     .join(" & ");
-  const eventDate = formatEventDate(value.eventDateTime);
+  const eventDate = formatEventDate(value.eventDateTime, LOCALE_TAGS[language]);
   const countdown = useCountdown(value.eventDateTime);
   const rules = (value.eventRulesText ?? "").split(RULES_DELIMITER).map((rule) => rule.trim()).filter(Boolean);
 
   const navItems = [
-    { key: "rsvp", icon: HeartIcon, label: "تأكيد الحضور", show: value.enableRsvp },
-    { key: "location", icon: MapPinIcon, label: "الموقع", show: value.venues.length > 0 },
-    { key: "music", icon: MusicIcon, label: "موسيقى", show: Boolean(value.musicUrl) },
-    { key: "contact", icon: PhoneIcon, label: "تواصل", show: value.contacts.length > 0 },
+    { key: "contact", icon: PhoneIcon, label: labels.contact, show: value.contacts.length > 0 },
+    { key: "music", icon: MusicIcon, label: labels.music, show: Boolean(value.musicUrl) },
+    { key: "capture", icon: CameraIcon, label: labels.capture, show: !value.hideCameraButton, isAction: true },
+    { key: "location", icon: MapPinIcon, label: labels.location, show: value.venues.length > 0 },
+    { key: "rsvp", icon: HeartIcon, label: labels.rsvp, show: value.enableRsvp },
   ].filter((item) => item.show);
 
   useEffect(() => {
@@ -125,7 +164,14 @@ export function PhonePreview({ value }: { value: InvitationDetail }) {
         <div className="absolute inset-0 scale-110 rounded-[3rem] bg-gold/20 blur-3xl" />
         <div className="relative rounded-[2rem] bg-gray-900 p-[3px] shadow-2xl">
           <div className="absolute left-1/2 top-1.5 z-20 h-3 w-16 -translate-x-1/2 rounded-full bg-gray-900" />
-          <div className="relative flex aspect-[9/18] flex-col overflow-hidden rounded-[1.85rem] bg-gradient-to-b from-[#F5F0E8] to-white">
+          <div
+            dir={isRtl ? "rtl" : "ltr"}
+            lang={LOCALE_TAGS[language]}
+            className={cn(
+              "relative flex aspect-[9/18] flex-col overflow-hidden rounded-[1.85rem] bg-gradient-to-b from-[#F5F0E8] to-white",
+              isRtl ? "text-right" : "text-left"
+            )}
+          >
             <div ref={scrollRef} className="flex-1 overflow-y-auto scroll-smooth">
               {/* Hero */}
               <div className="relative flex min-h-[60%] flex-col items-center justify-center gap-3 px-6 py-10 text-center">
@@ -373,21 +419,38 @@ export function PhonePreview({ value }: { value: InvitationDetail }) {
             </div>
 
             {navItems.length > 0 && (
-              <div className="grid shrink-0 border-t border-gray-100 bg-white/90 py-2 backdrop-blur" style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}>
-                {navItems.map((item) => (
-                  <button
-                    key={item.key}
-                    type="button"
-                    onClick={() => goToSection(item.key)}
-                    className={cn(
-                      "flex flex-col items-center gap-0.5 transition-colors",
-                      activeSection === item.key ? "text-gold" : "text-gray-500 hover:text-gray-700"
-                    )}
-                  >
-                    <item.icon className="size-4" />
-                    <span className="text-[8px]">{item.label}</span>
-                  </button>
-                ))}
+              <div
+                className="grid shrink-0 border-t border-gray-100 bg-white/90 py-2 backdrop-blur"
+                style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}
+              >
+                {navItems.map((item) =>
+                  item.isAction ? (
+                    <button
+                      key={item.key}
+                      type="button"
+                      onClick={() => goToSection(item.key)}
+                      className="flex flex-col items-center gap-0.5 text-gray-500"
+                    >
+                      <span className="-mt-5 flex size-9 items-center justify-center rounded-full bg-gold text-white shadow-lg ring-4 ring-white">
+                        <item.icon className="size-4" />
+                      </span>
+                      <span className="text-[8px]">{item.label}</span>
+                    </button>
+                  ) : (
+                    <button
+                      key={item.key}
+                      type="button"
+                      onClick={() => goToSection(item.key)}
+                      className={cn(
+                        "flex flex-col items-center gap-0.5 transition-colors",
+                        activeSection === item.key ? "text-gold" : "text-gray-500 hover:text-gray-700"
+                      )}
+                    >
+                      <item.icon className="size-4" />
+                      <span className="text-[8px]">{item.label}</span>
+                    </button>
+                  )
+                )}
               </div>
             )}
           </div>
