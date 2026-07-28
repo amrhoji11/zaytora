@@ -98,6 +98,11 @@ export function Header() {
     };
   }, [accountOpen]);
 
+  useEffect(() => {
+    document.documentElement.dir = language === "AR" ? "rtl" : "ltr";
+    document.documentElement.lang = language === "AR" ? "ar" : "en";
+  }, [language]);
+
   function toggleLanguage() {
     setLanguage((current) => LANGUAGES[(LANGUAGES.indexOf(current) + 1) % LANGUAGES.length]);
   }
