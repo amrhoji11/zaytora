@@ -76,6 +76,11 @@ export function MusicPlayerModal({
     audio.addEventListener("pause", onPause);
     audio.addEventListener("ended", onEnd);
     audio.addEventListener("error", onError);
+
+    // Fresh <audio> element for this track (remounted via key={effectiveUrl}
+    // below) — explicitly (re)load it so playback state starts clean.
+    audio.load();
+
     return () => {
       audio.removeEventListener("timeupdate", onTime);
       audio.removeEventListener("loadedmetadata", onMeta);

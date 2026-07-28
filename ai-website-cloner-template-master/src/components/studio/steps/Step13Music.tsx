@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { TextField } from "@/components/studio/fields/TextField";
 import { HintBox } from "@/components/studio/fields/HintBox";
-import { CheckIcon, LinkIcon, MusicIcon, PauseIcon, PlayIcon, TrashIcon, UploadIcon } from "@/components/icons";
+import { CheckIcon, LinkIcon, MusicIcon, PauseIcon, PlayIcon, RefreshIcon, TrashIcon, UploadIcon } from "@/components/icons";
 import { cn } from "@/lib/utils";
 import type { InvitationDetail } from "@/types/studio";
 
@@ -51,10 +51,20 @@ export function Step13Music({
 }) {
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [showLinkInput, setShowLinkInput] = useState(false);
+  // Per-preset local overrides — this template ships no licensed audio, so
+  // during testing a real file can be dropped in for any one preset slot
+  // instead of its SoundHelix stand-in, without touching the others.
+  const [overrides, setOverrides] = useState<Record<string, string>>({});
+  const overrideTargetRef = useRef<string | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const overrideInputRef = useRef<HTMLInputElement>(null);
 
   const { h, m, s } = secondsToHms(value.musicStartSeconds ?? 0);
+
+  function trackUrl(track: (typeof PRESET_TRACKS)[number]) {
+    return overrides[track.id] ?? track.url;
+  }
 
   // playingId only ever reflects the audio element's own pause/ended/error
   // events — not a manually-set flag — so the row highlight can't drift out
@@ -74,7 +84,7 @@ export function Step13Music({
   }, []);
 
   function selectTrack(track: (typeof PRESET_TRACKS)[number]) {
-    onChange({ musicUrl: track.url, musicTitle: trackLabel(track) });
+    onChange({ musicUrl: trackUrl(track), musicTitle: trackLabel(track) });
   }
 
   function togglePreview(track: (typeof PRESET_TRACKS)[number]) {
@@ -84,8 +94,41 @@ export function Step13Music({
       audio.pause();
       return;
     }
-    audio.src = track.url;
+    // Switching tracks while another preview is active: reassigning src on
+    // the shared element implicitly stops whatever was playing, load()
+    // makes the reset explicit, then play() starts the new track fresh.
+    audio.src = trackUrl(track);
+    audio.load();
     audio.play().then(() => setPlayingId(track.id)).catch(() => setPlayingId(null));
+  }
+
+  function requestOverride(trackId: string) {
+    overrideTargetRef.current = trackId;
+    overrideInputRef.current?.click();
+  }
+
+  async function handleOverrideSelected(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    const trackId = overrideTargetRef.current;
+    event.target.value = "";
+    overrideTargetRef.current = null;
+    if (!file || !trackId) return;
+
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+
+    setOverrides((current) => ({ ...current, [trackId]: dataUrl }));
+
+    // If this preset is the one currently selected for the invitation,
+    // repoint its saved musicUrl at the new local file immediately.
+    const track = PRESET_TRACKS.find((item) => item.id === trackId);
+    if (track && value.musicUrl === trackUrl(track)) {
+      onChange({ musicUrl: dataUrl });
+    }
   }
 
   function updateStart(next: Partial<{ h: number; m: number; s: number }>) {
@@ -116,6 +159,13 @@ export function Step13Music({
   return (
     <div className="space-y-5">
       <audio ref={audioRef} className="hidden" />
+      <input
+        ref={overrideInputRef}
+        type="file"
+        accept="audio/*"
+        className="hidden"
+        onChange={handleOverrideSelected}
+      />
 
       <HintBox>اختر مقطوعة من المكتبة أو ارفع ملفك الخاص — تعزف الموسيقى عند فتح الدعوة.</HintBox>
 
@@ -124,8 +174,9 @@ export function Step13Music({
         <p className="mb-2 text-sm text-gray-700">مكتبة الموسيقى</p>
         <div className="space-y-2">
           {PRESET_TRACKS.map((track) => {
-            const selected = value.musicUrl === track.url;
+            const selected = value.musicUrl === trackUrl(track);
             const playing = playingId === track.id;
+            const overridden = Boolean(overrides[track.id]);
             return (
               <div
                 key={track.id}
@@ -145,13 +196,30 @@ export function Step13Music({
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-medium text-gray-800">{track.title}</span>
-                  {track.artist && <span className="block truncate text-xs text-gray-400">{track.artist}</span>}
+                  {track.artist && (
+                    <span className="block truncate text-xs text-gray-400">
+                      {track.artist}
+                      {overridden && <span className="text-gold"> · ملف محلي</span>}
+                    </span>
+                  )}
                 </span>
                 {selected && (
                   <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-gold text-white">
                     <CheckIcon className="size-3" />
                   </span>
                 )}
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    requestOverride(track.id);
+                  }}
+                  aria-label="استبدال بملف محلي"
+                  title="استبدال بملف محلي (اختبار)"
+                  className="flex size-8 shrink-0 items-center justify-center rounded-full border border-gray-200 text-gray-400 transition-colors hover:border-gold/40 hover:text-gold"
+                >
+                  <RefreshIcon className="size-3.5" />
+                </button>
                 <button
                   type="button"
                   onClick={(event) => {

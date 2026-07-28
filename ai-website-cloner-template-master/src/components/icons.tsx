@@ -37,6 +37,7 @@ export {
   Volume2 as VolumeIcon,
   Upload as UploadIcon,
   Link as LinkIcon,
+  RefreshCw as RefreshIcon,
   Trash2 as TrashIcon,
   Plus as PlusIcon,
   Lightbulb as LightbulbIcon,
