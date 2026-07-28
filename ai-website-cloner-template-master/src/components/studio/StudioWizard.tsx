@@ -18,13 +18,25 @@ function buildPatch(detail: InvitationDetail): UpdateInvitationPatch {
   return patch;
 }
 
+function clampStepIndex(index: number) {
+  return Math.min(Math.max(index, 0), WIZARD_STEPS.length - 1);
+}
+
+function readStepIndexFromParam(stepParam: string | null) {
+  const parsed = stepParam ? Number.parseInt(stepParam, 10) : 1;
+  if (!Number.isFinite(parsed)) return 0;
+  return clampStepIndex(parsed - 1);
+}
+
 export function StudioWizard() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const invitationIdParam = searchParams.get("invitationId");
 
   const [form, setForm] = useState<InvitationDetail | null>(null);
-  const [stepIndex, setStepIndex] = useState(0);
+  // Initialized from the URL's ?step= (1-indexed) so a page reload resumes
+  // on the same step instead of always restarting at step 1.
+  const [stepIndex, setStepIndexState] = useState(() => readStepIndexFromParam(searchParams.get("step")));
   const [saving, setSaving] = useState(false);
   const [finished, setFinished] = useState(false);
   const [loadError, setLoadError] = useState(false);
@@ -54,7 +66,7 @@ export function StudioWizard() {
         const created = await createInvitation();
         if (cancelled) return;
         rememberInvitation(created.id);
-        router.replace(`/studio?invitationId=${created.id}`);
+        router.replace(`/studio?invitationId=${created.id}&step=${stepIndex + 1}`);
         const detail = await getInvitation(created.id);
         if (!cancelled) setForm(detail);
       } catch (error) {
@@ -74,6 +86,16 @@ export function StudioWizard() {
     setForm((current) => (current ? { ...current, ...patch } : current));
   }
 
+  // Keeps ?step= (1-indexed) in sync with the current step so a reload
+  // resumes where the user left off, without piling onto browser history.
+  function goToStep(index: number) {
+    const clamped = clampStepIndex(index);
+    setStepIndexState(clamped);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("step", String(clamped + 1));
+    router.replace(`/studio?${params.toString()}`, { scroll: false });
+  }
+
   async function saveProgress() {
     if (!form) return;
     setSaving(true);
@@ -91,12 +113,12 @@ export function StudioWizard() {
     if (stepIndex === WIZARD_STEPS.length - 1) {
       setFinished(true);
     } else {
-      setStepIndex((index) => index + 1);
+      goToStep(stepIndex + 1);
     }
   }
 
   function handleBack() {
-    setStepIndex((index) => Math.max(0, index - 1));
+    goToStep(stepIndex - 1);
   }
 
   if (loadError) {
@@ -127,6 +149,10 @@ export function StudioWizard() {
       <WizardStepper activePhase="design" />
       <DraftBanner previousDraftId={previousDraftId} currentInvitationId={form.id} />
 
+      {/* Grid column order follows the page's dir attribute (rtl by default):
+          PhonePreview, listed first, lands on the visual right with the form
+          on the left — matching numinds.me. This flips automatically if a
+          parent ever sets dir="ltr" for a non-Arabic locale. */}
       <div className="grid gap-8 lg:grid-cols-[auto_1fr]">
         <div className="flex justify-center lg:justify-start">
           <PhonePreview value={form} />
@@ -169,16 +195,23 @@ export function StudioWizard() {
                   </span>
                   <span className="text-sm font-medium text-gray-700">{step.label}</span>
                 </div>
-                <span className="rounded-full border border-gold/20 bg-gold/5 px-3 py-1 text-xs text-gold">
+                <span
+                  dir="ltr"
+                  className="rounded-full border border-gold/20 bg-gold/5 px-3 py-1 text-xs text-gold"
+                >
                   {stepIndex + 1} / {WIZARD_STEPS.length}
                 </span>
               </div>
 
-              <div className="px-5 pb-2 pt-4">
+              <div className="border-b border-gold/15 px-5 pb-4 pt-4">
                 <p className="text-base font-medium text-gray-900">{step.question}</p>
               </div>
 
-              <div className="px-5 py-4">
+              <div className="px-5 pb-2 pt-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">{step.label}</p>
+              </div>
+
+              <div className="px-5 pb-4 pt-2">
                 <StepComponent value={form} onChange={updateForm} />
               </div>
 
@@ -201,7 +234,20 @@ export function StudioWizard() {
                   <ChevronLeftIcon className="size-4" />
                   رجوع
                 </button>
-                <span className="hidden text-sm text-gray-400 sm:inline">{step.label}</span>
+                <div className="hidden flex-col items-center gap-1.5 sm:flex">
+                  <span className="text-sm text-gray-400">{step.label}</span>
+                  <div className="flex items-center gap-1">
+                    {WIZARD_STEPS.map((s, i) => (
+                      <span
+                        key={s.id}
+                        className={cn(
+                          "h-1 rounded-full transition-all",
+                          i === stepIndex ? "w-4 bg-gold" : "w-1 bg-gray-200"
+                        )}
+                      />
+                    ))}
+                  </div>
+                </div>
                 <button
                   type="button"
                   onClick={handleNext}

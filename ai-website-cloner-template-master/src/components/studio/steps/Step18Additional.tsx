@@ -21,9 +21,9 @@ export function Step18Additional({
           value={value.generalTextFont ?? ""}
           onChange={(generalTextFont) => onChange({ generalTextFont })}
         />
-        <p className={cn("mt-2 text-center text-sm text-gray-600", value.generalTextFont || "font-sans")}>
-          أنتم مدعوون
-        </p>
+        <div className="mt-2 rounded-xl border border-gray-100 bg-gold/5 px-4 py-5 text-center">
+          <p className={cn("text-sm text-gray-600", value.generalTextFont || "font-sans")}>أنتم مدعوون</p>
+        </div>
       </div>
 
       <div>
@@ -32,9 +32,9 @@ export function Step18Additional({
           value={value.envelopeNameFont ?? ""}
           onChange={(envelopeNameFont) => onChange({ envelopeNameFont })}
         />
-        <p className={cn("mt-2 text-center text-lg text-gold", value.envelopeNameFont || "font-cinzel")}>
-          {namesPreview}
-        </p>
+        <div className="mt-2 rounded-xl border border-gray-100 bg-gold/5 px-4 py-5 text-center">
+          <p className={cn("text-lg text-gold", value.envelopeNameFont || "font-cinzel")}>{namesPreview}</p>
+        </div>
       </div>
     </div>
   );

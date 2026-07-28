@@ -13,7 +13,7 @@ export function Step14Gift({
   return (
     <div className="space-y-5">
       <HintBox>
-        قل هذا حتى يتمكن الضيوف من إرسال هدية عبر التحويل البنكي. يمكنك مشاركة رقم IBAN ورمز QR.
+        فعّل هذا حتى يتمكن الضيوف من إرسال هدية عبر التحويل البنكي. يمكنك مشاركة رقم IBAN ورمز QR.
       </HintBox>
       <ToggleField
         label="تفعيل الهدايا"

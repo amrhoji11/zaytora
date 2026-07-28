@@ -1,14 +1,22 @@
 "use client";
 
+import { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import {
+  BedDoubleIcon,
   CalendarIcon,
+  ClipboardListIcon,
   HeartIcon,
+  ImageIcon,
   MapPinIcon,
+  MessageCircleIcon,
   MusicIcon,
   PhoneIcon,
   QrCodeIcon,
 } from "@/components/icons";
+import { getTemplates } from "@/lib/services/templates.service";
+import type { TemplateDto } from "@/types/api";
 import type { InvitationDetail } from "@/types/studio";
 
 function formatEventDate(iso?: string | null) {
@@ -25,18 +33,91 @@ function formatEventDate(iso?: string | null) {
   }).format(date);
 }
 
+function useCountdown(iso?: string | null) {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!iso) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [iso]);
+
+  return useMemo(() => {
+    if (!iso) return null;
+    const target = new Date(iso).getTime();
+    if (Number.isNaN(target)) return null;
+    const diff = Math.max(0, target - now);
+    const days = Math.floor(diff / 86_400_000);
+    const hours = Math.floor((diff % 86_400_000) / 3_600_000);
+    const minutes = Math.floor((diff % 3_600_000) / 60_000);
+    const seconds = Math.floor((diff % 60_000) / 1000);
+    return { days, hours, minutes, seconds };
+  }, [iso, now]);
+}
+
+const RULES_DELIMITER = " · ";
+
 export function PhonePreview({ value }: { value: InvitationDetail }) {
+  const [templates, setTemplates] = useState<TemplateDto[]>([]);
+  const [activeSection, setActiveSection] = useState<string | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    getTemplates()
+      .then((list) => {
+        if (!cancelled) setTemplates(list);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const template = templates.find((item) => item.id === value.templateId) ?? null;
+
   const names = [value.firstName, value.invitationType === "couple" ? value.secondName : null]
     .filter(Boolean)
     .join(" & ");
   const eventDate = formatEventDate(value.eventDateTime);
+  const countdown = useCountdown(value.eventDateTime);
+  const rules = (value.eventRulesText ?? "").split(RULES_DELIMITER).map((rule) => rule.trim()).filter(Boolean);
 
   const navItems = [
-    { icon: PhoneIcon, label: "CONTACT", show: value.contacts.length > 0 },
-    { icon: MusicIcon, label: "MUSIC", show: Boolean(value.musicUrl) },
-    { icon: MapPinIcon, label: "LOCATION", show: value.venues.length > 0 },
-    { icon: HeartIcon, label: "RSVP", show: value.enableRsvp },
+    { key: "rsvp", icon: HeartIcon, label: "تأكيد الحضور", show: value.enableRsvp },
+    { key: "location", icon: MapPinIcon, label: "الموقع", show: value.venues.length > 0 },
+    { key: "music", icon: MusicIcon, label: "موسيقى", show: Boolean(value.musicUrl) },
+    { key: "contact", icon: PhoneIcon, label: "تواصل", show: value.contacts.length > 0 },
   ].filter((item) => item.show);
+
+  useEffect(() => {
+    const root = scrollRef.current;
+    if (!root || navItems.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (visible) setActiveSection(visible.target.getAttribute("data-section"));
+      },
+      { root, threshold: [0.4, 0.6] }
+    );
+
+    navItems.forEach((item) => {
+      const el = sectionRefs.current[item.key];
+      if (el) observer.observe(el);
+    });
+
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navItems.map((item) => item.key).join(",")]);
+
+  function goToSection(key: string) {
+    setActiveSection(key);
+    sectionRefs.current[key]?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
   return (
     <div className="sticky top-24 flex flex-col items-center gap-3">
@@ -45,31 +126,267 @@ export function PhonePreview({ value }: { value: InvitationDetail }) {
         <div className="relative rounded-[2rem] bg-gray-900 p-[3px] shadow-2xl">
           <div className="absolute left-1/2 top-1.5 z-20 h-3 w-16 -translate-x-1/2 rounded-full bg-gray-900" />
           <div className="relative flex aspect-[9/18] flex-col overflow-hidden rounded-[1.85rem] bg-gradient-to-b from-[#F5F0E8] to-white">
-            <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-              {names ? (
-                <p className="font-cinzel text-2xl text-gray-900">{names}</p>
-              ) : (
-                <p className="font-cinzel text-4xl text-gold/40">&amp;</p>
+            <div ref={scrollRef} className="flex-1 overflow-y-auto scroll-smooth">
+              {/* Hero */}
+              <div className="relative flex min-h-[60%] flex-col items-center justify-center gap-3 px-6 py-10 text-center">
+                {template?.imageUrl && (
+                  <>
+                    <Image
+                      src={template.imageUrl}
+                      alt=""
+                      fill
+                      sizes="256px"
+                      className="object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/35 to-black/70" />
+                  </>
+                )}
+                <div className="relative z-10 flex flex-col items-center gap-3">
+                  {names ? (
+                    <p
+                      className={cn(
+                        "font-cinzel text-2xl",
+                        template?.imageUrl ? "text-white drop-shadow" : "text-gray-900"
+                      )}
+                    >
+                      {names}
+                    </p>
+                  ) : (
+                    <p className={cn("font-cinzel text-4xl", template?.imageUrl ? "text-white/80" : "text-gold/40")}>
+                      &amp;
+                    </p>
+                  )}
+                  {eventDate && (
+                    <p className={cn("text-xs", template?.imageUrl ? "text-white/90" : "text-gray-500")}>
+                      {eventDate}
+                    </p>
+                  )}
+                  {countdown && (
+                    <div
+                      className={cn(
+                        "flex items-center gap-2 rounded-full px-3 py-1 text-[10px]",
+                        template?.imageUrl ? "bg-white/15 text-white" : "bg-gold/10 text-gold"
+                      )}
+                    >
+                      <span>{countdown.days}ي</span>
+                      <span>{countdown.hours}س</span>
+                      <span>{countdown.minutes}د</span>
+                      <span>{countdown.seconds}ث</span>
+                    </div>
+                  )}
+                  {value.thankYouText && (
+                    <p
+                      className="mt-1 text-[10px] uppercase tracking-widest"
+                      style={{ color: template?.imageUrl ? "#ffffff" : (value.thankYouTextColor ?? "#111111") }}
+                    >
+                      {value.thankYouText}
+                    </p>
+                  )}
+                  {value.enableQrEntry && (
+                    <QrCodeIcon className={cn("mt-2 size-6", template?.imageUrl ? "text-white/70" : "text-gray-400")} />
+                  )}
+                </div>
+              </div>
+
+              {/* Program */}
+              {value.showEventProgram && value.programItems.length > 0 && (
+                <div className="border-t border-gray-100 px-5 py-4">
+                  <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-gray-700">
+                    <ClipboardListIcon className="size-3.5 text-gold" />
+                    برنامج الحفل
+                  </p>
+                  <ul className="space-y-1.5">
+                    {value.programItems.map((item, index) => (
+                      <li key={index} className="flex items-center justify-between text-[11px] text-gray-600">
+                        <span>{item.title}</span>
+                        {item.time && <span className="text-gray-400">{item.time}</span>}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
-              {eventDate && <p className="text-xs text-gray-500">{eventDate}</p>}
-              {value.thankYouText && (
-                <p
-                  className="mt-2 text-[10px] uppercase tracking-widest"
-                  style={{ color: value.thankYouTextColor ?? "#111111" }}
+
+              {/* Rules */}
+              {value.showEventRules && rules.length > 0 && (
+                <div className="border-t border-gray-100 px-5 py-4">
+                  <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-gray-700">
+                    <ClipboardListIcon className="size-3.5 text-gold" />
+                    تفاصيل الحدث
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {rules.map((rule) => (
+                      <span key={rule} className="rounded-full bg-gold/10 px-2 py-0.5 text-[10px] text-gold">
+                        {rule}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Accommodation */}
+              {value.showAccommodation && value.accommodations.length > 0 && (
+                <div className="border-t border-gray-100 px-5 py-4">
+                  <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-gray-700">
+                    <BedDoubleIcon className="size-3.5 text-gold" />
+                    أين تقيمون
+                  </p>
+                  <div className="space-y-2">
+                    {value.accommodations.map((hotel, index) => (
+                      <div key={index} className="rounded-lg bg-gray-50 px-2.5 py-2">
+                        <p className="text-[11px] font-medium text-gray-800">{hotel.name || "—"}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Gallery */}
+              {value.galleryImages.filter(Boolean).length > 0 && (
+                <div className="border-t border-gray-100 px-5 py-4">
+                  <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-gray-700">
+                    <ImageIcon className="size-3.5 text-gold" />
+                    معرض الصور
+                  </p>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {value.galleryImages.filter(Boolean).map((url, index) => (
+                      <div key={index} className="aspect-square overflow-hidden rounded-md bg-gray-100">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt="" className="size-full object-cover" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Personal message */}
+              {value.showPersonalMessage && value.personalMessageText && (
+                <div className="border-t border-gray-100 px-5 py-4 text-center">
+                  {value.personalMessageTitle && (
+                    <p className="text-[11px] font-semibold text-gray-700">{value.personalMessageTitle}</p>
+                  )}
+                  <p className="mt-1 text-[11px] leading-relaxed text-gray-600">{value.personalMessageText}</p>
+                  {value.personalMessageSignature && (
+                    <p className="mt-1 text-[10px] text-gold">{value.personalMessageSignature}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Location */}
+              {value.venues.length > 0 && (
+                <div
+                  ref={(el) => {
+                    sectionRefs.current.location = el;
+                  }}
+                  data-section="location"
+                  className="border-t border-gray-100 px-5 py-4"
                 >
-                  {value.thankYouText}
-                </p>
+                  <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-gray-700">
+                    <MapPinIcon className="size-3.5 text-gold" />
+                    الموقع
+                  </p>
+                  <div className="space-y-2">
+                    {value.venues.map((venue, index) => (
+                      <div key={index} className="rounded-lg bg-gray-50 px-2.5 py-2">
+                        <p className="text-[11px] font-medium text-gray-800">{venue.name || "—"}</p>
+                        {venue.address && <p className="text-[10px] text-gray-500">{venue.address}</p>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
-              {value.enableQrEntry && <QrCodeIcon className="mt-2 size-6 text-gray-400" />}
+
+              {/* Music */}
+              {value.musicUrl && (
+                <div
+                  ref={(el) => {
+                    sectionRefs.current.music = el;
+                  }}
+                  data-section="music"
+                  className="border-t border-gray-100 px-5 py-4"
+                >
+                  <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-gray-700">
+                    <MusicIcon className="size-3.5 text-gold" />
+                    موسيقى
+                  </p>
+                  <div className="flex items-center gap-2 rounded-lg bg-gray-50 px-2.5 py-2">
+                    <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-gold/10 text-gold">
+                      <MusicIcon className="size-3" />
+                    </span>
+                    <p className="truncate text-[11px] text-gray-700">{value.musicTitle || value.musicUrl}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Contacts */}
+              {value.contacts.length > 0 && (
+                <div
+                  ref={(el) => {
+                    sectionRefs.current.contact = el;
+                  }}
+                  data-section="contact"
+                  className="border-t border-gray-100 px-5 py-4"
+                >
+                  <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-gray-700">
+                    <PhoneIcon className="size-3.5 text-gold" />
+                    تواصل
+                  </p>
+                  <div className="space-y-1.5">
+                    {value.contacts.map((contact, index) => (
+                      <div key={index} className="flex items-center justify-between text-[11px]">
+                        <span className="text-gray-700">
+                          {contact.name}
+                          {contact.role ? ` (${contact.role})` : ""}
+                        </span>
+                        <span dir="ltr" className="text-gray-400">
+                          {contact.phone}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* RSVP */}
+              {value.enableRsvp && (
+                <div
+                  ref={(el) => {
+                    sectionRefs.current.rsvp = el;
+                  }}
+                  data-section="rsvp"
+                  className="border-t border-gray-100 px-5 py-5 text-center"
+                >
+                  <p className="mb-2 flex items-center justify-center gap-1.5 text-[11px] font-semibold text-gray-700">
+                    <HeartIcon className="size-3.5 text-gold" />
+                    تأكيد الحضور
+                  </p>
+                  <p className="mb-3 text-[10px] text-gray-500">
+                    <MessageCircleIcon className="mb-0.5 inline size-3" /> يسعدنا تأكيد حضوركم
+                  </p>
+                  <button
+                    type="button"
+                    className="rounded-full bg-gold px-5 py-1.5 text-[11px] font-medium text-white"
+                  >
+                    تأكيد الحضور
+                  </button>
+                </div>
+              )}
             </div>
 
             {navItems.length > 0 && (
-              <div className="grid grid-cols-4 border-t border-gray-100 bg-white/80 py-2 backdrop-blur">
+              <div className="grid shrink-0 border-t border-gray-100 bg-white/90 py-2 backdrop-blur" style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}>
                 {navItems.map((item) => (
-                  <div key={item.label} className="flex flex-col items-center gap-0.5 text-gray-500">
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => goToSection(item.key)}
+                    className={cn(
+                      "flex flex-col items-center gap-0.5 transition-colors",
+                      activeSection === item.key ? "text-gold" : "text-gray-500 hover:text-gray-700"
+                    )}
+                  >
                     <item.icon className="size-4" />
                     <span className="text-[8px]">{item.label}</span>
-                  </div>
+                  </button>
                 ))}
               </div>
             )}

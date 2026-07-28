@@ -2,6 +2,7 @@ import { ToggleField } from "@/components/studio/fields/ToggleField";
 import { TextField } from "@/components/studio/fields/TextField";
 import { TextareaField } from "@/components/studio/fields/TextareaField";
 import { FontSelect } from "@/components/studio/fields/FontSelect";
+import { HintBox } from "@/components/studio/fields/HintBox";
 import { cn } from "@/lib/utils";
 import type { InvitationDetail } from "@/types/studio";
 
@@ -14,6 +15,8 @@ export function Step05InvitationText({
 }) {
   return (
     <div className="space-y-5">
+      <HintBox>مثال: اسم العائلة: آل الراشد · نص الدعوة: &quot;يتشرفون بدعوتكم لحضور حفل زفافهم...&quot;</HintBox>
+
       <ToggleField
         label="إخفاء أسماء العائلات"
         description="لن تظهر أسماء العائلات في الدعوة والمشاركة"

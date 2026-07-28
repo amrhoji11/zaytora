@@ -7,6 +7,7 @@ export function ListEditor<T>({
   renderItem,
   addLabel,
   emptyLabel,
+  itemLabel,
   max,
 }: {
   items: T[];
@@ -15,6 +16,7 @@ export function ListEditor<T>({
   renderItem: (item: T, update: (patch: Partial<T>) => void, index: number) => React.ReactNode;
   addLabel: string;
   emptyLabel?: string;
+  itemLabel?: string;
   max?: number;
 }) {
   function addItem() {
@@ -49,7 +51,14 @@ export function ListEditor<T>({
           >
             <TrashIcon className="size-4" />
           </button>
-          <div className="space-y-2 pl-8">{renderItem(item, (patch) => updateItem(index, patch), index)}</div>
+          <div className="space-y-2 pl-8">
+            {itemLabel && (
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                {itemLabel} {index + 1}
+              </p>
+            )}
+            {renderItem(item, (patch) => updateItem(index, patch), index)}
+          </div>
         </div>
       ))}
 

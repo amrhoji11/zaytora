@@ -1,6 +1,7 @@
 import { ToggleField } from "@/components/studio/fields/ToggleField";
 import { TextField } from "@/components/studio/fields/TextField";
 import { TextareaField } from "@/components/studio/fields/TextareaField";
+import { HintBox } from "@/components/studio/fields/HintBox";
 import type { InvitationDetail } from "@/types/studio";
 
 export function Step11PersonalMessage({
@@ -12,6 +13,8 @@ export function Step11PersonalMessage({
 }) {
   return (
     <div className="space-y-5">
+      <HintBox>مثال: &quot;أعزاءنا الأصدقاء، وجودكم يعني لنا الكثير. بمحبة، أحمد وسارة&quot;</HintBox>
+
       <ToggleField
         label="إضافة رسالة شخصية"
         checked={value.showPersonalMessage}

@@ -3,10 +3,17 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
-import { LoaderIcon, StarIcon } from "@/components/icons";
+import { CheckIcon, LoaderIcon, StarIcon } from "@/components/icons";
 import { getTemplates } from "@/lib/services/templates.service";
 import type { TemplateDto } from "@/types/api";
 import type { InvitationDetail } from "@/types/studio";
+
+const CATEGORY_LABELS: Record<string, string> = {
+  wedding: "زفاف",
+  engagement: "خطوبة",
+  henna: "حنة",
+  marriage_contract: "عقد قران",
+};
 
 export function Step03Template({
   value,
@@ -49,7 +56,7 @@ export function Step03Template({
   }
 
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+    <div className="flex flex-col gap-2">
       {templates.map((template) => {
         const selected = template.id === value.templateId;
         return (
@@ -58,22 +65,30 @@ export function Step03Template({
             type="button"
             onClick={() => onChange({ templateId: template.id })}
             className={cn(
-              "flex flex-col items-center gap-2 rounded-xl border-2 p-2 transition-all",
+              "flex items-center gap-3 rounded-xl border-2 p-2 text-start transition-all",
               selected ? "border-gold bg-gold/5" : "border-gray-200 hover:border-gold/40"
             )}
           >
-            <div className="relative w-full">
-              {template.isPopular && (
-                <span className="absolute -top-1.5 -right-1.5 z-10 flex items-center gap-0.5 rounded-full bg-gradient-to-r from-gold to-gray-900 px-1.5 py-0.5 text-[9px] font-medium text-white">
-                  <StarIcon className="size-2.5" />
-                  POPULAR
-                </span>
-              )}
-              <div className="relative aspect-[9/16] w-full overflow-hidden rounded-lg bg-gray-100">
-                <Image src={template.imageUrl} alt={template.code} fill className="object-cover" sizes="140px" />
-              </div>
+            <div className="relative size-14 shrink-0 overflow-hidden rounded-lg bg-gray-100">
+              <Image src={template.imageUrl} alt={template.code} fill className="object-cover" sizes="56px" />
             </div>
-            <span className="text-xs font-medium text-gray-700">{template.code}</span>
+            <div className="flex-1">
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-medium text-gray-900">{template.code}</span>
+                {template.isPopular && (
+                  <span className="inline-flex items-center gap-0.5 rounded-full bg-gradient-to-r from-gold to-gray-900 px-1.5 py-0.5 text-[9px] font-medium text-white">
+                    <StarIcon className="size-2.5" />
+                    POPULAR
+                  </span>
+                )}
+              </div>
+              <span className="text-xs text-gray-400">{CATEGORY_LABELS[template.category] ?? template.category}</span>
+            </div>
+            {selected && (
+              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-gold text-white">
+                <CheckIcon className="size-3" />
+              </span>
+            )}
           </button>
         );
       })}

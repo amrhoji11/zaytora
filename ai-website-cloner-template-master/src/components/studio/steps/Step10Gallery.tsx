@@ -1,4 +1,5 @@
-import { PlusIcon, TrashIcon } from "@/components/icons";
+import { ImageIcon, PlusIcon, TrashIcon } from "@/components/icons";
+import { HintBox } from "@/components/studio/fields/HintBox";
 import type { InvitationDetail } from "@/types/studio";
 
 const MAX_IMAGES = 6;
@@ -22,40 +23,50 @@ export function Step10Gallery({
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-gray-500">
-        ارفع حتى {MAX_IMAGES} صور — صور عائلية، صور القاعة، أو لحظات خاصة. الصق رابط الصورة أدناه.
-      </p>
+      <HintBox>ارفع حتى {MAX_IMAGES} صور — صور عائلية، صور القاعة، أو لحظات خاصة.</HintBox>
 
-      {images.map((url, index) => (
-        <div key={index} className="flex items-center gap-2">
-          <input
-            type="text"
-            value={url}
-            placeholder="https://example.com/photo.jpg"
-            onChange={(event) => updateAt(index, event.target.value)}
-            className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-gold"
-          />
+      <div className="grid grid-cols-3 gap-3">
+        {images.map((url, index) => (
+          <div key={index} className="group relative">
+            <div className="aspect-square overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
+              {url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={url} alt="" className="size-full object-cover" />
+              ) : (
+                <div className="flex size-full items-center justify-center text-gray-300">
+                  <ImageIcon className="size-6" />
+                </div>
+              )}
+            </div>
+            <input
+              type="text"
+              value={url}
+              placeholder="رابط الصورة"
+              onChange={(event) => updateAt(index, event.target.value)}
+              className="mt-1 w-full rounded-lg border border-gray-200 px-2 py-1 text-xs outline-none focus:border-gold"
+            />
+            <button
+              type="button"
+              onClick={() => removeAt(index)}
+              aria-label="حذف"
+              className="absolute -top-2 -end-2 flex size-5 items-center justify-center rounded-full bg-white text-gray-400 shadow transition-colors hover:text-rose-500"
+            >
+              <TrashIcon className="size-3" />
+            </button>
+          </div>
+        ))}
+
+        {images.length < MAX_IMAGES && (
           <button
             type="button"
-            onClick={() => removeAt(index)}
-            aria-label="حذف"
-            className="text-gray-300 transition-colors hover:text-rose-500"
+            onClick={() => onChange({ galleryImages: [...images, ""] })}
+            className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-gold/40 text-gold transition-colors hover:bg-gold/5"
           >
-            <TrashIcon className="size-4" />
+            <PlusIcon className="size-5" />
+            <span className="text-xs font-medium">إضافة</span>
           </button>
-        </div>
-      ))}
-
-      {images.length < MAX_IMAGES && (
-        <button
-          type="button"
-          onClick={() => onChange({ galleryImages: [...images, ""] })}
-          className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-gold/40 py-3 text-sm font-medium text-gold transition-colors hover:bg-gold/5"
-        >
-          <PlusIcon className="size-4" />
-          إضافة ({images.length}/{MAX_IMAGES})
-        </button>
-      )}
+        )}
+      </div>
     </div>
   );
 }

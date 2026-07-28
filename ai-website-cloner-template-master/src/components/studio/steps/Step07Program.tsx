@@ -1,5 +1,6 @@
 import { ToggleField } from "@/components/studio/fields/ToggleField";
 import { ListEditor } from "@/components/studio/fields/ListEditor";
+import { HintBox } from "@/components/studio/fields/HintBox";
 import type { InvitationDetail, ProgramItem } from "@/types/studio";
 
 export function Step07Program({
@@ -11,6 +12,8 @@ export function Step07Program({
 }) {
   return (
     <div className="space-y-5">
+      <HintBox>مثال: استقبال الضيوف 6:00 م ← العشاء 7:30 م ← حفل الزفاف 9:00 م</HintBox>
+
       <ToggleField
         label="عرض برنامج الحفل"
         description="عرض البرنامج في الدعوة"

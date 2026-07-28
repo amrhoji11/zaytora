@@ -21,14 +21,20 @@ export function ToggleField({
         "flex w-full items-center justify-between gap-4 rounded-xl border px-4 py-3 text-right transition-colors",
         tone === "highlight" && checked
           ? "border-rose-200 bg-rose-50"
-          : "border-gray-200 bg-white hover:border-gold/40"
+          : checked
+            ? "border-gold/30 bg-gold/5"
+            : "border-gray-200 bg-white hover:border-gold/40"
       )}
     >
       <span>
         <span
           className={cn(
             "block text-sm font-medium",
-            tone === "highlight" && checked ? "text-rose-600" : "text-gray-900"
+            tone === "highlight" && checked
+              ? "text-rose-600"
+              : checked
+                ? "text-gold"
+                : "text-gray-900"
           )}
         >
           {label}

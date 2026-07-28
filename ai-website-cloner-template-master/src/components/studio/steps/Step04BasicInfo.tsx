@@ -32,9 +32,9 @@ export function Step04BasicInfo({
         onChange={(eventTitleFont) => onChange({ eventTitleFont })}
       />
       {value.eventTitle && (
-        <p className={cn("text-center text-lg text-gray-800", value.eventTitleFont || "font-cinzel")}>
-          {value.eventTitle}
-        </p>
+        <div className="rounded-xl border border-gray-100 bg-gold/5 px-4 py-5 text-center">
+          <p className={cn("text-lg text-gray-800", value.eventTitleFont || "font-cinzel")}>{value.eventTitle}</p>
+        </div>
       )}
 
       <div>
@@ -82,10 +82,12 @@ export function Step04BasicInfo({
         onChange={(namesFont) => onChange({ namesFont })}
       />
       {value.firstName && (
-        <p className={cn("text-center text-lg text-gold", value.namesFont || "font-cinzel")}>
-          {value.firstName}
-          {value.invitationType === "couple" && value.secondName ? ` & ${value.secondName}` : ""}
-        </p>
+        <div className="rounded-xl border border-gray-100 bg-gold/5 px-4 py-5 text-center">
+          <p className={cn("text-lg text-gold", value.namesFont || "font-cinzel")}>
+            {value.firstName}
+            {value.invitationType === "couple" && value.secondName ? ` & ${value.secondName}` : ""}
+          </p>
+        </div>
       )}
 
       <DateTimeField

@@ -1,6 +1,7 @@
 import { ToggleField } from "@/components/studio/fields/ToggleField";
 import { ListEditor } from "@/components/studio/fields/ListEditor";
 import { TextField } from "@/components/studio/fields/TextField";
+import { HintBox } from "@/components/studio/fields/HintBox";
 import type { InvitationDetail, VenueItem } from "@/types/studio";
 
 export function Step09Accommodation({
@@ -12,6 +13,8 @@ export function Step09Accommodation({
 }) {
   return (
     <div className="space-y-5">
+      <HintBox>مثال: &quot;فندق جراند&quot; · العنوان · رابط خرائط جوجل — يمكن إضافة حتى 4 فنادق</HintBox>
+
       <ToggleField
         label="أين تقيمون"
         description="اعرض الفنادق وأماكن الإقامة في دعوتك"
@@ -26,6 +29,7 @@ export function Step09Accommodation({
           createItem={() => ({ name: "", address: "", mapUrl: "" })}
           addLabel="إضافة فندق"
           emptyLabel="لم تتم إضافة فنادق بعد"
+          itemLabel="فندق"
           max={4}
           renderItem={(item, update) => (
             <>
