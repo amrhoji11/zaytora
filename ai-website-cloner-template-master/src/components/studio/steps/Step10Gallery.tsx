@@ -1,8 +1,18 @@
+import { useRef } from "react";
 import { ImageIcon, PlusIcon, TrashIcon } from "@/components/icons";
 import { HintBox } from "@/components/studio/fields/HintBox";
 import type { InvitationDetail } from "@/types/studio";
 
 const MAX_IMAGES = 6;
+
+function readAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
 
 export function Step10Gallery({
   value,
@@ -12,39 +22,46 @@ export function Step10Gallery({
   onChange: (patch: Partial<InvitationDetail>) => void;
 }) {
   const images = value.galleryImages;
-
-  function updateAt(index: number, url: string) {
-    onChange({ galleryImages: images.map((image, i) => (i === index ? url : image)) });
-  }
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   function removeAt(index: number) {
     onChange({ galleryImages: images.filter((_, i) => i !== index) });
+  }
+
+  async function handleFilesSelected(event: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = "";
+    if (files.length === 0) return;
+
+    const remainingSlots = MAX_IMAGES - images.length;
+    const dataUrls = await Promise.all(files.slice(0, remainingSlots).map(readAsDataUrl));
+    onChange({ galleryImages: [...images, ...dataUrls] });
   }
 
   return (
     <div className="space-y-3">
       <HintBox>ارفع حتى {MAX_IMAGES} صور — صور عائلية، صور القاعة، أو لحظات خاصة.</HintBox>
 
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={handleFilesSelected}
+      />
+
       <div className="grid grid-cols-3 gap-3">
         {images.map((url, index) => (
-          <div key={index} className="group relative">
-            <div className="aspect-square overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
-              {url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={url} alt="" className="size-full object-cover" />
-              ) : (
-                <div className="flex size-full items-center justify-center text-gray-300">
-                  <ImageIcon className="size-6" />
-                </div>
-              )}
-            </div>
-            <input
-              type="text"
-              value={url}
-              placeholder="رابط الصورة"
-              onChange={(event) => updateAt(index, event.target.value)}
-              className="mt-1 w-full rounded-lg border border-gray-200 px-2 py-1 text-xs outline-none focus:border-gold"
-            />
+          <div key={index} className="group relative aspect-square overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
+            {url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={url} alt="" className="size-full object-cover" />
+            ) : (
+              <div className="flex size-full items-center justify-center text-gray-300">
+                <ImageIcon className="size-6" />
+              </div>
+            )}
             <button
               type="button"
               onClick={() => removeAt(index)}
@@ -59,7 +76,7 @@ export function Step10Gallery({
         {images.length < MAX_IMAGES && (
           <button
             type="button"
-            onClick={() => onChange({ galleryImages: [...images, ""] })}
+            onClick={() => fileInputRef.current?.click()}
             className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-gold/40 text-gold transition-colors hover:bg-gold/5"
           >
             <PlusIcon className="size-5" />
