@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Numinds.Api.Data;
 using Numinds.Api.Models.Entities;
 using Numinds.Api.Services;
@@ -68,7 +69,16 @@ builder.Services.AddDbContextPool<NumindsDbContext>(options =>
             options.UseSqlServer(connectionString, sql => sql.EnableRetryOnFailure());
             break;
         case "Sqlite":
+            // Migrations are generated against Postgres (the production
+            // provider) so their column types/annotations are Npgsql-native
+            // and will never byte-for-byte match Sqlite's own type mappings.
+            // That's a permanent, expected mismatch between two providers
+            // sharing one migration history — not real schema drift — so the
+            // check is suppressed here. It stays enabled for Postgres/SQL
+            // Server below, where it still catches genuine drift, and this
+            // provider only ever touches the disposable local dev.db.
             options.UseSqlite(connectionString);
+            options.ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning));
             break;
         default:
             throw new InvalidOperationException(
