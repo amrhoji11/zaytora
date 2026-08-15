@@ -7,6 +7,7 @@ export {
   User as UserIcon,
   Menu as MenuIcon,
   Eye as EyeIcon,
+  EyeOff as EyeOffIcon,
   CalendarDays as CalendarIcon,
   Clock as ClockIcon,
   Mail as MailIcon,
@@ -48,11 +49,83 @@ export {
   ClipboardList as ClipboardListIcon,
   Building2 as BuildingIcon,
   Loader2 as LoaderIcon,
+  Search as SearchIcon,
   Check as CheckIcon,
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
+  ChevronUp as ChevronUpIcon,
   BedDouble as BedDoubleIcon,
+  TrendingUp as TrendingUpIcon,
+  Wallet as WalletIcon,
+  Handshake as HandshakeIcon,
+  ShoppingBag as OrdersIcon,
+  Percent as PercentIcon,
+  Ticket as TicketIcon,
+  CheckCircle2 as CheckCircleIcon,
+  XCircle as XCircleIcon,
+  Inbox as InboxIcon,
+  ExternalLink as ExternalLinkIcon,
+  Wifi as WifiIcon,
+  LogOut as LogOutIcon,
+  Save as SaveIcon,
+  RotateCcw as RotateCcwIcon,
+  Video as VideoIcon,
+  Zap as ZapIcon,
+  ZapOff as ZapOffIcon,
+  Download as DownloadIcon,
+  AlertTriangle as WarningIcon,
+  Copy as CopyIcon,
+  ShieldCheck as ShieldIcon,
 } from "lucide-react";
+
+export function InstagramIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+      <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+    </svg>
+  );
+}
+
+export function FacebookIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
+      <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
+    </svg>
+  );
+}
+
+export function TikTokIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
+      <path d="M16.6 5.82s.51.5 0 0A4.278 4.278 0 0 1 15.54 3h-3.09v12.4a2.592 2.592 0 0 1-2.59 2.5c-1.42 0-2.6-1.16-2.6-2.6 0-1.72 1.66-3.01 3.37-2.48V9.66c-3.45-.46-6.47 2.22-6.47 5.64 0 3.33 2.76 5.7 5.69 5.7 3.14 0 5.69-2.55 5.69-5.7V9.01a7.35 7.35 0 0 0 4.32 1.39V7.31s-1.88.09-3.26-1.49z" />
+    </svg>
+  );
+}
+
+export function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" {...props}>
+      <path
+        fill="#4285F4"
+        d="M23.52 12.27c0-.85-.08-1.67-.22-2.45H12v4.64h6.47a5.53 5.53 0 0 1-2.4 3.63v3h3.87c2.27-2.09 3.58-5.17 3.58-8.82z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 24c3.24 0 5.96-1.07 7.94-2.91l-3.87-3c-1.08.72-2.45 1.15-4.07 1.15-3.13 0-5.78-2.11-6.73-4.96H1.27v3.11A12 12 0 0 0 12 24z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M5.27 14.28A7.2 7.2 0 0 1 4.89 12c0-.79.14-1.56.38-2.28V6.61H1.27A12 12 0 0 0 0 12c0 1.94.46 3.77 1.27 5.39z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 4.77c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0A12 12 0 0 0 1.27 6.61l4 3.11C6.22 6.87 8.87 4.77 12 4.77z"
+      />
+    </svg>
+  );
+}
 
 export function WhatsAppIcon(props: React.SVGProps<SVGSVGElement>) {
   return (

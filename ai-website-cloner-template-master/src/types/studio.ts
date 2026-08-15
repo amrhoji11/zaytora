@@ -16,6 +16,7 @@ export interface ContactItem {
   name: string;
   role?: string;
   phone: string;
+  whatsapp?: string;
 }
 
 export interface WishlistItem {
@@ -44,11 +45,16 @@ export interface InvitationDetail {
   secondName?: string | null;
   namesFont?: string | null;
   useNameImage: boolean;
+  // Not yet backed by a backend column (see the gift/QR-entry notes below
+  // for the same caveat) — persists for the editing session but won't
+  // survive a reload until the API grows a matching field.
+  nameImageUrl?: string | null;
   eventDateTime?: string | null;
   timezone?: string | null;
   useHijriDate: boolean;
   thankYouText?: string | null;
   thankYouTextColor?: string | null;
+  thankYouImageUrl?: string | null;
 
   hideFamilyNames: boolean;
   familyName1?: string | null;
@@ -82,9 +88,6 @@ export interface InvitationDetail {
 
   enableGifts: boolean;
   giftIban?: string | null;
-  // Not yet backed by a backend column (see StudioWizard/PhonePreview notes) —
-  // persists for the editing session but won't survive a reload until the
-  // API grows matching fields.
   giftFeeCoverage?: boolean;
   giftMessage?: string | null;
   giftBankTransferEnabled?: boolean;
@@ -112,9 +115,19 @@ export interface InvitationDetail {
   rsvpShowMessage: boolean;
   rsvpShowLiveCount: boolean;
   guestLimit?: number | null;
+  // Derived from the invitation's own RSVP responses, not user-editable —
+  // powers the guest-facing attendee count + wishes feed.
+  rsvpAttendingCount: number;
+  rsvpWishes: string[];
 
   generalTextFont?: string | null;
   envelopeNameFont?: string | null;
+  // Manual override for every heading/body/strong/muted text color the
+  // canvas would otherwise resolve from the template's own theme (see
+  // resolveCanvasTheme in InvitationCanvas.tsx) — lets a guest fix text
+  // that's hard to read against their chosen template's background instead
+  // of being stuck with that template's automatic color choice.
+  textColor?: string | null;
 }
 
 // Every field optional — a step only ever sends the slice it owns.

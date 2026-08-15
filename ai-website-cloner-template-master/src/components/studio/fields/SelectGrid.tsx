@@ -41,9 +41,9 @@ export function SelectGrid({
               layout === "row" ? "flex items-center gap-3 text-start" : "text-center",
               selected
                 ? layout === "row"
-                  ? "border-gold bg-white text-gold"
-                  : "border-gold bg-gold/10 text-gray-900"
-                : "border-gray-200 bg-white text-gray-700 hover:border-gold/40"
+                  ? "border-gold bg-gold/10 text-gold"
+                  : "border-gold bg-gold/10 text-foreground"
+                : "border-border bg-background/5 text-body-foreground hover:border-gold/40"
             )}
           >
             {selected && layout === "tile" && (
@@ -64,7 +64,7 @@ export function SelectGrid({
             <span>
               <span className="block">{option.label}</span>
               {option.sublabel && (
-                <span className="mt-0.5 block text-xs font-normal text-gray-400">{option.sublabel}</span>
+                <span className="mt-0.5 block text-xs font-normal text-muted-foreground">{option.sublabel}</span>
               )}
             </span>
           </button>

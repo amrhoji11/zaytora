@@ -1,6 +1,13 @@
+"use client";
+
 import { WhatsAppIcon } from "@/components/icons";
+import { useLanguage } from "@/context/LanguageContext";
+
+const COPY = { ar: "تواصل معنا", en: "Contact Us" };
 
 export function WhatsAppButton() {
+  const { language } = useLanguage();
+
   return (
     <a
       href="https://wa.me/966500000000"
@@ -10,7 +17,7 @@ export function WhatsAppButton() {
     >
       <WhatsAppIcon className="size-6 shrink-0" />
       <span className="max-w-0 overflow-hidden whitespace-nowrap transition-all duration-200 group-hover:max-w-xs">
-        تواصل معنا
+        {COPY[language]}
       </span>
     </a>
   );

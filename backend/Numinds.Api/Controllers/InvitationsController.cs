@@ -1,8 +1,10 @@
+using System.Linq.Expressions;
 using System.Text.Json;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Numinds.Api.Data;
+using Numinds.Api.Models;
 using Numinds.Api.Models.Dtos;
 using Numinds.Api.Models.Entities;
 
@@ -14,6 +16,22 @@ public class InvitationsController(
     NumindsDbContext db,
     UserManager<ApplicationUser> userManager) : ControllerBase
 {
+    // Matches numinds.me's "5 invitation cards" cap. Applies to authenticated
+    // users (by UserId) and anonymous guests alike (by the GuestId tracking
+    // cookie set in GetOrCreateGuestId) — nobody gets an unlimited number of
+    // drafts just by staying signed out.
+    private const int MaxInvitationsPerUser = 5;
+    private const string GuestCookieName = "numinds_guest_id";
+
+    // A row gets created the instant the studio loads (see Create below),
+    // before the visitor has entered anything — so merely opening /studio
+    // and leaving would otherwise occupy a permanent, empty slot in both the
+    // cap count and the dashboard list. Picking a template or filling in
+    // step 4's basic info (name/title) is the first point that reflects
+    // actual intent to build an invitation, not just a glance at the studio.
+    private static readonly Expression<Func<Invitation, bool>> HasContent =
+        i => i.TemplateId != null || !string.IsNullOrEmpty(i.EventTitle) || !string.IsNullOrEmpty(i.FirstName);
+
     // POST /api/invitations
     // Anonymous is allowed: the Hero "إنشاء دعوة" CTA can create a draft
     // before the user has an account. If a session cookie is present the
@@ -30,11 +48,24 @@ public class InvitationsController(
         }
 
         var userId = await GetCurrentUserIdAsync();
+        var guestId = userId is null ? GetOrCreateGuestId() : (Guid?)null;
+
+        var existingCount = userId is not null
+            ? await db.Invitations.Where(i => i.UserId == userId).CountAsync(HasContent, cancellationToken)
+            : await db.Invitations.Where(i => i.GuestId == guestId).CountAsync(HasContent, cancellationToken);
+        if (existingCount >= MaxInvitationsPerUser)
+        {
+            return Conflict(new
+            {
+                title = $"You've reached the maximum of {MaxInvitationsPerUser} invitations. Delete one to create a new one.",
+            });
+        }
 
         var invitation = new Invitation
         {
             Id = Guid.NewGuid(),
             UserId = userId,
+            GuestId = guestId,
             TemplateId = templateId,
             Status = "draft",
             CreatedAt = DateTime.UtcNow,
@@ -54,14 +85,92 @@ public class InvitationsController(
         return CreatedAtAction(nameof(GetById), new { id = invitation.Id }, dto);
     }
 
+    // Once an order is placed, an invitation only becomes real — visible in
+    // the dashboard, openable via its public link — once an admin has
+    // reviewed the (out-of-band) payment and confirmed it. Before that, and
+    // if the admin rejects it, it stays invisible everywhere except to its
+    // own owner and to admins (see List/GetById below): functionally "not
+    // created yet" without actually destroying whatever the guest designed,
+    // in case the reject was a mistake or the guest still wants to pay.
+    private static bool IsPubliclyVisible(Invitation invitation) => invitation.Status is "paid" or "shared";
+
+    // GET /api/invitations
+    // Lists the caller's own invitations for the dashboard's bookings table —
+    // every status (not just admin-approved ones) that HasContent: this is
+    // the owner's own management view (and the only place they can see/
+    // delete a draft that's counting against MaxInvitationsPerUser above),
+    // unlike the public guest-facing link, which IsPubliclyVisible/GetById
+    // still gates to paid/shared only. Authenticated callers see their
+    // invitations by UserId; anonymous callers see theirs by the GuestId
+    // tracking cookie (read-only here — no cookie means no invitations yet,
+    // so there's nothing to mint one for). A guest with neither a session
+    // nor a cookie just gets [].
+    [HttpGet]
+    public async Task<ActionResult<List<InvitationSummaryDto>>> List(CancellationToken cancellationToken)
+    {
+        var userId = await GetCurrentUserIdAsync();
+        var guestId = userId is null ? GetGuestIdFromCookie() : null;
+        if (userId is null && guestId is null)
+        {
+            return Ok(new List<InvitationSummaryDto>());
+        }
+
+        var invitations = await db.Invitations
+            .AsNoTracking()
+            .Where(i => userId != null ? i.UserId == userId : i.GuestId == guestId)
+            .Where(HasContent)
+            .Include(i => i.Responses)
+            .OrderBy(i => i.CreatedAt)
+            .ToListAsync(cancellationToken);
+
+        var summaries = invitations
+            .Select((invitation, index) => new InvitationSummaryDto
+            {
+                Id = invitation.Id.ToString(),
+                BookingId = $"ND{1001 + index}",
+                Status = invitation.Status,
+                IsPaid = invitation.Status is "paid" or "shared",
+                CreatedAt = invitation.CreatedAt,
+                EventDateTime = invitation.EventDateTime,
+                ResponseCount = invitation.Responses.Count,
+                GalleryCount = Deserialize<string>(invitation.GalleryImagesJson).Count,
+                FirstName = invitation.FirstName,
+                SecondName = invitation.SecondName,
+            })
+            .ToList();
+
+        return Ok(summaries);
+    }
+
     // GET /api/invitations/{id}
+    // Used by three very different callers, which is why the gate below
+    // isn't a blanket [Authorize]: the owner needs this while still
+    // designing/reviewing in the studio (any status — it's their own
+    // unfinished work), an admin needs it to preview before deciding
+    // paid/rejected (any status — that's the whole point of reviewing it),
+    // and everyone else is a guest opening the shared link, who should only
+    // ever reach something the admin has actually approved.
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<InvitationDetailDto>> GetById(Guid id, CancellationToken cancellationToken)
     {
-        var invitation = await db.Invitations.AsNoTracking().FirstOrDefaultAsync(i => i.Id == id, cancellationToken);
+        var invitation = await db.Invitations
+            .AsNoTracking()
+            .Include(i => i.Responses)
+            .FirstOrDefaultAsync(i => i.Id == id, cancellationToken);
         if (invitation is null)
         {
             return NotFound();
+        }
+
+        if (!IsPubliclyVisible(invitation))
+        {
+            var userId = await GetCurrentUserIdAsync();
+            var isOwner = OwnsInvitation(invitation, userId);
+            var isAdmin = User.IsInRole(Roles.Admin);
+            if (!isOwner && !isAdmin)
+            {
+                return NotFound();
+            }
         }
 
         return Ok(ToDetailDto(invitation));
@@ -77,10 +186,48 @@ public class InvitationsController(
         UpdateInvitationRequest request,
         CancellationToken cancellationToken)
     {
-        var invitation = await db.Invitations.FirstOrDefaultAsync(i => i.Id == id, cancellationToken);
+        var invitation = await db.Invitations.Include(i => i.Responses).FirstOrDefaultAsync(i => i.Id == id, cancellationToken);
         if (invitation is null)
         {
             return NotFound();
+        }
+
+        var userId = await GetCurrentUserIdAsync();
+        var guestId = userId is null ? GetGuestIdFromCookie() : null;
+
+        if (invitation.UserId is not null)
+        {
+            // Already claimed — only its owner may edit it. Admins can view
+            // and approve/reject (via OrdersController.UpdateStatus) but must
+            // never rewrite a user's own content — this is intentionally not
+            // bypassed for Roles.Admin. Without this, the invitation's own id
+            // (now handed out freely as the shareable public link) would
+            // double as a write token: anyone who received the link could
+            // PUT arbitrary changes — gift IBAN, event date, RSVP settings —
+            // to someone else's already-approved invitation.
+            if (invitation.UserId != userId)
+            {
+                return Forbid();
+            }
+        }
+        else if (userId is null && invitation.GuestId != guestId)
+        {
+            // Still an anonymous draft: only the guest cookie that created
+            // it may touch it. A signed-in caller is allowed through here
+            // (see the claim below) since that's the studio's normal
+            // login-at-payment-gate flow, but a random anonymous visitor
+            // who merely knows/guesses the id is not.
+            return Forbid();
+        }
+
+        // Claims anonymous drafts (UserId is null, e.g. started via the Hero
+        // "إنشاء دعوة" CTA before signing in) the first time an authenticated
+        // request touches them — in practice, the moment a guest logs in at
+        // the studio's payment gate and its next autosave fires. Never
+        // reassigns an already-claimed invitation to someone else.
+        if (invitation.UserId is null)
+        {
+            invitation.UserId = userId;
         }
 
         if (request.TemplateId is not null)
@@ -112,6 +259,7 @@ public class InvitationsController(
         if (request.UseHijriDate is not null) invitation.UseHijriDate = request.UseHijriDate.Value;
         if (request.ThankYouText is not null) invitation.ThankYouText = request.ThankYouText;
         if (request.ThankYouTextColor is not null) invitation.ThankYouTextColor = request.ThankYouTextColor;
+        if (request.ThankYouImageUrl is not null) invitation.ThankYouImageUrl = request.ThankYouImageUrl;
 
         if (request.HideFamilyNames is not null) invitation.HideFamilyNames = request.HideFamilyNames.Value;
         if (request.FamilyName1 is not null) invitation.FamilyName1 = request.FamilyName1;
@@ -144,6 +292,13 @@ public class InvitationsController(
 
         if (request.EnableGifts is not null) invitation.EnableGifts = request.EnableGifts.Value;
         if (request.GiftIban is not null) invitation.GiftIban = request.GiftIban;
+        if (request.GiftFeeCoverage is not null) invitation.GiftFeeCoverage = request.GiftFeeCoverage.Value;
+        if (request.GiftMessage is not null) invitation.GiftMessage = request.GiftMessage;
+        if (request.GiftBankTransferEnabled is not null) invitation.GiftBankTransferEnabled = request.GiftBankTransferEnabled.Value;
+        if (request.GiftAccountHolderName is not null) invitation.GiftAccountHolderName = request.GiftAccountHolderName;
+        if (request.GiftQrImageUrl is not null) invitation.GiftQrImageUrl = request.GiftQrImageUrl;
+        if (request.GiftWishlistEnabled is not null) invitation.GiftWishlistEnabled = request.GiftWishlistEnabled.Value;
+        if (request.GiftWishlistItems is not null) invitation.GiftWishlistItemsJson = JsonSerializer.Serialize(request.GiftWishlistItems);
 
         if (request.HideCameraButton is not null) invitation.HideCameraButton = request.HideCameraButton.Value;
         if (request.HideSaveButton is not null) invitation.HideSaveButton = request.HideSaveButton.Value;
@@ -160,12 +315,154 @@ public class InvitationsController(
 
         if (request.GeneralTextFont is not null) invitation.GeneralTextFont = request.GeneralTextFont;
         if (request.EnvelopeNameFont is not null) invitation.EnvelopeNameFont = request.EnvelopeNameFont;
+        if (request.TextColor is not null) invitation.TextColor = request.TextColor;
 
         invitation.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync(cancellationToken);
 
         return Ok(ToDetailDto(invitation));
+    }
+
+    // DELETE /api/invitations/{id}
+    // Powers the dashboard's Delete action. Scoped to the caller's own
+    // invitations (by UserId for a session, by GuestId cookie otherwise) —
+    // same ownership rule Update enforces above, so one caller can't delete
+    // (or edit) another's invitation.
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+    {
+        var userId = await GetCurrentUserIdAsync();
+        var invitation = await db.Invitations.FirstOrDefaultAsync(i => i.Id == id, cancellationToken);
+        if (invitation is null)
+        {
+            return NotFound();
+        }
+
+        if (!OwnsInvitation(invitation, userId))
+        {
+            return Forbid();
+        }
+
+        db.Invitations.Remove(invitation);
+        await db.SaveChangesAsync(cancellationToken);
+
+        return NoContent();
+    }
+
+    // POST /api/invitations/{id}/rsvp
+    // Anonymous is allowed: this is submitted by a *guest* viewing the
+    // published invitation (InteractiveRSVPModal.tsx), not by the owner.
+    [HttpPost("{id:guid}/rsvp")]
+    public async Task<IActionResult> SubmitRsvp(
+        Guid id,
+        RsvpSubmissionRequest request,
+        CancellationToken cancellationToken)
+    {
+        var invitation = await db.Invitations
+            .Include(i => i.Responses)
+            .FirstOrDefaultAsync(i => i.Id == id, cancellationToken);
+        if (invitation is null)
+        {
+            return NotFound();
+        }
+
+        // Same "confirmed guests" counting as RsvpAttendingCount in
+        // ToDetailDto below: Attending != false counts (an unasked/null
+        // attendance is treated as attending), falling back to 1 per
+        // response with no headcount of its own.
+        var incomingCount = request.Attending != false ? request.GuestCount ?? 1 : 0;
+        if (invitation.GuestLimit is { } limit && incomingCount > 0)
+        {
+            var currentCount = invitation.Responses
+                .Where(r => r.Attending != false)
+                .Sum(r => r.GuestCount ?? 1);
+            if (currentCount + incomingCount > limit)
+            {
+                return Conflict(new { title = "This event has reached its guest limit." });
+            }
+        }
+
+        db.RsvpResponses.Add(new RsvpResponse
+        {
+            Id = Guid.NewGuid(),
+            InvitationId = id,
+            GuestName = request.GuestName,
+            Attending = request.Attending,
+            GuestCount = request.GuestCount,
+            Message = request.Message,
+            CreatedAt = DateTime.UtcNow,
+        });
+        await db.SaveChangesAsync(cancellationToken);
+
+        return NoContent();
+    }
+
+    // GET /api/invitations/{id}/rsvp
+    // The owner's dashboard "Responses" modal — every individual guest
+    // submission, newest first. Scoped to the caller's own invitation, same
+    // as Delete below.
+    [HttpGet("{id:guid}/rsvp")]
+    public async Task<ActionResult<List<RsvpResponseDto>>> ListRsvpResponses(Guid id, CancellationToken cancellationToken)
+    {
+        var userId = await GetCurrentUserIdAsync();
+        var invitation = await db.Invitations
+            .AsNoTracking()
+            .Include(i => i.Responses)
+            .FirstOrDefaultAsync(i => i.Id == id, cancellationToken);
+        if (invitation is null)
+        {
+            return NotFound();
+        }
+        if (!OwnsInvitation(invitation, userId))
+        {
+            return Forbid();
+        }
+
+        var responses = invitation.Responses
+            .OrderByDescending(r => r.CreatedAt)
+            .Select(r => new RsvpResponseDto
+            {
+                Id = r.Id.ToString(),
+                GuestName = r.GuestName,
+                Attending = r.Attending,
+                GuestCount = r.GuestCount,
+                Message = r.Message,
+                CreatedAt = r.CreatedAt,
+            })
+            .ToList();
+
+        return Ok(responses);
+    }
+
+    // DELETE /api/invitations/{id}/rsvp/{responseId}
+    // Lets the owner remove a single guest response (e.g. spam/test
+    // submissions) from the dashboard modal without affecting the rest.
+    [HttpDelete("{id:guid}/rsvp/{responseId:guid}")]
+    public async Task<IActionResult> DeleteRsvpResponse(Guid id, Guid responseId, CancellationToken cancellationToken)
+    {
+        var userId = await GetCurrentUserIdAsync();
+        var invitation = await db.Invitations.FirstOrDefaultAsync(i => i.Id == id, cancellationToken);
+        if (invitation is null)
+        {
+            return NotFound();
+        }
+        if (!OwnsInvitation(invitation, userId))
+        {
+            return Forbid();
+        }
+
+        var response = await db.RsvpResponses.FirstOrDefaultAsync(
+            r => r.Id == responseId && r.InvitationId == id, cancellationToken);
+        if (response is null)
+        {
+            return NotFound();
+        }
+
+        db.RsvpResponses.Remove(response);
+        await db.SaveChangesAsync(cancellationToken);
+
+        return NoContent();
     }
 
     private async Task<Guid?> ResolveTemplateIdAsync(string? templateId, CancellationToken cancellationToken)
@@ -184,8 +481,65 @@ public class InvitationsController(
         return user?.Id;
     }
 
-    private static List<T> Deserialize<T>(string json) =>
-        JsonSerializer.Deserialize<List<T>>(json) ?? [];
+    // Read-only lookup of the anonymous tracking cookie — used by List/
+    // Delete/rsvp endpoints, which should never mint a cookie for a guest
+    // who's never created anything.
+    private Guid? GetGuestIdFromCookie() =>
+        Guid.TryParse(Request.Cookies[GuestCookieName], out var existing) ? existing : null;
+
+    // Reads the anonymous tracking cookie if present, otherwise mints one
+    // and writes it to the response. Same SameSite/Secure policy as the
+    // Identity auth cookie (see Program.cs) so it survives the same
+    // localhost-cross-port and production cross-subdomain setups.
+    private Guid GetOrCreateGuestId()
+    {
+        if (GetGuestIdFromCookie() is { } existing)
+        {
+            return existing;
+        }
+
+        var guestId = Guid.NewGuid();
+        Response.Cookies.Append(GuestCookieName, guestId.ToString(), new CookieOptions
+        {
+            HttpOnly = true,
+            SameSite = SameSiteMode.Lax,
+            Secure = Request.IsHttps,
+            Expires = DateTimeOffset.UtcNow.AddYears(1),
+        });
+        return guestId;
+    }
+
+    // A caller owns an invitation if it matches their UserId (once claimed),
+    // or — still unclaimed — their GuestId cookie, checked regardless of
+    // whether they're now also signed in. That second branch matters for
+    // exactly one real sequence: a guest starts a draft, then logs in (e.g.
+    // at the payment gate) before its first authenticated PUT has claimed it
+    // for their UserId. Without it, the studio's very first GET right after
+    // that login — now authenticated, UserId still doesn't match anything —
+    // would 404 on the caller's own draft. GetGuestIdFromCookie is read
+    // directly here rather than passed in, specifically so it's never
+    // suppressed just because the caller happens to be authenticated.
+    private bool OwnsInvitation(Invitation invitation, Guid? userId) =>
+        (userId is not null && invitation.UserId == userId) ||
+        (invitation.UserId is null && GetGuestIdFromCookie() is { } guestId && invitation.GuestId == guestId);
+
+    // Tolerant on purpose: a *Json column added via migration to a table
+    // that already has rows (see GiftWishlistItemsJson) backfills as an
+    // empty string, not "[]" — JsonSerializer throws on that, which would
+    // otherwise 500 every GET for every invitation that predates the
+    // migration.
+    private static List<T> Deserialize<T>(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return [];
+        try
+        {
+            return JsonSerializer.Deserialize<List<T>>(json) ?? [];
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+    }
 
     private static InvitationDetailDto ToDetailDto(Invitation invitation) => new()
     {
@@ -213,6 +567,7 @@ public class InvitationsController(
         UseHijriDate = invitation.UseHijriDate,
         ThankYouText = invitation.ThankYouText,
         ThankYouTextColor = invitation.ThankYouTextColor,
+        ThankYouImageUrl = invitation.ThankYouImageUrl,
 
         HideFamilyNames = invitation.HideFamilyNames,
         FamilyName1 = invitation.FamilyName1,
@@ -245,6 +600,13 @@ public class InvitationsController(
 
         EnableGifts = invitation.EnableGifts,
         GiftIban = invitation.GiftIban,
+        GiftFeeCoverage = invitation.GiftFeeCoverage,
+        GiftMessage = invitation.GiftMessage,
+        GiftBankTransferEnabled = invitation.GiftBankTransferEnabled,
+        GiftAccountHolderName = invitation.GiftAccountHolderName,
+        GiftQrImageUrl = invitation.GiftQrImageUrl,
+        GiftWishlistEnabled = invitation.GiftWishlistEnabled,
+        GiftWishlistItems = Deserialize<WishlistItemDto>(invitation.GiftWishlistItemsJson),
 
         HideCameraButton = invitation.HideCameraButton,
         HideSaveButton = invitation.HideSaveButton,
@@ -259,7 +621,20 @@ public class InvitationsController(
         RsvpShowLiveCount = invitation.RsvpShowLiveCount,
         GuestLimit = invitation.GuestLimit,
 
+        // Sum of confirmed guests (falling back to 1 per response with no
+        // headcount of their own) rather than a raw response count, so a
+        // family of four who RSVP once still counts as four attendees.
+        RsvpAttendingCount = invitation.Responses
+            .Where(r => r.Attending != false)
+            .Sum(r => r.GuestCount ?? 1),
+        RsvpWishes = invitation.Responses
+            .Where(r => !string.IsNullOrWhiteSpace(r.Message))
+            .OrderByDescending(r => r.CreatedAt)
+            .Select(r => r.Message!)
+            .ToList(),
+
         GeneralTextFont = invitation.GeneralTextFont,
         EnvelopeNameFont = invitation.EnvelopeNameFont,
+        TextColor = invitation.TextColor,
     };
 }

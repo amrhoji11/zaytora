@@ -1,8 +1,13 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using Numinds.Api.Models;
 using Numinds.Api.Models.Dtos;
 using Numinds.Api.Models.Entities;
+using Numinds.Api.Services;
 
 namespace Numinds.Api.Controllers;
 
@@ -10,8 +15,12 @@ namespace Numinds.Api.Controllers;
 [Route("api/account")]
 public class AccountController(
     SignInManager<ApplicationUser> signInManager,
-    UserManager<ApplicationUser> userManager) : ControllerBase
+    UserManager<ApplicationUser> userManager,
+    IEmailSender emailSender,
+    IConfiguration configuration) : ControllerBase
 {
+    private string FrontendBaseUrl => configuration["Frontend:BaseUrl"] ?? "http://localhost:3000";
+
     // GET /api/account/me
     [HttpGet("me")]
     [Authorize]
@@ -23,20 +32,50 @@ public class AccountController(
             return Unauthorized();
         }
 
-        return Ok(new UserDto
+        return Ok(await ToDtoAsync(user));
+    }
+
+    // POST /api/account/register
+    // Creates the account and immediately signs it in (isPersistent: true,
+    // matching Login below) so the caller lands authenticated without a
+    // separate sign-in step. EmailConfirmed is set true — no email/SMS
+    // verification flow exists yet, same shortcut SeedIdentity uses for the
+    // demo user.
+    [HttpPost("register")]
+    [EnableRateLimiting("auth")]
+    public async Task<ActionResult<UserDto>> Register(RegisterRequest request)
+    {
+        var existing = await userManager.FindByEmailAsync(request.Email);
+        if (existing is not null)
         {
-            Id = user.Id.ToString(),
-            DisplayName = user.DisplayName,
-            Email = user.Email ?? string.Empty,
-            AvatarUrl = user.AvatarUrl,
-        });
+            return BadRequest(new { title = "A user with this email already exists" });
+        }
+
+        var user = new ApplicationUser
+        {
+            UserName = request.Email,
+            Email = request.Email,
+            EmailConfirmed = true,
+            DisplayName = request.DisplayName,
+            PhoneNumber = request.PhoneNumber,
+            PhoneNumberConfirmed = !string.IsNullOrWhiteSpace(request.PhoneNumber),
+        };
+
+        var result = await userManager.CreateAsync(user, request.Password);
+        if (!result.Succeeded)
+        {
+            var title = string.Join(" ", result.Errors.Select(e => e.Description));
+            return BadRequest(new { title });
+        }
+
+        await signInManager.SignInAsync(user, isPersistent: true);
+
+        return Ok(await ToDtoAsync(user));
     }
 
     // POST /api/account/login
-    // Not part of the original frontend spec — the account cookie session
-    // has to come from somewhere for /me and /logout to be testable before
-    // a real sign-in screen exists. Seeded demo user: see SeedIdentity.
     [HttpPost("login")]
+    [EnableRateLimiting("auth")]
     public async Task<ActionResult<UserDto>> Login(LoginRequest request)
     {
         var user = await userManager.FindByEmailAsync(request.Email);
@@ -45,21 +84,53 @@ public class AccountController(
             return Unauthorized(new { title = "Invalid email or password." });
         }
 
+        // lockoutOnFailure: true — layers Identity's own per-account lockout
+        // (5 failed attempts -> 5 minute lockout by default) on top of the
+        // "auth" rate limit above, so a single account can't be brute-forced
+        // by spreading guesses across many IPs either.
         var result = await signInManager.PasswordSignInAsync(
-            user, request.Password, isPersistent: true, lockoutOnFailure: false);
+            user, request.Password, isPersistent: true, lockoutOnFailure: true);
 
         if (!result.Succeeded)
         {
             return Unauthorized(new { title = "Invalid email or password." });
         }
 
-        return Ok(new UserDto
+        return Ok(await ToDtoAsync(user));
+    }
+
+    // PATCH /api/account/me
+    // Lets a signed-in user add/change their own phone number after the
+    // fact — the only signup path that captures one today is email/password
+    // registration with the field filled in; Google sign-in never collects
+    // it, so this is how those accounts (and anyone who skipped it) can add
+    // one later. Empty string clears it back to null rather than being
+    // rejected, so a user can undo a typo'd number.
+    [HttpPatch("me")]
+    [Authorize]
+    public async Task<ActionResult<UserDto>> UpdateProfile(UpdateProfileRequest request)
+    {
+        var user = await userManager.GetUserAsync(User);
+        if (user is null)
         {
-            Id = user.Id.ToString(),
-            DisplayName = user.DisplayName,
-            Email = user.Email ?? string.Empty,
-            AvatarUrl = user.AvatarUrl,
-        });
+            return Unauthorized();
+        }
+
+        if (request.PhoneNumber is not null)
+        {
+            var trimmed = request.PhoneNumber.Trim();
+            user.PhoneNumber = trimmed.Length == 0 ? null : trimmed;
+            user.PhoneNumberConfirmed = trimmed.Length > 0;
+
+            var result = await userManager.UpdateAsync(user);
+            if (!result.Succeeded)
+            {
+                var title = string.Join(" ", result.Errors.Select(e => e.Description));
+                return BadRequest(new { title });
+            }
+        }
+
+        return Ok(await ToDtoAsync(user));
     }
 
     // POST /api/account/logout
@@ -68,6 +139,117 @@ public class AccountController(
     {
         await signInManager.SignOutAsync();
         return NoContent();
+    }
+
+    // POST /api/account/forgot-password
+    // Always returns 204 regardless of whether the email matches an account,
+    // so the response can't be used to enumerate registered emails.
+    [HttpPost("forgot-password")]
+    [EnableRateLimiting("auth")]
+    public async Task<IActionResult> ForgotPassword(ForgotPasswordRequest request, CancellationToken cancellationToken)
+    {
+        var user = await userManager.FindByEmailAsync(request.Email);
+        if (user is not null)
+        {
+            var token = await userManager.GeneratePasswordResetTokenAsync(user);
+            var resetUrl = $"{FrontendBaseUrl}/reset-password" +
+                $"?email={Uri.EscapeDataString(request.Email)}&token={Uri.EscapeDataString(token)}";
+
+            await emailSender.SendAsync(
+                request.Email,
+                "Reset your Numinds password",
+                $"<p>Click the link below to reset your password:</p>" +
+                $"<p><a href=\"{resetUrl}\">{resetUrl}</a></p>" +
+                $"<p>If you didn't request this, you can ignore this email.</p>",
+                cancellationToken);
+        }
+
+        return NoContent();
+    }
+
+    // POST /api/account/reset-password
+    [HttpPost("reset-password")]
+    [EnableRateLimiting("auth")]
+    public async Task<IActionResult> ResetPassword(ResetPasswordRequest request, CancellationToken cancellationToken)
+    {
+        var user = await userManager.FindByEmailAsync(request.Email);
+        if (user is null)
+        {
+            return BadRequest(new { title = "Invalid or expired reset link." });
+        }
+
+        var result = await userManager.ResetPasswordAsync(user, request.Token, request.NewPassword);
+        if (!result.Succeeded)
+        {
+            var title = string.Join(" ", result.Errors.Select(e => e.Description));
+            return BadRequest(new { title });
+        }
+
+        return NoContent();
+    }
+
+    // GET /api/account/external-login/google
+    // The frontend triggers this with a full browser navigation (not fetch) —
+    // it challenges Google, which redirects back to the callback below once
+    // the user approves.
+    [HttpGet("external-login/google")]
+    public IActionResult ExternalLoginGoogle([FromQuery] string returnUrl = "/dashboard")
+    {
+        var callbackUrl = $"{Request.Scheme}://{Request.Host}" +
+            $"/api/account/external-login/callback?returnUrl={Uri.EscapeDataString(returnUrl)}";
+        var properties = signInManager.ConfigureExternalAuthenticationProperties(GoogleDefaults.AuthenticationScheme, callbackUrl);
+        return Challenge(properties, GoogleDefaults.AuthenticationScheme);
+    }
+
+    // GET /api/account/external-login/callback
+    [HttpGet("external-login/callback")]
+    public async Task<IActionResult> ExternalLoginCallback([FromQuery] string returnUrl = "/dashboard")
+    {
+        var info = await signInManager.GetExternalLoginInfoAsync();
+        if (info is null)
+        {
+            return Redirect($"{FrontendBaseUrl}/login?error=external-login-failed");
+        }
+
+        var signInResult = await signInManager.ExternalLoginSignInAsync(
+            info.LoginProvider, info.ProviderKey, isPersistent: true, bypassTwoFactor: true);
+        if (signInResult.Succeeded)
+        {
+            return Redirect($"{FrontendBaseUrl}{returnUrl}");
+        }
+
+        var email = info.Principal.FindFirstValue(ClaimTypes.Email);
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return Redirect($"{FrontendBaseUrl}/login?error=external-login-failed");
+        }
+
+        var user = await userManager.FindByEmailAsync(email);
+        if (user is null)
+        {
+            user = new ApplicationUser
+            {
+                UserName = email,
+                Email = email,
+                EmailConfirmed = true,
+                DisplayName = info.Principal.FindFirstValue(ClaimTypes.Name) ?? email,
+            };
+
+            var createResult = await userManager.CreateAsync(user);
+            if (!createResult.Succeeded)
+            {
+                return Redirect($"{FrontendBaseUrl}/login?error=external-login-failed");
+            }
+        }
+
+        var addLoginResult = await userManager.AddLoginAsync(user, info);
+        if (!addLoginResult.Succeeded)
+        {
+            return Redirect($"{FrontendBaseUrl}/login?error=external-login-failed");
+        }
+
+        await signInManager.SignInAsync(user, isPersistent: true);
+        return Redirect($"{FrontendBaseUrl}{returnUrl}");
     }
 
     // DELETE /api/account
@@ -91,4 +273,14 @@ public class AccountController(
 
         return NoContent();
     }
+
+    private async Task<UserDto> ToDtoAsync(ApplicationUser user) => new()
+    {
+        Id = user.Id.ToString(),
+        DisplayName = user.DisplayName,
+        Email = user.Email ?? string.Empty,
+        AvatarUrl = user.AvatarUrl,
+        PhoneNumber = user.PhoneNumber,
+        IsAdmin = await userManager.IsInRoleAsync(user, Roles.Admin),
+    };
 }

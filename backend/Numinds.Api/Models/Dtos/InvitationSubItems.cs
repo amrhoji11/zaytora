@@ -22,4 +22,12 @@ public class ContactItemDto
     public string Name { get; set; } = string.Empty;
     public string? Role { get; set; }
     public string Phone { get; set; } = string.Empty;
+    public string? Whatsapp { get; set; }
+}
+
+public class WishlistItemDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string? Link { get; set; }
+    public string? ImageUrl { get; set; }
 }

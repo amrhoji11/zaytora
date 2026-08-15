@@ -1,8 +1,34 @@
+"use client";
+
 import { ToggleField } from "@/components/studio/fields/ToggleField";
 import { TextField } from "@/components/studio/fields/TextField";
 import { TextareaField } from "@/components/studio/fields/TextareaField";
 import { HintBox } from "@/components/studio/fields/HintBox";
+import { useLanguage } from "@/context/LanguageContext";
 import type { InvitationDetail } from "@/types/studio";
+
+const COPY = {
+  ar: {
+    hint: 'مثال: "أعزاءنا الأصدقاء، وجودكم يعني لنا الكثير. بمحبة، أحمد وسارة"',
+    addMessage: "إضافة رسالة شخصية",
+    title: "العنوان",
+    titlePlaceholder: "رسالة العروسين",
+    messageText: "نص الرسالة",
+    messageTextPlaceholder: "أعزاءنا الأصدقاء والعائلة...",
+    signature: "التوقيع",
+    signaturePlaceholder: "بمحبة، أحمد وسارة",
+  },
+  en: {
+    hint: 'Example: "Dear friends, your presence means so much to us. With love, Ahmed and Sarah"',
+    addMessage: "Add a personal message",
+    title: "Title",
+    titlePlaceholder: "A message from the couple",
+    messageText: "Message text",
+    messageTextPlaceholder: "Dear friends and family...",
+    signature: "Signature",
+    signaturePlaceholder: "With love, Ahmed and Sarah",
+  },
+};
 
 export function Step11PersonalMessage({
   value,
@@ -11,12 +37,15 @@ export function Step11PersonalMessage({
   value: InvitationDetail;
   onChange: (patch: Partial<InvitationDetail>) => void;
 }) {
+  const { language } = useLanguage();
+  const t = COPY[language];
+
   return (
     <div className="space-y-5">
-      <HintBox>مثال: &quot;أعزاءنا الأصدقاء، وجودكم يعني لنا الكثير. بمحبة، أحمد وسارة&quot;</HintBox>
+      <HintBox>{t.hint}</HintBox>
 
       <ToggleField
-        label="إضافة رسالة شخصية"
+        label={t.addMessage}
         checked={value.showPersonalMessage}
         onChange={(showPersonalMessage) => onChange({ showPersonalMessage })}
       />
@@ -24,21 +53,21 @@ export function Step11PersonalMessage({
       {value.showPersonalMessage && (
         <>
           <TextField
-            label="العنوان"
+            label={t.title}
             value={value.personalMessageTitle ?? ""}
-            placeholder="رسالة العروسين"
+            placeholder={t.titlePlaceholder}
             onChange={(personalMessageTitle) => onChange({ personalMessageTitle })}
           />
           <TextareaField
-            label="نص الرسالة"
+            label={t.messageText}
             value={value.personalMessageText ?? ""}
-            placeholder="أعزاءنا الأصدقاء والعائلة..."
+            placeholder={t.messageTextPlaceholder}
             onChange={(personalMessageText) => onChange({ personalMessageText })}
           />
           <TextField
-            label="التوقيع"
+            label={t.signature}
             value={value.personalMessageSignature ?? ""}
-            placeholder="بمحبة، أحمد وسارة"
+            placeholder={t.signaturePlaceholder}
             onChange={(personalMessageSignature) => onChange({ personalMessageSignature })}
           />
         </>

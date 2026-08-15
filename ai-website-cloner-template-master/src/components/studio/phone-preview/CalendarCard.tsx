@@ -1,0 +1,127 @@
+"use client";
+
+import { motion } from "framer-motion";
+import { CalendarIcon } from "@/components/icons";
+
+// Minimal RFC 5545 .ics builder — just enough for a single VEVENT, no
+// recurrence/timezone/attendee support, since all this widget needs is a
+// "tap to add to your phone's calendar" button. DTSTART/DTEND are emitted
+// as UTC ("Z" suffix), which every calendar app interprets correctly
+// regardless of the guest's own timezone.
+function toIcsTimestamp(date: Date) {
+  return date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+}
+
+const DEFAULT_EVENT_DURATION_MS = 3 * 60 * 60 * 1000;
+
+function buildIcsContent({
+  startIso,
+  title,
+  location,
+}: {
+  startIso: string;
+  title: string;
+  location?: string | null;
+}) {
+  const start = new Date(startIso);
+  const end = new Date(start.getTime() + DEFAULT_EVENT_DURATION_MS);
+  return [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//ZAYTORA//Invitation//AR",
+    "BEGIN:VEVENT",
+    `UID:${start.getTime()}@numinds.me`,
+    `DTSTAMP:${toIcsTimestamp(new Date())}`,
+    `DTSTART:${toIcsTimestamp(start)}`,
+    `DTEND:${toIcsTimestamp(end)}`,
+    `SUMMARY:${title}`,
+    location ? `LOCATION:${location}` : null,
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ]
+    .filter(Boolean)
+    .join("\r\n");
+}
+
+// A "physical desk calendar" widget — still reads as an object sitting on
+// the page rather than a themed glass panel like the other sections, but its
+// ribbon/card/button colors now come from the same --tpl-* custom properties
+// InvitationCanvas's resolveCanvasTheme() sets on the canvas root (cascading
+// through the DOM, no props needed here), instead of a fixed cream/sage
+// palette baked in regardless of the active template. Two small ring/pin
+// notches poke above its top edge to sell the torn-calendar-page metaphor,
+// plus a "save the date" button that hands the guest a real .ics file.
+export function CalendarCard({
+  month,
+  day,
+  weekday,
+  time,
+  eventIso,
+  eventTitle,
+  venueName,
+}: {
+  month: string;
+  day: string;
+  weekday: string;
+  time: string | null;
+  // Feeds the "احفظ الموعد" download — omitted (button hidden) when there's
+  // no valid event date to save.
+  eventIso: string | null;
+  eventTitle?: string | null;
+  venueName?: string | null;
+}) {
+  function handleSaveDate() {
+    if (!eventIso) return;
+    const ics = buildIcsContent({ startIso: eventIso, title: eventTitle || "دعوة", location: venueName });
+    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "invitation.ics";
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 40 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-50px" }}
+      transition={{ duration: 0.6, ease: "easeOut" }}
+      className="flex flex-col items-center gap-4"
+    >
+      <div className="relative w-40">
+        <span
+          aria-hidden
+          className="absolute -top-3 start-6 size-6 rounded-full border-4 border-[var(--tpl-card-border)] bg-[var(--tpl-page-bg-solid)] shadow-inner"
+        />
+        <span
+          aria-hidden
+          className="absolute -top-3 end-6 size-6 rounded-full border-4 border-[var(--tpl-card-border)] bg-[var(--tpl-page-bg-solid)] shadow-inner"
+        />
+        <div className="overflow-hidden rounded-[24px] border border-[var(--tpl-card-border)] bg-[var(--tpl-card-bg)] shadow-[0_12px_32px_var(--tpl-card-shadow),inset_0_1px_0_var(--tpl-card-highlight)] backdrop-blur-lg">
+          <div className="bg-[var(--tpl-accent)] px-3 py-2 text-center">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white">{month}</p>
+          </div>
+          <div className="flex flex-col items-center gap-1 px-3 py-5">
+            <p className="font-cinzel text-6xl leading-none text-[var(--tpl-text-strong)] [text-shadow:var(--tpl-text-shadow)]">{day}</p>
+            <div className="my-3 h-px w-12 bg-[var(--tpl-card-border)]" aria-hidden />
+            <p className="text-xs font-medium text-[var(--tpl-text-muted)] [text-shadow:var(--tpl-text-shadow)]">{weekday}</p>
+            {time && <p className="mt-2 text-[11px] tracking-wide text-[var(--tpl-accent)]">{time}</p>}
+          </div>
+        </div>
+      </div>
+
+      {eventIso && (
+        <button
+          type="button"
+          onClick={handleSaveDate}
+          className="flex items-center gap-1.5 rounded-full border border-[var(--tpl-accent-30)] bg-[var(--tpl-chip-bg)] px-5 py-2 text-[11px] font-medium text-[var(--tpl-accent)] backdrop-blur-md transition-colors active:scale-95 hover:opacity-90"
+        >
+          <CalendarIcon className="size-3.5" />
+          احفظ الموعد
+        </button>
+      )}
+    </motion.div>
+  );
+}

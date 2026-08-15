@@ -215,6 +215,147 @@ namespace Numinds.Api.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("Numinds.Api.Models.Entities.ContactSettings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AvailabilityText")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("AvailableWorldwide")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("InstagramUrl")
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ResponseTimeText")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SecondaryEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TikTokUrl")
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ContactSettings");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("11111111-1111-1111-1111-111111111111"),
+                            AvailabilityText = "7/24",
+                            AvailableWorldwide = true,
+                            Email = "support@numinds.me",
+                            ResponseTimeText = "1H",
+                            SecondaryEmail = "numindsdesign@gmail.com"
+                        });
+                });
+
+            modelBuilder.Entity("Numinds.Api.Models.Entities.ContactWhatsAppNumber", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ContactSettingsId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CountryCode")
+                        .IsRequired()
+                        .HasMaxLength(4)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ContactSettingsId");
+
+                    b.ToTable("ContactWhatsAppNumbers");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("22222222-2222-2222-2222-222222222222"),
+                            ContactSettingsId = new Guid("11111111-1111-1111-1111-111111111111"),
+                            CountryCode = "SA",
+                            PhoneNumber = "+966 55 123 4567",
+                            SortOrder = 0
+                        },
+                        new
+                        {
+                            Id = new Guid("33333333-3333-3333-3333-333333333333"),
+                            ContactSettingsId = new Guid("11111111-1111-1111-1111-111111111111"),
+                            CountryCode = "GB",
+                            PhoneNumber = "+44 7911 123456",
+                            SortOrder = 1
+                        });
+                });
+
+            modelBuilder.Entity("Numinds.Api.Models.Entities.Envelope", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FoldPointsJson")
+                        .HasMaxLength(2048)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OpeningStyle")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PhotoUrl")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("SealXPercent")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("SealYPercent")
+                        .HasColumnType("REAL");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Envelopes");
+                });
+
             modelBuilder.Entity("Numinds.Api.Models.Entities.Invitation", b =>
                 {
                     b.Property<Guid>("Id")
@@ -275,7 +416,32 @@ namespace Numinds.Api.Migrations
                     b.Property<string>("GeneralTextFont")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("GiftAccountHolderName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("GiftBankTransferEnabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("GiftFeeCoverage")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("GiftIban")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("GiftMessage")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("GiftQrImageUrl")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("GiftWishlistEnabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("GiftWishlistItemsJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("GuestId")
                         .HasColumnType("TEXT");
 
                     b.Property<int?>("GuestLimit")
@@ -366,6 +532,12 @@ namespace Numinds.Api.Migrations
                     b.Property<Guid?>("TemplateId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("TextColor")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ThankYouImageUrl")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("ThankYouText")
                         .HasColumnType("TEXT");
 
@@ -393,6 +565,8 @@ namespace Numinds.Api.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("GuestId");
+
                     b.HasIndex("TemplateId");
 
                     b.HasIndex("UserId");
@@ -400,10 +574,423 @@ namespace Numinds.Api.Migrations
                     b.ToTable("Invitations");
                 });
 
+            modelBuilder.Entity("Numinds.Api.Models.Entities.Order", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AdminNote")
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("AmountUsd")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("ConvertedAmount")
+                        .HasColumnType("decimal(12,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CustomerEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CustomerName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("GiftFeeCoverage")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("InvitationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("PaidAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PaymentStatus")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PromoCodeUsed")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("QrEnabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("QrGuestCount")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerEmail");
+
+                    b.HasIndex("CustomerName");
+
+                    b.HasIndex("InvitationId");
+
+                    b.ToTable("Orders");
+                });
+
+            modelBuilder.Entity("Numinds.Api.Models.Entities.Partner", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Active")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ApplicantName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ApprovedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BusinessName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Country")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CountryFlag")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DiscountType")
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("DiscountValue")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FacebookUrl")
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("InstagramUrl")
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LogoUrl")
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PromoCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("RevenueUsd")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("SubmittedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Tagline")
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TikTokUrl")
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("UsageCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("WebsiteUrl")
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Whatsapp")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BusinessName");
+
+                    b.HasIndex("Email");
+
+                    b.HasIndex("PromoCode")
+                        .IsUnique()
+                        .HasFilter("\"PromoCode\" IS NOT NULL");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasFilter("\"UserId\" IS NOT NULL");
+
+                    b.ToTable("Partners");
+                });
+
+            modelBuilder.Entity("Numinds.Api.Models.Entities.PaymentSettings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AccountNumber")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BankName")
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Iban")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Instructions")
+                        .HasMaxLength(1024)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RecipientName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PaymentSettings");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("44444444-4444-4444-4444-444444444444"),
+                            AccountNumber = "",
+                            RecipientName = ""
+                        });
+                });
+
+            modelBuilder.Entity("Numinds.Api.Models.Entities.PricingSettings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("BasePriceUsd")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("DefaultPartnerDiscountType")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("DefaultPartnerDiscountValue")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("GiftFeePercent")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("PlatformDiscountCode")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PlatformDiscountType")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("PlatformDiscountValue")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("QrRateUsd")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PricingSettings");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("55555555-5555-5555-5555-555555555555"),
+                            BasePriceUsd = 17.99m,
+                            DefaultPartnerDiscountType = "percent",
+                            DefaultPartnerDiscountValue = 33.3m,
+                            GiftFeePercent = 5m,
+                            PlatformDiscountCode = "PARTNER2026",
+                            PlatformDiscountType = "percent",
+                            PlatformDiscountValue = 33.3m,
+                            QrRateUsd = 0.45m
+                        });
+                });
+
+            modelBuilder.Entity("Numinds.Api.Models.Entities.Review", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Country")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CountryFlag")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Rating")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("SubmittedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name");
+
+                    b.ToTable("Reviews");
+                });
+
+            modelBuilder.Entity("Numinds.Api.Models.Entities.RsvpResponse", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool?>("Attending")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("GuestCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("GuestName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("InvitationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Message")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvitationId");
+
+                    b.ToTable("RsvpResponses");
+                });
+
+            modelBuilder.Entity("Numinds.Api.Models.Entities.SupportMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ReceivedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReceivedAt");
+
+                    b.ToTable("SupportMessages");
+                });
+
             modelBuilder.Entity("Numinds.Api.Models.Entities.Template", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AmbientEffect")
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BackgroundImageUrl")
+                        .HasMaxLength(1024)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CardBg")
+                        .HasMaxLength(32)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Category")
@@ -416,18 +1003,74 @@ namespace Numinds.Api.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("DateRevealStyle")
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DecorationImageUrl")
+                        .HasMaxLength(1024)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DefaultNamesFont")
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("EnvelopeId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EnvelopeStyle")
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("HeroFrameStyle")
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("HeroIllustrationUrl")
+                        .HasMaxLength(1024)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("ImageUrl")
                         .IsRequired()
                         .HasMaxLength(512)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("InvitationCardStyle")
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsHomepageFeatured")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("IsPopular")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("Layout")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PageBg")
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PrimaryAccent")
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TextColor")
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
                     b.HasIndex("Code")
                         .IsUnique();
+
+                    b.HasIndex("EnvelopeId");
 
                     b.ToTable("Templates");
 
@@ -435,35 +1078,452 @@ namespace Numinds.Api.Migrations
                         new
                         {
                             Id = new Guid("8f14e45f-ceea-467e-adb2-000000000001"),
+                            AmbientEffect = "petals",
+                            BackgroundImageUrl = "https://images.unsplash.com/photo-1673026190548-c95adc90ef60?w=1200&q=80",
+                            CardBg = "#fbeee5",
                             Category = "wedding",
                             Code = "W024",
-                            ImageUrl = "/images/templates/w024.png",
-                            IsPopular = true
+                            DefaultNamesFont = "font-cinzel",
+                            ImageUrl = "https://images.unsplash.com/photo-1673026190548-c95adc90ef60?w=800&q=80",
+                            IsActive = true,
+                            IsHomepageFeatured = false,
+                            IsPopular = true,
+                            Layout = "full-bleed",
+                            PageBg = "#faf1ea,#fffdfa",
+                            PrimaryAccent = "#8c2a3a",
+                            TextColor = "#5c1a26"
                         },
                         new
                         {
                             Id = new Guid("8f14e45f-ceea-467e-adb2-000000000002"),
+                            AmbientEffect = "smoke",
+                            BackgroundImageUrl = "https://images.unsplash.com/photo-1762621175799-5fc1e336e84a?w=1200&q=80",
+                            CardBg = "#2b2119",
                             Category = "wedding",
                             Code = "W031",
-                            ImageUrl = "/images/templates/w031.jpeg",
-                            IsPopular = false
+                            DefaultNamesFont = "font-cinzel",
+                            ImageUrl = "https://images.unsplash.com/photo-1762621175799-5fc1e336e84a?w=800&q=80",
+                            IsActive = true,
+                            IsHomepageFeatured = false,
+                            IsPopular = false,
+                            Layout = "full-bleed",
+                            PageBg = "#241d17,#332920",
+                            PrimaryAccent = "#D8C4A0",
+                            TextColor = "#F3E9DC"
                         },
                         new
                         {
                             Id = new Guid("8f14e45f-ceea-467e-adb2-000000000003"),
+                            AmbientEffect = "petals",
+                            BackgroundImageUrl = "https://images.unsplash.com/photo-1526353043579-c836f1c675ad?w=1200&q=80",
+                            CardBg = "#fdf3e4",
                             Category = "wedding",
                             Code = "W029",
-                            ImageUrl = "/images/templates/w029.png",
-                            IsPopular = false
+                            DefaultNamesFont = "font-serif",
+                            ImageUrl = "https://images.unsplash.com/photo-1526353043579-c836f1c675ad?w=800&q=80",
+                            IsActive = true,
+                            IsHomepageFeatured = false,
+                            IsPopular = false,
+                            Layout = "full-bleed",
+                            PageBg = "#fdf6ec,#fffcf5",
+                            PrimaryAccent = "#c98a5a",
+                            TextColor = "#6b4a2f"
                         },
                         new
                         {
                             Id = new Guid("8f14e45f-ceea-467e-adb2-000000000004"),
+                            AmbientEffect = "sparkle",
+                            BackgroundImageUrl = "https://images.unsplash.com/photo-1584032910793-7aa893dbefda?w=1200&q=80",
+                            CardBg = "#ffffff",
                             Category = "wedding",
                             Code = "W019",
-                            ImageUrl = "/images/templates/w019.png",
-                            IsPopular = false
+                            DefaultNamesFont = "italic font-serif",
+                            ImageUrl = "https://images.unsplash.com/photo-1584032910793-7aa893dbefda?w=800&q=80",
+                            IsActive = true,
+                            IsHomepageFeatured = false,
+                            IsPopular = false,
+                            Layout = "full-bleed",
+                            PageBg = "#ffffff,#fbfbf9",
+                            PrimaryAccent = "#a68a4a",
+                            TextColor = "#5a5a54"
+                        },
+                        new
+                        {
+                            Id = new Guid("8f14e45f-ceea-467e-adb2-000000000005"),
+                            AmbientEffect = "petals",
+                            BackgroundImageUrl = "https://images.unsplash.com/photo-1520854221256-17451cc331bf?w=1200&q=80",
+                            CardBg = "#0f2419",
+                            Category = "wedding",
+                            Code = "W101",
+                            ImageUrl = "https://images.unsplash.com/photo-1520854221256-17451cc331bf?w=800&q=80",
+                            IsActive = true,
+                            IsHomepageFeatured = false,
+                            IsPopular = true,
+                            Layout = "full-bleed",
+                            PageBg = "#0b1f16,#16291e",
+                            PrimaryAccent = "#8FBF9F",
+                            TextColor = "#DCEBD9"
+                        },
+                        new
+                        {
+                            Id = new Guid("8f14e45f-ceea-467e-adb2-000000000006"),
+                            AmbientEffect = "sparkle",
+                            BackgroundImageUrl = "https://images.unsplash.com/photo-1519741497674-611481863552?w=1200&q=80",
+                            CardBg = "#fffaf2",
+                            Category = "wedding",
+                            Code = "W102",
+                            ImageUrl = "https://images.unsplash.com/photo-1519741497674-611481863552?w=800&q=80",
+                            IsActive = true,
+                            IsHomepageFeatured = false,
+                            IsPopular = false,
+                            Layout = "boxed-hero",
+                            PageBg = "#fbf3e7,#fff9f0",
+                            PrimaryAccent = "#b8823c",
+                            TextColor = "#4a3520"
+                        },
+                        new
+                        {
+                            Id = new Guid("8f14e45f-ceea-467e-adb2-000000000007"),
+                            AmbientEffect = "petals",
+                            BackgroundImageUrl = "https://images.unsplash.com/photo-1778186414142-7e4100e9f17d?w=1200&q=80",
+                            CardBg = "#fff5f7",
+                            Category = "wedding",
+                            Code = "W103",
+                            ImageUrl = "https://images.unsplash.com/photo-1778186414142-7e4100e9f17d?w=800&q=80",
+                            IsActive = true,
+                            IsHomepageFeatured = false,
+                            IsPopular = false,
+                            Layout = "full-bleed",
+                            PageBg = "#fdf2f4,#fffbfc",
+                            PrimaryAccent = "#c9748a",
+                            TextColor = "#6b2f3a"
+                        },
+                        new
+                        {
+                            Id = new Guid("8f14e45f-ceea-467e-adb2-000000000008"),
+                            AmbientEffect = "sparkle",
+                            BackgroundImageUrl = "https://images.unsplash.com/photo-1686538246844-f3ca82434d95?w=1200&q=80",
+                            CardBg = "#fbeee0",
+                            Category = "engagement",
+                            Code = "E001",
+                            ImageUrl = "https://images.unsplash.com/photo-1686538246844-f3ca82434d95?w=800&q=80",
+                            IsActive = true,
+                            IsHomepageFeatured = false,
+                            IsPopular = true,
+                            Layout = "full-bleed",
+                            PageBg = "#fdf3ea,#fffaf5",
+                            PrimaryAccent = "#c9945a",
+                            TextColor = "#7a4a35"
+                        },
+                        new
+                        {
+                            Id = new Guid("8f14e45f-ceea-467e-adb2-000000000009"),
+                            AmbientEffect = "sparkle",
+                            BackgroundImageUrl = "https://images.unsplash.com/photo-1639078007551-b14a57d62c8d?w=1200&q=80",
+                            CardBg = "#f7f4ef",
+                            Category = "engagement",
+                            Code = "E002",
+                            ImageUrl = "https://images.unsplash.com/photo-1639078007551-b14a57d62c8d?w=800&q=80",
+                            IsActive = true,
+                            IsHomepageFeatured = false,
+                            IsPopular = false,
+                            Layout = "full-bleed",
+                            PageBg = "#f3efe9,#fdfdfb",
+                            PrimaryAccent = "#a89a86",
+                            TextColor = "#5a5652"
+                        },
+                        new
+                        {
+                            Id = new Guid("8f14e45f-ceea-467e-adb2-00000000000a"),
+                            AmbientEffect = "sparkle",
+                            BackgroundImageUrl = "https://images.unsplash.com/photo-1596911942922-521ec0db907d?w=1200&q=80",
+                            CardBg = "#f7efd9",
+                            Category = "marriage_contract",
+                            Code = "Q001",
+                            DefaultNamesFont = "font-cinzel",
+                            ImageUrl = "https://images.unsplash.com/photo-1596911942922-521ec0db907d?w=800&q=80",
+                            IsActive = true,
+                            IsHomepageFeatured = false,
+                            IsPopular = true,
+                            Layout = "full-bleed",
+                            PageBg = "#faf5e8,#fffdf7",
+                            PrimaryAccent = "#b8963c",
+                            TextColor = "#5c4a1f"
+                        },
+                        new
+                        {
+                            Id = new Guid("8f14e45f-ceea-467e-adb2-00000000000b"),
+                            AmbientEffect = "smoke",
+                            BackgroundImageUrl = "https://images.unsplash.com/photo-1730376475964-0e196eb95a6e?w=1200&q=80",
+                            CardBg = "#16203a",
+                            Category = "marriage_contract",
+                            Code = "Q002",
+                            DefaultNamesFont = "font-cinzel",
+                            ImageUrl = "https://images.unsplash.com/photo-1730376475964-0e196eb95a6e?w=800&q=80",
+                            IsActive = true,
+                            IsHomepageFeatured = false,
+                            IsPopular = false,
+                            Layout = "full-bleed",
+                            PageBg = "#111a2e,#1c2740",
+                            PrimaryAccent = "#c9a13c",
+                            TextColor = "#e8d9a8"
+                        },
+                        new
+                        {
+                            Id = new Guid("8f14e45f-ceea-467e-adb2-00000000000c"),
+                            AmbientEffect = "petals",
+                            BackgroundImageUrl = "https://images.unsplash.com/photo-1771992230505-97e0c3d38213?w=1200&q=80",
+                            CardBg = "#fde2c8",
+                            Category = "henna",
+                            Code = "H001",
+                            ImageUrl = "https://images.unsplash.com/photo-1771992230505-97e0c3d38213?w=800&q=80",
+                            IsActive = true,
+                            IsHomepageFeatured = false,
+                            IsPopular = true,
+                            Layout = "full-bleed",
+                            PageBg = "#fdece0,#fff8f0",
+                            PrimaryAccent = "#d9741f",
+                            TextColor = "#7a3a1a"
+                        },
+                        new
+                        {
+                            Id = new Guid("8f14e45f-ceea-467e-adb2-00000000000d"),
+                            AmbientEffect = "petals",
+                            BackgroundImageUrl = "https://images.unsplash.com/photo-1771992228898-79342c9c1c39?w=1200&q=80",
+                            CardBg = "#fbd9c4",
+                            Category = "henna",
+                            Code = "H002",
+                            ImageUrl = "https://images.unsplash.com/photo-1771992228898-79342c9c1c39?w=800&q=80",
+                            IsActive = true,
+                            IsHomepageFeatured = false,
+                            IsPopular = false,
+                            Layout = "full-bleed",
+                            PageBg = "#fbe4d8,#fff6f0",
+                            PrimaryAccent = "#c0392b",
+                            TextColor = "#6b2a1a"
+                        },
+                        new
+                        {
+                            Id = new Guid("8f14e45f-ceea-467e-adb2-00000000000e"),
+                            AmbientEffect = "sparkle",
+                            BackgroundImageUrl = "https://images.unsplash.com/photo-1727178757622-26389a0538f5?w=1200&q=80",
+                            CardBg = "#fbe4e8",
+                            Category = "bridal_shower",
+                            Code = "S001",
+                            ImageUrl = "https://images.unsplash.com/photo-1727178757622-26389a0538f5?w=800&q=80",
+                            IsActive = true,
+                            IsHomepageFeatured = false,
+                            IsPopular = true,
+                            Layout = "full-bleed",
+                            PageBg = "#fdf1f3,#fffbfc",
+                            PrimaryAccent = "#d88a9e",
+                            TextColor = "#8a3f52"
+                        },
+                        new
+                        {
+                            Id = new Guid("8f14e45f-ceea-467e-adb2-00000000000f"),
+                            AmbientEffect = "petals",
+                            BackgroundImageUrl = "https://images.unsplash.com/photo-1581022295432-7fabcc628434?w=1200&q=80",
+                            CardBg = "#f9dee6",
+                            Category = "bridal_shower",
+                            Code = "S002",
+                            ImageUrl = "https://images.unsplash.com/photo-1581022295432-7fabcc628434?w=800&q=80",
+                            IsActive = true,
+                            IsHomepageFeatured = false,
+                            IsPopular = false,
+                            Layout = "full-bleed",
+                            PageBg = "#fbeaf0,#fff8fa",
+                            PrimaryAccent = "#e0a0b8",
+                            TextColor = "#7a3f52"
+                        },
+                        new
+                        {
+                            Id = new Guid("8f14e45f-ceea-467e-adb2-000000000010"),
+                            AmbientEffect = "sparkle",
+                            BackgroundImageUrl = "https://images.unsplash.com/photo-1768776181652-d640d88a75f0?w=1200&q=80",
+                            CardBg = "#e8e5f5",
+                            Category = "gender_reveal",
+                            Code = "R001",
+                            ImageUrl = "https://images.unsplash.com/photo-1768776181652-d640d88a75f0?w=800&q=80",
+                            IsActive = true,
+                            IsHomepageFeatured = false,
+                            IsPopular = true,
+                            Layout = "full-bleed",
+                            PageBg = "#f0eef7,#fbfaff",
+                            PrimaryAccent = "#9b8fc9",
+                            TextColor = "#4a4568"
+                        },
+                        new
+                        {
+                            Id = new Guid("8f14e45f-ceea-467e-adb2-000000000011"),
+                            AmbientEffect = "sparkle",
+                            BackgroundImageUrl = "https://images.unsplash.com/photo-1560128411-79892dd93bf8?w=1200&q=80",
+                            CardBg = "#dcebfa",
+                            Category = "gender_reveal",
+                            Code = "R002",
+                            ImageUrl = "https://images.unsplash.com/photo-1560128411-79892dd93bf8?w=800&q=80",
+                            IsActive = true,
+                            IsHomepageFeatured = false,
+                            IsPopular = false,
+                            Layout = "full-bleed",
+                            PageBg = "#eaf2fb,#f8fbff",
+                            PrimaryAccent = "#7fa8d9",
+                            TextColor = "#2f4a68"
+                        },
+                        new
+                        {
+                            Id = new Guid("8f14e45f-ceea-467e-adb2-000000000012"),
+                            AmbientEffect = "sparkle",
+                            BackgroundImageUrl = "https://images.unsplash.com/photo-1704649917979-9a23d585da95?w=1200&q=80",
+                            CardBg = "#f5eee0",
+                            Category = "aqeeqah",
+                            Code = "A001",
+                            ImageUrl = "https://images.unsplash.com/photo-1704649917979-9a23d585da95?w=800&q=80",
+                            IsActive = true,
+                            IsHomepageFeatured = false,
+                            IsPopular = true,
+                            Layout = "full-bleed",
+                            PageBg = "#faf6ee,#fffdf8",
+                            PrimaryAccent = "#c9b183",
+                            TextColor = "#6b5a3f"
+                        },
+                        new
+                        {
+                            Id = new Guid("8f14e45f-ceea-467e-adb2-000000000013"),
+                            AmbientEffect = "petals",
+                            BackgroundImageUrl = "https://images.unsplash.com/photo-1741840800730-785888bd32c2?w=1200&q=80",
+                            CardBg = "#f7dee2",
+                            Category = "aqeeqah",
+                            Code = "A002",
+                            ImageUrl = "https://images.unsplash.com/photo-1741840800730-785888bd32c2?w=800&q=80",
+                            IsActive = true,
+                            IsHomepageFeatured = false,
+                            IsPopular = false,
+                            Layout = "full-bleed",
+                            PageBg = "#fbeef0,#fff9fa",
+                            PrimaryAccent = "#d98fa0",
+                            TextColor = "#7a4a52"
+                        },
+                        new
+                        {
+                            Id = new Guid("8f14e45f-ceea-467e-adb2-000000000014"),
+                            AmbientEffect = "sparkle",
+                            BackgroundImageUrl = "https://images.unsplash.com/photo-1636231945376-3d40fdcbc462?w=1200&q=80",
+                            CardBg = "#13291f",
+                            Category = "graduation",
+                            Code = "G001",
+                            ImageUrl = "https://images.unsplash.com/photo-1636231945376-3d40fdcbc462?w=800&q=80",
+                            IsActive = true,
+                            IsHomepageFeatured = false,
+                            IsPopular = true,
+                            Layout = "full-bleed",
+                            PageBg = "#0f1f18,#182e24",
+                            PrimaryAccent = "#5fae7f",
+                            TextColor = "#dcece0"
+                        },
+                        new
+                        {
+                            Id = new Guid("8f14e45f-ceea-467e-adb2-000000000015"),
+                            AmbientEffect = "sparkle",
+                            BackgroundImageUrl = "https://images.unsplash.com/photo-1785052335573-8c0bcd811c5b?w=1200&q=80",
+                            CardBg = "#f7ecc4",
+                            Category = "graduation",
+                            Code = "G002",
+                            ImageUrl = "https://images.unsplash.com/photo-1785052335573-8c0bcd811c5b?w=800&q=80",
+                            IsActive = true,
+                            IsHomepageFeatured = false,
+                            IsPopular = false,
+                            Layout = "full-bleed",
+                            PageBg = "#fdf6e3,#fffcf0",
+                            PrimaryAccent = "#c9a227",
+                            TextColor = "#6b5518"
+                        },
+                        new
+                        {
+                            Id = new Guid("8f14e45f-ceea-467e-adb2-000000000016"),
+                            AmbientEffect = "sparkle",
+                            BackgroundImageUrl = "https://images.unsplash.com/photo-1762918988304-97d4a5840a4a?w=1200&q=80",
+                            CardBg = "#f7ead0",
+                            Category = "birthday",
+                            Code = "B001",
+                            ImageUrl = "https://images.unsplash.com/photo-1762918988304-97d4a5840a4a?w=800&q=80",
+                            IsActive = true,
+                            IsHomepageFeatured = false,
+                            IsPopular = true,
+                            Layout = "full-bleed",
+                            PageBg = "#fbf3e6,#fffcf5",
+                            PrimaryAccent = "#c9a13c",
+                            TextColor = "#6b5220"
+                        },
+                        new
+                        {
+                            Id = new Guid("8f14e45f-ceea-467e-adb2-000000000017"),
+                            AmbientEffect = "sparkle",
+                            BackgroundImageUrl = "https://images.unsplash.com/photo-1780586382191-bef9c740798e?w=1200&q=80",
+                            CardBg = "#dff0e3",
+                            Category = "birthday",
+                            Code = "B002",
+                            ImageUrl = "https://images.unsplash.com/photo-1780586382191-bef9c740798e?w=800&q=80",
+                            IsActive = true,
+                            IsHomepageFeatured = false,
+                            IsPopular = false,
+                            Layout = "full-bleed",
+                            PageBg = "#eef7f0,#fbfffb",
+                            PrimaryAccent = "#7fbf95",
+                            TextColor = "#2f5240"
+                        },
+                        new
+                        {
+                            Id = new Guid("8f14e45f-ceea-467e-adb2-000000000018"),
+                            AmbientEffect = "sparkle",
+                            BackgroundImageUrl = "https://videos.pexels.com/video-files/33588485/14277788_1920_1080_25fps.mp4",
+                            CardBg = "#fbf4e4",
+                            Category = "wedding",
+                            Code = "W106",
+                            DateRevealStyle = "scratch",
+                            DefaultNamesFont = "italic font-serif",
+                            EnvelopeStyle = "waxseal",
+                            HeroFrameStyle = "archIslamic",
+                            ImageUrl = "https://images.unsplash.com/photo-1572280075160-be1ab588d4d6?w=800&q=80",
+                            InvitationCardStyle = "archIslamic",
+                            IsActive = true,
+                            IsHomepageFeatured = false,
+                            IsPopular = true,
+                            Layout = "boxed-hero",
+                            PageBg = "#f7f0e0,#fffcf5",
+                            PrimaryAccent = "#b8923f",
+                            TextColor = "#5c4826"
                         });
+                });
+
+            modelBuilder.Entity("Numinds.Api.Models.Entities.ThankYouSuggestion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ImageUrl")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ThankYouSuggestions");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
@@ -517,6 +1577,15 @@ namespace Numinds.Api.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Numinds.Api.Models.Entities.ContactWhatsAppNumber", b =>
+                {
+                    b.HasOne("Numinds.Api.Models.Entities.ContactSettings", null)
+                        .WithMany("WhatsAppNumbers")
+                        .HasForeignKey("ContactSettingsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Numinds.Api.Models.Entities.Invitation", b =>
                 {
                     b.HasOne("Numinds.Api.Models.Entities.Template", "Template")
@@ -532,6 +1601,53 @@ namespace Numinds.Api.Migrations
                     b.Navigation("Template");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Numinds.Api.Models.Entities.Order", b =>
+                {
+                    b.HasOne("Numinds.Api.Models.Entities.Invitation", "Invitation")
+                        .WithMany()
+                        .HasForeignKey("InvitationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Invitation");
+                });
+
+            modelBuilder.Entity("Numinds.Api.Models.Entities.RsvpResponse", b =>
+                {
+                    b.HasOne("Numinds.Api.Models.Entities.Invitation", "Invitation")
+                        .WithMany("Responses")
+                        .HasForeignKey("InvitationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Invitation");
+                });
+
+            modelBuilder.Entity("Numinds.Api.Models.Entities.Template", b =>
+                {
+                    b.HasOne("Numinds.Api.Models.Entities.Envelope", "Envelope")
+                        .WithMany("Templates")
+                        .HasForeignKey("EnvelopeId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Envelope");
+                });
+
+            modelBuilder.Entity("Numinds.Api.Models.Entities.ContactSettings", b =>
+                {
+                    b.Navigation("WhatsAppNumbers");
+                });
+
+            modelBuilder.Entity("Numinds.Api.Models.Entities.Envelope", b =>
+                {
+                    b.Navigation("Templates");
+                });
+
+            modelBuilder.Entity("Numinds.Api.Models.Entities.Invitation", b =>
+                {
+                    b.Navigation("Responses");
                 });
 
             modelBuilder.Entity("Numinds.Api.Models.Entities.Template", b =>

@@ -1,54 +1,162 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
+import { useCurrency, CURRENCY_CODES } from "@/context/CurrencyContext";
+import type { PublicCurrencyCode } from "@/lib/priceRates";
+import { ApiError } from "@/lib/api/client";
 import { ChevronLeftIcon, ChevronRightIcon, LoaderIcon } from "@/components/icons";
 import { createInvitation, getInvitation, updateInvitation } from "@/lib/services/invitations.service";
 import type { InvitationDetail, UpdateInvitationPatch } from "@/types/studio";
 import { WizardStepper } from "./WizardStepper";
 import { DraftBanner, readLastInvitationId, rememberInvitation } from "./DraftBanner";
 import { PhonePreview } from "./PhonePreview";
-import { PreviewPhase } from "./PreviewPhase";
-import { PaymentPhase } from "./PaymentPhase";
-import { FullPreviewOverlay } from "./FullPreviewOverlay";
-import { WIZARD_STEPS } from "./stepsConfig";
+// Code-split: a fresh /studio visit always starts on the "design" phase, so
+// these three (each only rendered once `phase` moves past it — see below)
+// shouldn't be part of that first load's bundle.
+const PreviewPhase = dynamic(() => import("./PreviewPhase").then((m) => m.PreviewPhase));
+const PaymentPhase = dynamic(() => import("./PaymentPhase").then((m) => m.PaymentPhase));
+const OrderConfirmation = dynamic(() => import("./OrderConfirmation").then((m) => m.OrderConfirmation));
+import { getWizardSteps, type StepErrorCode } from "./stepsConfig";
+import { StepNavigatorDrawer } from "./StepNavigatorDrawer";
+import type { OrderCreatedResponse } from "@/types/api";
 
-type Phase = "design" | "preview" | "payment";
+type Phase = "design" | "preview" | "payment" | "confirmation";
+
+const COPY = {
+  ar: {
+    title: "إنشاء دعوة",
+    loadError: "تعذّر بدء الاستوديو. تأكد من تشغيل الخادم الخلفي وحاول مرة أخرى.",
+    limitReached: "وصلت للحد الأقصى (5) دعوات. احذف إحدى دعواتك الحالية من لوحة التحكم لتتمكن من إنشاء دعوة جديدة.",
+    forbidden: "هذه الدعوة ليست ملكك، ولا يمكنك تعديلها. تأكد من الرابط أو ارجع للوحة التحكم لفتح دعواتك الخاصة.",
+    notFound: "تعذّر فتح هذه الدعوة — ربما تم حذفها، أو الرابط غير صحيح. ارجع للوحة التحكم لفتح دعواتك الخاصة.",
+    goToDashboard: "الذهاب للوحة التحكم",
+    back: "رجوع",
+    next: "التالي",
+    finish: "إنهاء",
+    stepOf: (current: number, total: number) => `خطوة ${current} / ${total}`,
+    stepsRemaining: (count: number) => `${count} خطوة متبقية`,
+    lastStep: "الخطوة الأخيرة",
+    saveChanges: "حفظ التغييرات",
+    stepErrors: {
+      missingEventTitle: "الرجاء إدخال عنوان المناسبة قبل المتابعة.",
+      missingFirstName: "الرجاء إدخال الاسم قبل المتابعة.",
+      missingSecondName: "الرجاء إدخال اسم الطرف الثاني قبل المتابعة.",
+      missingEventDate: "الرجاء تحديد تاريخ ووقت المناسبة قبل المتابعة.",
+      pastEventDate: "تاريخ المناسبة لا يمكن أن يكون في الماضي.",
+      missingVenueName: "الرجاء إدخال اسم كل قاعة أضفتها، أو احذف القاعات الفارغة.",
+      missingWishlistItemName: "الرجاء إدخال اسم كل عنصر بقائمة الأمنيات، أو احذف العناصر الفارغة.",
+      invalidQrScanRange: "وقت نهاية المسح يجب أن يكون بعد وقت البداية.",
+    } satisfies Record<StepErrorCode, string>,
+  },
+  en: {
+    title: "Create Invitation",
+    loadError: "Couldn't start the studio. Make sure the backend is running and try again.",
+    limitReached: "You've reached the maximum of 5 invitations. Delete one from your dashboard to create a new one.",
+    forbidden: "This invitation isn't yours, so you can't edit it. Double-check the link, or go to your dashboard to open your own invitations.",
+    notFound: "Couldn't open this invitation — it may have been deleted, or the link is wrong. Go to your dashboard to open your own invitations.",
+    goToDashboard: "Go to dashboard",
+    back: "Back",
+    next: "Next",
+    finish: "Finish",
+    stepOf: (current: number, total: number) => `Step ${current} / ${total}`,
+    stepsRemaining: (count: number) => `${count} step${count === 1 ? "" : "s"} remaining`,
+    lastStep: "Last step",
+    saveChanges: "Save changes",
+    stepErrors: {
+      missingEventTitle: "Please enter an event title before continuing.",
+      missingFirstName: "Please enter a name before continuing.",
+      missingSecondName: "Please enter the second name before continuing.",
+      missingEventDate: "Please set the event date and time before continuing.",
+      pastEventDate: "The event date can't be in the past.",
+      missingVenueName: "Please name every venue you've added, or remove the empty ones.",
+      missingWishlistItemName: "Please name every wishlist item, or remove the empty ones.",
+      invalidQrScanRange: "Scan end time must be after the start time.",
+    } satisfies Record<StepErrorCode, string>,
+  },
+};
 
 function buildPatch(detail: InvitationDetail): UpdateInvitationPatch {
+  // rsvpAttendingCount/rsvpWishes are server-derived from the invitation's
+  // own RSVP responses (see InvitationDetail's comment) — never sent back,
+  // or a guest RSVP-ing while the owner is mid-edit would get silently
+  // clobbered by the stale count/wishes this session loaded at open time.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { id, status, editUrl, createdAt, updatedAt, ...patch } = detail;
+  const { id, status, editUrl, createdAt, updatedAt, rsvpAttendingCount, rsvpWishes, ...patch } = detail;
   return patch;
 }
 
-function clampStepIndex(index: number) {
-  return Math.min(Math.max(index, 0), WIZARD_STEPS.length - 1);
+function clampStepIndex(index: number, stepCount: number) {
+  return Math.min(Math.max(index, 0), stepCount - 1);
 }
 
-function readStepIndexFromParam(stepParam: string | null) {
+function readStepIndexFromParam(stepParam: string | null, stepCount: number) {
   const parsed = stepParam ? Number.parseInt(stepParam, 10) : 1;
   if (!Number.isFinite(parsed)) return 0;
-  return clampStepIndex(parsed - 1);
+  return clampStepIndex(parsed - 1, stepCount);
 }
 
 export function StudioWizard() {
   const router = useRouter();
+  const { user } = useAuth();
+  const { language, dir } = useLanguage();
+  const t = COPY[language];
+  // StudioWizard re-renders on every keystroke (updateForm/setForm below),
+  // so an unmemoized call here would rebuild all 18 steps' closures on each
+  // one — memoized so it only changes when the language actually does.
+  const wizardSteps = useMemo(() => getWizardSteps(language), [language]);
   const searchParams = useSearchParams();
   const invitationIdParam = searchParams.get("invitationId");
+  const currencyParam = searchParams.get("currency");
+  // Set by TemplateCard's "اختر" button (homepage + /templates) — only
+  // consulted on the "start a brand-new draft" path below, so it's ignored
+  // once an invitationId is present (resuming an existing draft never
+  // overrides its already-chosen template).
+  const templateIdParam = searchParams.get("templateId");
+  const { setCurrency } = useCurrency();
+
+  // Lets a shared "/studio?currency=USD" link (e.g. the Prices page's
+  // "Start Now" button) seed the checkout currency even on a cold load,
+  // without waiting on the shared context's own localStorage hydration.
+  useEffect(() => {
+    if (currencyParam && (CURRENCY_CODES as string[]).includes(currencyParam)) {
+      setCurrency(currencyParam as PublicCurrencyCode);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currencyParam]);
 
   const [form, setForm] = useState<InvitationDetail | null>(null);
   // Initialized from the URL's ?step= (1-indexed) so a page reload resumes
   // on the same step instead of always restarting at step 1.
-  const [stepIndex, setStepIndexState] = useState(() => readStepIndexFromParam(searchParams.get("step")));
+  const [stepIndex, setStepIndexState] = useState(() =>
+    readStepIndexFromParam(searchParams.get("step"), wizardSteps.length)
+  );
   const [phase, setPhase] = useState<Phase>("design");
-  const [fullPreviewOpen, setFullPreviewOpen] = useState(false);
+  const [completedOrder, setCompletedOrder] = useState<OrderCreatedResponse | null>(null);
   const [saving, setSaving] = useState(false);
-  const [loadError, setLoadError] = useState(false);
+  const [loadError, setLoadError] = useState<"generic" | "limitReached" | "forbidden" | "notFound" | null>(null);
+  const [stepNavOpen, setStepNavOpen] = useState(false);
+  const [stepError, setStepError] = useState<StepErrorCode | null>(null);
   // Captured on first render, before this page load's own rememberInvitation()
   // call (below) can overwrite it — this is what makes it possible to detect
   // "you were previously working on a different draft".
   const [previousDraftId] = useState(readLastInvitationId);
+  // Guards the createInvitation() call below against React Strict Mode's
+  // dev-only double-invoke of effects. A plain boolean ref isn't enough:
+  // it would stop the *second* invocation from calling createInvitation()
+  // at all, while the *first* invocation's own result gets thrown away by
+  // its own `cancelled` check (Strict Mode cleans it up right away) — net
+  // result, neither invocation ever calls setForm() and the studio hangs on
+  // its loading spinner forever. Caching the in-flight *promise* instead
+  // fixes both problems: only one createInvitation() call ever fires, but
+  // whichever invocation survives (isn't cancelled) still awaits and applies
+  // its result.
+  const creatingRef = useRef<Promise<InvitationDetail> | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -61,22 +169,44 @@ export function StudioWizard() {
             setForm(detail);
             rememberInvitation(detail.id);
           }
-          return;
         } catch (error) {
-          console.error("[studio] failed to load invitation, starting a new draft:", error);
+          // A specific invitation was requested (via the URL or a "continue
+          // last draft" link) and couldn't be loaded — could be deleted, or
+          // someone else's draft (the backend 404s either way rather than
+          // leaking which). Silently starting a brand-new draft here instead
+          // used to be the fallback, but that quietly burned the 5-invitation
+          // cap with junk every time a stale link was clicked — surface it
+          // instead and let the user explicitly start a new one if they want.
+          if (!cancelled) {
+            console.error("[studio] failed to load invitation:", error);
+            setLoadError("notFound");
+          }
         }
+        return;
       }
 
-      try {
-        const created = await createInvitation();
-        if (cancelled) return;
+      creatingRef.current ??= (async () => {
+        const created = await createInvitation(templateIdParam ? { templateId: templateIdParam } : undefined);
         rememberInvitation(created.id);
         router.replace(`/studio?invitationId=${created.id}&step=${stepIndex + 1}`);
-        const detail = await getInvitation(created.id);
+        return getInvitation(created.id);
+      })();
+
+      try {
+        const detail = await creatingRef.current;
         if (!cancelled) setForm(detail);
       } catch (error) {
+        if (cancelled) return;
+        if (error instanceof ApiError && error.status === 409) {
+          // Expected, already-handled outcome (the 5-invitation cap) — the
+          // page itself communicates this to the user, so it isn't logged
+          // as an error (Next's dev overlay treats any console.error as a
+          // crash, which it isn't here).
+          setLoadError("limitReached");
+          return;
+        }
         console.error("[studio] failed to start a new draft:", error);
-        if (!cancelled) setLoadError(true);
+        setLoadError("generic");
       }
     }
 
@@ -87,15 +217,37 @@ export function StudioWizard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [invitationIdParam]);
 
+  useEffect(() => {
+    if (!form || !user) return;
+    // Claims this draft to the now-signed-in account if it was started
+    // anonymously (backend no-ops if it's already owned by anyone) — covers
+    // landing back here straight from the payment-gate login, before the
+    // next field edit would otherwise trigger the same claim via autosave.
+    // A 403 here means `form` is actually someone else's invitation (e.g. a
+    // stale "continue your last draft" link from a different account that
+    // shared this browser) — surface that instead of leaving the wizard
+    // silently unable to save anything the user types.
+    updateInvitation(form.id, {}).catch((error) => {
+      if (error instanceof ApiError && error.status === 403) {
+        setLoadError("forbidden");
+        return;
+      }
+      console.error("[studio] failed to claim invitation:", error);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form?.id, user?.id]);
+
   function updateForm(patch: Partial<InvitationDetail>) {
     setForm((current) => (current ? { ...current, ...patch } : current));
+    setStepError(null);
   }
 
   // Keeps ?step= (1-indexed) in sync with the current step so a reload
   // resumes where the user left off, without piling onto browser history.
   function goToStep(index: number) {
-    const clamped = clampStepIndex(index);
+    const clamped = clampStepIndex(index, wizardSteps.length);
     setStepIndexState(clamped);
+    setStepError(null);
     const params = new URLSearchParams(searchParams.toString());
     params.set("step", String(clamped + 1));
     router.replace(`/studio?${params.toString()}`, { scroll: false });
@@ -107,6 +259,10 @@ export function StudioWizard() {
     try {
       await updateInvitation(form.id, buildPatch(form));
     } catch (error) {
+      if (error instanceof ApiError && error.status === 403) {
+        setLoadError("forbidden");
+        return;
+      }
       console.error("[studio] auto-save failed:", error);
     } finally {
       setSaving(false);
@@ -114,127 +270,218 @@ export function StudioWizard() {
   }
 
   async function handleNext() {
+    if (!form) return;
+    const error = wizardSteps[stepIndex].validate?.(form) ?? null;
+    if (error) {
+      setStepError(error);
+      return;
+    }
     await saveProgress();
-    if (stepIndex === WIZARD_STEPS.length - 1) {
+    if (stepIndex === wizardSteps.length - 1) {
       setPhase("preview");
     } else {
       goToStep(stepIndex + 1);
     }
   }
 
-  function handleBack() {
+  async function handleBack() {
+    // No validate() call here on purpose — unlike handleNext, going back
+    // should never be blocked by the step you're leaving being incomplete.
+    await saveProgress();
     goToStep(stepIndex - 1);
   }
 
   if (loadError) {
+    const message =
+      loadError === "limitReached"
+        ? t.limitReached
+        : loadError === "forbidden"
+          ? t.forbidden
+          : loadError === "notFound"
+            ? t.notFound
+            : t.loadError;
     return (
-      <div className="mx-auto max-w-lg py-24 text-center">
-        <p className="text-gray-600">تعذّر بدء الاستوديو. تأكد من تشغيل الخادم الخلفي وحاول مرة أخرى.</p>
+      <div className="min-h-screen bg-background">
+        <div className="mx-auto max-w-lg py-24 text-center">
+          <p className="text-body-foreground">{message}</p>
+          {loadError !== "generic" && (
+            <Link
+              href="/dashboard"
+              className="mt-4 inline-flex items-center justify-center rounded-full bg-gold px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gold/90"
+            >
+              {t.goToDashboard}
+            </Link>
+          )}
+        </div>
       </div>
     );
   }
 
   if (!form) {
     return (
-      <div className="flex items-center justify-center py-32 text-gray-400">
+      <div className="flex min-h-screen items-center justify-center bg-background py-32 text-muted-foreground">
         <LoaderIcon className="size-6 animate-spin" />
       </div>
     );
   }
 
-  const step = WIZARD_STEPS[stepIndex];
+  const step = wizardSteps[stepIndex];
   const StepIcon = step.icon;
   const StepComponent = step.Component;
-  const remaining = WIZARD_STEPS.length - (stepIndex + 1);
+  const remaining = wizardSteps.length - (stepIndex + 1);
+  // An admin already approved this invitation in a previous session (see
+  // OrdersController.UpdateStatus) — reaching the end of the wizard again
+  // is an edit, not a first-time checkout, so it shouldn't re-enter payment
+  // or create a second order for the same invitation.
+  const isAlreadyApproved = form.status === "paid" || form.status === "shared";
 
   return (
+    <div className="min-h-screen bg-background">
     <div className="mx-auto max-w-6xl px-4 py-10">
-      <h1 className="mb-6 text-lg font-semibold text-gray-900">إنشاء دعوة</h1>
+      <h1 className="mb-6 text-lg font-semibold text-foreground">{t.title}</h1>
 
-      <WizardStepper activePhase={phase} />
+      <WizardStepper activePhase={phase === "confirmation" ? "share" : phase} />
       <DraftBanner previousDraftId={previousDraftId} currentInvitationId={form.id} />
 
-      {/* Grid column order follows the page's dir attribute (rtl by default):
-          the form, listed first, lands on the visual right with the phone
-          preview on the left — matching numinds.me. This flips automatically
-          if a parent ever sets dir="ltr" for a non-Arabic locale. */}
-      <div className="grid gap-8 lg:grid-cols-2">
-        <div className="rounded-2xl border border-gray-100 shadow-sm">
+      {/* dir is read from LanguageContext (not just inherited from
+          <html>) so the grid explicitly tracks the active language: the
+          form, listed first in the DOM, lands in the first grid column,
+          which CSS places on the visual right in rtl (Arabic — matching
+          numinds.me) and on the left in ltr (English), putting the phone
+          preview on the opposite side in both cases. */}
+      <div dir={dir} className="grid gap-8 lg:grid-cols-2">
+        <div className="rounded-2xl border border-border bg-card shadow-sm">
           {phase === "preview" && (
             <PreviewPhase
-              onOpenFullPreview={() => setFullPreviewOpen(true)}
+              onOpenFullPreview={() => {
+                window.open(`/invitationpublic?id=${form.id}&preview=true`, "_blank");
+              }}
+              // Already admin-approved (paid/shared) — this pass through the
+              // wizard is an edit of a real, existing invitation, not a new
+              // one waiting on payment. It only needs saving, never another
+              // order or another trip through admin review (see
+              // OrdersController.UpdateStatus on the backend: paid is what
+              // approval actually means).
+              continueLabel={isAlreadyApproved ? t.saveChanges : undefined}
               onContinue={async () => {
                 await saveProgress();
+                if (isAlreadyApproved) {
+                  router.push("/dashboard");
+                  return;
+                }
+                if (!user) {
+                  // Design/preview stay guest-friendly — login is only
+                  // required here, right before payment, so the invitation
+                  // (already saved above) can be claimed to an account. The
+                  // returnUrl brings them straight back to this same draft.
+                  const returnUrl = window.location.pathname + window.location.search;
+                  router.push(`/login?returnUrl=${encodeURIComponent(returnUrl)}`);
+                  return;
+                }
                 setPhase("payment");
               }}
               onBack={() => setPhase("design")}
             />
           )}
 
-          {phase === "payment" && <PaymentPhase value={form} onBack={() => setPhase("preview")} />}
+          {phase === "payment" && (
+            <PaymentPhase
+              value={form}
+              onBack={() => setPhase("preview")}
+              onOrderCreated={(result) => {
+                setCompletedOrder(result);
+                setPhase("confirmation");
+              }}
+            />
+          )}
+
+          {phase === "confirmation" && completedOrder && (
+            <OrderConfirmation order={completedOrder.order} paymentSettings={completedOrder.paymentSettings} />
+          )}
 
           {phase === "design" && (
             <>
-              <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+              <div className="flex items-center justify-between border-b border-border px-5 py-4">
                 <div className="flex items-center gap-2">
                   <span className="flex size-9 items-center justify-center rounded-full bg-gold/10 text-gold">
                     <StepIcon className="size-4" />
                   </span>
-                  <span className="text-sm font-medium text-gray-700">{step.label}</span>
+                  <span className="text-sm font-medium text-body-foreground">{step.label}</span>
                 </div>
-                <span
+                <button
+                  type="button"
                   dir="ltr"
-                  className="rounded-full border border-gold/20 bg-gold/5 px-3 py-1 text-xs text-gold"
+                  onClick={() => setStepNavOpen(true)}
+                  aria-haspopup="dialog"
+                  aria-expanded={stepNavOpen}
+                  className="rounded-full border border-gold/20 bg-gold/5 px-3 py-1 text-xs text-gold transition-colors hover:bg-gold/10"
                 >
-                  {stepIndex + 1} / {WIZARD_STEPS.length}
-                </span>
+                  {stepIndex + 1} / {wizardSteps.length}
+                </button>
               </div>
 
               <div className="border-b border-gold/15 px-5 pb-4 pt-4">
-                <p className="text-base font-medium text-gray-900">{step.question}</p>
+                <p className="text-base font-medium text-foreground">{step.question}</p>
               </div>
 
               <div className="px-5 pb-2 pt-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">{step.label}</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{step.label}</p>
               </div>
 
               <div className="px-5 pb-4 pt-2">
                 <StepComponent value={form} onChange={updateForm} />
               </div>
 
-              <div className="flex items-center justify-between border-t border-gray-100 px-5 py-3 text-xs text-gray-400">
-                <span>خطوة {stepIndex + 1} / {WIZARD_STEPS.length}</span>
-                <span>{remaining > 0 ? `${remaining} خطوة متبقية` : "الخطوة الأخيرة"}</span>
+              <div className="flex items-center justify-between border-t border-border px-5 py-3 text-xs text-muted-foreground">
+                <span>{t.stepOf(stepIndex + 1, wizardSteps.length)}</span>
+                <span>{remaining > 0 ? t.stepsRemaining(remaining) : t.lastStep}</span>
               </div>
+
+              {stepError && (
+                <p dir={dir} className="border-t border-rose-200 dark:border-rose-900/40 bg-rose-50 dark:bg-rose-950/30 px-5 py-2.5 text-xs font-medium text-rose-700 dark:text-rose-400">
+                  {t.stepErrors[stepError]}
+                </p>
+              )}
 
               {/* Kept in physical left-to-right order (dir="ltr" on the row)
                   to match the reference site: Back stays on the left with
                   "<", Next/gold stays on the right with ">", regardless of
                   the page's overall RTL flow. */}
-              <div dir="ltr" className="flex items-center justify-between gap-3 border-t border-gray-100 px-5 py-4">
+              <div dir="ltr" className="flex items-center justify-between gap-3 border-t border-border px-5 py-4">
                 <button
                   type="button"
                   onClick={handleBack}
                   disabled={stepIndex === 0 || saving}
-                  className="flex items-center gap-1 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 transition-colors disabled:opacity-40"
+                  className="flex items-center gap-1 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-body-foreground transition-colors hover:bg-background/5 disabled:opacity-40"
                 >
                   <ChevronLeftIcon className="size-4" />
-                  رجوع
+                  {t.back}
                 </button>
-                <div className="hidden flex-col items-center gap-1.5 sm:flex">
-                  <span className="text-sm text-gray-400">{step.label}</span>
+                {/* Same jump-to-any-step drawer as the "N / 18" pill in the
+                    header above — this label+dots row is a second, more
+                    discoverable trigger for it (the reference design's own
+                    footer stepper is clickable the same way), not just a
+                    passive progress readout. */}
+                <button
+                  type="button"
+                  onClick={() => setStepNavOpen(true)}
+                  aria-haspopup="dialog"
+                  aria-expanded={stepNavOpen}
+                  className="hidden flex-col items-center gap-1.5 rounded-lg px-2 py-1 transition-colors hover:bg-gold/5 sm:flex"
+                >
+                  <span className="text-base font-semibold text-body-foreground">{step.label}</span>
                   <div className="flex items-center gap-1">
-                    {WIZARD_STEPS.map((s, i) => (
+                    {wizardSteps.map((s, i) => (
                       <span
                         key={s.id}
                         className={cn(
                           "h-1 rounded-full transition-all",
-                          i === stepIndex ? "w-4 bg-gold" : "w-1 bg-gray-200"
+                          i === stepIndex ? "w-4 bg-gold" : "w-1 bg-background/10"
                         )}
                       />
                     ))}
                   </div>
-                </div>
+                </button>
                 <button
                   type="button"
                   onClick={handleNext}
@@ -245,11 +492,11 @@ export function StudioWizard() {
                 >
                   {saving ? (
                     <LoaderIcon className="size-4 animate-spin" />
-                  ) : stepIndex === WIZARD_STEPS.length - 1 ? (
-                    "إنهاء"
+                  ) : stepIndex === wizardSteps.length - 1 ? (
+                    t.finish
                   ) : (
                     <>
-                      التالي
+                      {t.next}
                       <ChevronRightIcon className="size-4" />
                     </>
                   )}
@@ -260,11 +507,20 @@ export function StudioWizard() {
         </div>
 
         <div className="flex justify-center lg:self-start">
-          <PhonePreview value={form} />
+          <PhonePreview value={form} isTemplateStep={step.id === "template"} />
         </div>
       </div>
 
-      {fullPreviewOpen && <FullPreviewOverlay value={form} onClose={() => setFullPreviewOpen(false)} />}
+      {stepNavOpen && (
+        <StepNavigatorDrawer
+          steps={wizardSteps}
+          currentIndex={stepIndex}
+          language={language}
+          onSelect={goToStep}
+          onClose={() => setStepNavOpen(false)}
+        />
+      )}
+    </div>
     </div>
   );
 }

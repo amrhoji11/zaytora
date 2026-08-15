@@ -36,7 +36,7 @@ export interface FaqItem {
   answer: string;
 }
 
-export type CurrencyCode = "SAR" | "USD" | "GBP";
+export type CurrencyCode = "SAR" | "USD" | "GBP" | "ILS";
 
 export interface CurrencyOption {
   code: CurrencyCode;

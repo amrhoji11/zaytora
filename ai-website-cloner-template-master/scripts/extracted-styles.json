@@ -1,0 +1,482 @@
+{
+  "column": {
+    "text": "@keyframes snowfall {\n        0% { trans",
+    "tag": "DIV",
+    "rect": {
+      "width": 393,
+      "height": 4982
+    },
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal",
+    "background": "rgba(0, 0, 0, 0)",
+    "backdropFilter": "none",
+    "border": "0px solid rgb(229, 229, 229)",
+    "boxShadow": "none",
+    "color": "rgb(196, 198, 184)",
+    "fontSize": "16px",
+    "fontWeight": "400",
+    "lineHeight": "24px",
+    "letterSpacing": "normal",
+    "fontFamily": "font_1772309694012_s0fq0qj, Inter, system-ui, sans-serif"
+  },
+  "contentWrapper": null,
+  "heroTitle": {
+    "text": "حـفـل زفـاف",
+    "tag": "DIV",
+    "rect": {
+      "width": 280,
+      "height": 24
+    },
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px 0px 32px",
+    "gap": "normal",
+    "background": "rgba(0, 0, 0, 0)",
+    "backdropFilter": "none",
+    "border": "0px solid rgb(229, 229, 229)",
+    "boxShadow": "none",
+    "color": "rgb(222, 193, 160)",
+    "fontSize": "16px",
+    "fontWeight": "400",
+    "lineHeight": "24px",
+    "letterSpacing": "3.2px",
+    "fontFamily": "font_1780163985183_saddzfj, sans-serif"
+  },
+  "heroDate": {
+    "text": "السبت، 19 ديسمبر 2026 في 9:00 م",
+    "tag": "DIV",
+    "rect": {
+      "width": 276,
+      "height": 20
+    },
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px 0px 0px 4px",
+    "gap": "normal",
+    "background": "rgba(0, 0, 0, 0)",
+    "backdropFilter": "none",
+    "border": "0px solid rgb(229, 229, 229)",
+    "boxShadow": "none",
+    "color": "rgb(222, 193, 160)",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "lineHeight": "20px",
+    "letterSpacing": "0.35px",
+    "fontFamily": "font_1772309694012_s0fq0qj, Inter, system-ui, sans-serif"
+  },
+  "invitationTextEl": {
+    "text": "يتــشرفـــون بــدعـوتـكم حـضور حـفـل زفـ",
+    "tag": "DIV",
+    "rect": {
+      "width": 295,
+      "height": 360
+    },
+    "borderRadius": "0px",
+    "padding": "0px 32px",
+    "margin": "0px 0px 32px",
+    "gap": "normal",
+    "background": "rgba(0, 0, 0, 0)",
+    "backdropFilter": "none",
+    "border": "0px solid rgb(229, 229, 229)",
+    "boxShadow": "none",
+    "color": "rgb(222, 193, 160)",
+    "fontSize": "16px",
+    "fontWeight": "400",
+    "lineHeight": "24px",
+    "letterSpacing": "normal",
+    "fontFamily": "font_1772309694012_s0fq0qj, Inter, system-ui, sans-serif"
+  },
+  "invitationCard": {
+    "text": "يتــشرفـــون بــدعـوتـكم حـضور حـفـل زفـ",
+    "tag": "DIV",
+    "rect": {
+      "width": 361,
+      "height": 674
+    },
+    "borderRadius": "24px",
+    "padding": "32px",
+    "margin": "0px 0px 32px",
+    "gap": "normal",
+    "background": "rgba(255, 255, 255, 0.08)",
+    "backdropFilter": "blur(16px)",
+    "border": "1px solid rgba(255, 255, 255, 0.2)",
+    "boxShadow": "rgba(0, 0, 0, 0.15) 0px 8px 32px 0px",
+    "color": "rgb(196, 198, 184)",
+    "fontSize": "16px",
+    "fontWeight": "400",
+    "lineHeight": "24px",
+    "letterSpacing": "normal",
+    "fontFamily": "font_1772309694012_s0fq0qj, Inter, system-ui, sans-serif"
+  },
+  "countdownLabel": {
+    "text": "أيام",
+    "tag": "DIV",
+    "rect": {
+      "width": 47,
+      "height": 16
+    },
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "4px 0px 0px",
+    "gap": "normal",
+    "background": "rgba(0, 0, 0, 0)",
+    "backdropFilter": "none",
+    "border": "0px solid rgb(229, 229, 229)",
+    "boxShadow": "none",
+    "color": "rgb(222, 193, 160)",
+    "fontSize": "12px",
+    "fontWeight": "400",
+    "lineHeight": "16px",
+    "letterSpacing": "0.6px",
+    "fontFamily": "font_1772309694012_s0fq0qj, Inter, system-ui, sans-serif"
+  },
+  "countdownChip": {
+    "text": "أيام",
+    "tag": "DIV",
+    "rect": {
+      "width": 47,
+      "height": 16
+    },
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "4px 0px 0px",
+    "gap": "normal",
+    "background": "rgba(0, 0, 0, 0)",
+    "backdropFilter": "none",
+    "border": "0px solid rgb(229, 229, 229)",
+    "boxShadow": "none",
+    "color": "rgb(222, 193, 160)",
+    "fontSize": "12px",
+    "fontWeight": "400",
+    "lineHeight": "16px",
+    "letterSpacing": "0.6px",
+    "fontFamily": "font_1772309694012_s0fq0qj, Inter, system-ui, sans-serif"
+  },
+  "programHeading": {
+    "text": "برنامج المناسبة",
+    "tag": "H3",
+    "rect": {
+      "width": 327,
+      "height": 28
+    },
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px 0px 32px",
+    "gap": "normal",
+    "background": "rgba(0, 0, 0, 0)",
+    "backdropFilter": "none",
+    "border": "0px solid rgb(229, 229, 229)",
+    "boxShadow": "none",
+    "color": "rgb(196, 198, 184)",
+    "fontSize": "20px",
+    "fontWeight": "400",
+    "lineHeight": "28px",
+    "letterSpacing": "normal",
+    "fontFamily": "font_1772309694012_s0fq0qj, Inter, system-ui, sans-serif"
+  },
+  "programCard": {
+    "text": "برنامج المناسبة1:09 PMاستقبال الضيوف2:10",
+    "tag": "DIV",
+    "rect": {
+      "width": 361,
+      "height": 366
+    },
+    "borderRadius": "24px",
+    "padding": "16px",
+    "margin": "0px 0px 32px",
+    "gap": "normal",
+    "background": "rgba(255, 255, 255, 0.08)",
+    "backdropFilter": "blur(16px)",
+    "border": "1px solid rgba(255, 255, 255, 0.2)",
+    "boxShadow": "rgba(0, 0, 0, 0.15) 0px 8px 32px 0px",
+    "color": "rgb(196, 198, 184)",
+    "fontSize": "16px",
+    "fontWeight": "400",
+    "lineHeight": "24px",
+    "letterSpacing": "normal",
+    "fontFamily": "font_1772309694012_s0fq0qj, Inter, system-ui, sans-serif"
+  },
+  "timelineDot": {
+    "width": 1,
+    "height": 272,
+    "background": "rgba(0, 0, 0, 0)"
+  },
+  "rulesHeading": {
+    "text": "تفاصيل الحفل",
+    "tag": "H3",
+    "rect": {
+      "width": 361,
+      "height": 28
+    },
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px 0px 24px",
+    "gap": "normal",
+    "background": "rgba(0, 0, 0, 0)",
+    "backdropFilter": "none",
+    "border": "0px solid rgb(229, 229, 229)",
+    "boxShadow": "none",
+    "color": "rgb(196, 198, 184)",
+    "fontSize": "20px",
+    "fontWeight": "400",
+    "lineHeight": "28px",
+    "letterSpacing": "normal",
+    "fontFamily": "font_1772309694012_s0fq0qj, Inter, system-ui, sans-serif"
+  },
+  "rulesCard": null,
+  "galleryHeading": {
+    "text": "لحظات من الحفل",
+    "tag": "H3",
+    "rect": {
+      "width": 361,
+      "height": 28
+    },
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px 0px 16px",
+    "gap": "normal",
+    "background": "rgba(0, 0, 0, 0)",
+    "backdropFilter": "none",
+    "border": "0px solid rgb(229, 229, 229)",
+    "boxShadow": "none",
+    "color": "rgb(196, 198, 184)",
+    "fontSize": "20px",
+    "fontWeight": "400",
+    "lineHeight": "28px",
+    "letterSpacing": "normal",
+    "fontFamily": "font_1772309694012_s0fq0qj, Inter, system-ui, sans-serif"
+  },
+  "galleryGrid": {
+    "display": "grid",
+    "gap": "12px",
+    "gridTemplateColumns": "158.5px 158.5px"
+  },
+  "galleryImageWrap": {
+    "borderRadius": "22px",
+    "backdropFilter": "blur(12px)",
+    "background": "rgba(255, 255, 255, 0.55)",
+    "className": "aspect-square rounded-xl overflow-hidden"
+  },
+  "bodyClassName": "",
+  "rootWrapperClassName": "min-h-screen bg-white",
+  "assetUrls": [
+    "https://base44.app/api/apps/6966e1f30fa9fbe508239391/files/mp/public/6966e1f30fa9fbe508239391/bb35c5f01_3.png",
+    "https://base44.app/api/apps/6966e1f30fa9fbe508239391/files/mp/public/6966e1f30fa9fbe508239391/77e3cf400_Newdesign.png",
+    "https://base44.app/api/apps/6966e1f30fa9fbe508239391/files/mp/public/6966e1f30fa9fbe508239391/c8e3a6ba7_kristala.png",
+    "https://base44.app/api/apps/6966e1f30fa9fbe508239391/files/mp/public/6966e1f30fa9fbe508239391/8acd32fea_neww.webp",
+    "https://base44.app/api/apps/6966e1f30fa9fbe508239391/files/mp/public/6966e1f30fa9fbe508239391/4cae2b83c_15.svg",
+    "https://base44.app/api/apps/6966e1f30fa9fbe508239391/files/mp/public/6966e1f30fa9fbe508239391/e038d9ab3_neww.webp",
+    "https://base44.app/api/apps/6966e1f30fa9fbe508239391/files/mp/public/6966e1f30fa9fbe508239391/4728b7c10_neww.webp",
+    "https://base44.app/api/apps/6966e1f30fa9fbe508239391/files/mp/public/6966e1f30fa9fbe508239391/16e34a8c8_cap-1783983960548.jpg",
+    "https://base44.app/api/apps/6966e1f30fa9fbe508239391/files/mp/public/6966e1f30fa9fbe508239391/914c31a1b_cap-1782867069557.jpg",
+    "https://base44.app/api/apps/6966e1f30fa9fbe508239391/files/mp/public/6966e1f30fa9fbe508239391/e64b36e1e_cap-1782661144600.jpg"
+  ],
+  "snowfallWrapper": {
+    "position": "fixed",
+    "zIndex": "10",
+    "className": "fixed inset-0 pointer-events-none z-10 overflow-hidden"
+  },
+  "attendeeLabel": {
+    "text": "عدد الحضور",
+    "tag": "SPAN",
+    "rect": {
+      "width": 59,
+      "height": 16
+    },
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal",
+    "background": "rgba(0, 0, 0, 0)",
+    "backdropFilter": "none",
+    "border": "0px solid rgb(229, 229, 229)",
+    "boxShadow": "none",
+    "color": "rgb(222, 193, 160)",
+    "fontSize": "12px",
+    "fontWeight": "400",
+    "lineHeight": "16px",
+    "letterSpacing": "1.2px",
+    "fontFamily": "font_1772309694012_s0fq0qj, Inter, system-ui, sans-serif"
+  },
+  "attendeeCount": {
+    "text": "447",
+    "tag": "DIV",
+    "rect": {
+      "width": 353,
+      "height": 40
+    },
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px 0px 12px",
+    "gap": "normal",
+    "background": "rgba(0, 0, 0, 0)",
+    "backdropFilter": "none",
+    "border": "0px solid rgb(229, 229, 229)",
+    "boxShadow": "none",
+    "color": "rgb(196, 198, 184)",
+    "fontSize": "36px",
+    "fontWeight": "300",
+    "lineHeight": "40px",
+    "letterSpacing": "normal",
+    "fontFamily": "font_1772309694012_s0fq0qj, Inter, system-ui, sans-serif"
+  },
+  "wishesHeading": {
+    "text": "التهاني",
+    "tag": "P",
+    "rect": {
+      "width": 40,
+      "height": 16
+    },
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal",
+    "background": "rgba(0, 0, 0, 0)",
+    "backdropFilter": "none",
+    "border": "0px solid rgb(229, 229, 229)",
+    "boxShadow": "none",
+    "color": "rgb(222, 193, 160)",
+    "fontSize": "12px",
+    "fontWeight": "400",
+    "lineHeight": "16px",
+    "letterSpacing": "1.2px",
+    "fontFamily": "font_1772309694012_s0fq0qj, Inter, system-ui, sans-serif"
+  },
+  "wishChip": {
+    "text": "\"Heart\"",
+    "tag": "DIV",
+    "rect": {
+      "width": 337,
+      "height": 57
+    },
+    "borderRadius": "22px",
+    "padding": "16px",
+    "margin": "12px 0px 0px",
+    "gap": "normal",
+    "background": "rgba(255, 255, 255, 0.12)",
+    "backdropFilter": "blur(12px)",
+    "border": "1px solid rgba(255, 255, 255, 0.2)",
+    "boxShadow": "rgba(0, 0, 0, 0.08) 0px 2px 8px 0px",
+    "color": "rgb(196, 198, 184)",
+    "fontSize": "16px",
+    "fontWeight": "400",
+    "lineHeight": "24px",
+    "letterSpacing": "normal",
+    "fontFamily": "font_1772309694012_s0fq0qj, Inter, system-ui, sans-serif"
+  },
+  "footer": {
+    "text": "Made by Numinds",
+    "tag": "A",
+    "rect": {
+      "width": 107,
+      "height": 26
+    },
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal",
+    "background": "rgba(0, 0, 0, 0)",
+    "backdropFilter": "none",
+    "border": "0px solid rgb(229, 229, 229)",
+    "boxShadow": "none",
+    "color": "rgb(222, 193, 160)",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "lineHeight": "20px",
+    "letterSpacing": "normal",
+    "fontFamily": "font_1772309694012_s0fq0qj, Inter, system-ui, sans-serif"
+  },
+  "bottomNav": null,
+  "cardCount": 14,
+  "sectionGaps": [
+    {
+      "gapPx": 553,
+      "prevText": "يتــشرفـــون بــدعـو",
+      "text": "العد التنازلي142أيام"
+    },
+    {
+      "gapPx": 64,
+      "prevText": "العد التنازلي142أيام",
+      "text": "برنامج المناسبة1:09 "
+    },
+    {
+      "gapPx": 85,
+      "prevText": "برنامج المناسبة1:09 ",
+      "text": "ممنوع التصوير"
+    },
+    {
+      "gapPx": 18,
+      "prevText": "ممنوع التصوير",
+      "text": "يرجى الحضور في الوقت"
+    },
+    {
+      "gapPx": 18,
+      "prevText": "يرجى الحضور في الوقت",
+      "text": "فعالية خاصة"
+    },
+    {
+      "gapPx": 1281,
+      "prevText": "فعالية خاصة",
+      "text": "\"Heart\""
+    },
+    {
+      "gapPx": 11,
+      "prevText": "\"Heart\"",
+      "text": "\"شكرا\""
+    },
+    {
+      "gapPx": 12,
+      "prevText": "\"شكرا\"",
+      "text": "\"Gbx\""
+    },
+    {
+      "gapPx": 12,
+      "prevText": "\"Gbx\"",
+      "text": "\"Hggngfbn\""
+    },
+    {
+      "gapPx": 12,
+      "prevText": "\"Hggngfbn\"",
+      "text": "\"مبروم.\""
+    },
+    {
+      "gapPx": 11,
+      "prevText": "\"مبروم.\"",
+      "text": "\"اهلا و سهلا في الحض"
+    },
+    {
+      "gapPx": 12,
+      "prevText": "\"اهلا و سهلا في الحض",
+      "text": "\"Can't wait 💕\""
+    },
+    {
+      "gapPx": 12,
+      "prevText": "\"Can't wait 💕\"",
+      "text": "\"🤍🤍\""
+    }
+  ],
+  "particles": {
+    "count": 16,
+    "sample": [
+      {
+        "style": "left: 0%; width: 4px; height: 4px; animation: 8s linear 0s infinite normal none running snowfall;",
+        "animationName": "snowfall"
+      },
+      {
+        "style": "left: 5.3%; width: 5px; height: 5px; animation: 9s linear 0.7s infinite normal none running snowfall;",
+        "animationName": "snowfall"
+      },
+      {
+        "style": "left: 10.6%; width: 6px; height: 6px; animation: 10s linear 1.4s infinite normal none running snowfall;",
+        "animationName": "snowfall"
+      }
+    ]
+  },
+  "envelope": {
+    "found": false,
+    "cover": null,
+    "openButton": null
+  }
+}

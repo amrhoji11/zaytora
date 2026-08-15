@@ -1,19 +1,29 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import Image from "next/image";
-import { cn } from "@/lib/utils";
+import { AnimatePresence, motion } from "framer-motion";
+import type { LucideIcon } from "lucide-react";
+import { canUseNextImage, cn, isVideoSource } from "@/lib/utils";
 import {
+  BabyIcon,
   BedDoubleIcon,
+  CakeIcon,
   CameraIcon,
   ClipboardListIcon,
+  GemIcon,
   GiftIcon,
+  GraduationCapIcon,
   HeartIcon,
   ImageIcon,
+  LoaderIcon,
   MapPinIcon,
   MusicIcon,
+  PauseIcon,
   PhoneIcon,
+  PlayIcon,
   QrCodeIcon,
+  SparklesIcon,
   XIcon,
 } from "@/components/icons";
 import { getTemplates } from "@/lib/services/templates.service";
@@ -27,6 +37,21 @@ import { LocationModal } from "./LocationModal";
 import { ContactModal } from "./ContactModal";
 import { GiftModal } from "./GiftModal";
 import { CameraOverlay } from "./CameraOverlay";
+import { CrimsonWaxSealEnvelopeCover, OliveWaxSealEnvelopeCover } from "./CrimsonWaxSealEnvelopeCover";
+import { NavyGoldWaxSealEnvelopeCover, PhotoWaxSealEnvelopeCover } from "./PhotoWaxSealEnvelopeCover";
+import { ScrollUnrollEnvelopeCover } from "./ScrollUnrollEnvelopeCover";
+import { DoorSlideEnvelopeCover } from "./DoorSlideEnvelopeCover";
+import { DoorFoldEnvelopeCover } from "./DoorFoldEnvelopeCover";
+import { EnvelopeCover } from "./EnvelopeCover";
+import { WaxSealEnvelopeCover } from "./WaxSealEnvelopeCover";
+import { ArchIslamicHeroFrame } from "./ArchIslamicHeroFrame";
+import { ScratchDateCard } from "./ScratchDateCard";
+import { ArchIslamicInvitationCard } from "./ArchIslamicInvitationCard";
+import { CalendarCard } from "./CalendarCard";
+import { WishesCarousel } from "./WishesCarousel";
+import { useMusicPlayer } from "./useMusicPlayer";
+import { useAutoScroll } from "./useAutoScroll";
+import { AmbientParticles, type AmbientVariant } from "./AmbientParticles";
 
 // Keyed by the same `value` codes Step01Language hands out (see
 // steps/Step01Language.tsx). "bilingual" reads Arabic-first, so it shares the
@@ -64,11 +89,92 @@ function resolveLanguage(language?: string | null): InvitationLanguage {
   return language && language in NAV_LABELS ? (language as InvitationLanguage) : "ar";
 }
 
-function formatEventDate(iso: string | null | undefined, locale: string) {
+// Drives the main invitation card's calligraphic header + flanking icon —
+// keyed by the exact `occasionType` codes Step02Occasion writes onto the
+// invitation (see steps/Step02Occasion.tsx's OCCASION_META), so picking a
+// template for a given occasion there is what makes this canvas read
+// "دعوة زفاف" with rings for a wedding vs. "حفل تخرج" with a graduation cap
+// without any extra wiring. Falls back to the wedding theme for an
+// occasionType this map doesn't recognize (a still-blank/in-progress draft,
+// or a future occasion added to Step02Occasion before this map catches up).
+const OCCASION_THEME: Record<string, { title: string; icon: LucideIcon }> = {
+  wedding: { title: "دعوة زفاف", icon: GemIcon },
+  engagement: { title: "دعوة خطوبة", icon: GemIcon },
+  marriage_contract: { title: "دعوة عقد قران", icon: GemIcon },
+  henna: { title: "دعوة حنة", icon: SparklesIcon },
+  bridal_shower: { title: "دعوة حفلة عروس", icon: SparklesIcon },
+  gender_reveal: { title: "حفل كشف الجنس", icon: SparklesIcon },
+  aqeeqah: { title: "دعوة عقيقة", icon: BabyIcon },
+  graduation: { title: "حفل تخرج", icon: GraduationCapIcon },
+  birthday: { title: "دعوة عيد ميلاد", icon: CakeIcon },
+};
+
+function resolveOccasionTheme(occasionType?: string | null) {
+  return (occasionType && OCCASION_THEME[occasionType]) || OCCASION_THEME.wedding;
+}
+
+// Full words ("أيام", "ساعات"...), matching the reference's countdown —
+// not the single-letter abbreviations ("ي", "س"...) used previously.
+const COUNTDOWN_LABELS: Record<InvitationLanguage, { days: string; hours: string; minutes: string; seconds: string }> = {
+  ar: { days: "أيام", hours: "ساعات", minutes: "دقائق", seconds: "ثواني" },
+  bilingual: { days: "أيام", hours: "ساعات", minutes: "دقائق", seconds: "ثواني" },
+  en: { days: "Days", hours: "Hours", minutes: "Minutes", seconds: "Seconds" },
+  ro: { days: "Zile", hours: "Ore", minutes: "Minute", seconds: "Secunde" },
+  fr: { days: "Jours", hours: "Heures", minutes: "Minutes", seconds: "Secondes" },
+  es: { days: "Días", hours: "Horas", minutes: "Minutos", seconds: "Segundos" },
+  hi: { days: "दिन", hours: "घंटे", minutes: "मिनट", seconds: "सेकंड" },
+  id: { days: "Hari", hours: "Jam", minutes: "Menit", seconds: "Detik" },
+};
+
+// Shown in the hero (via NamesLine, so the "&" still gets its own
+// font-great-vibes treatment) in place of the couple's real names on a
+// still-blank draft — every template used to fall back to a single bare "&"
+// glyph there, which read as a second, disconnected ampersand sitting right
+// under this same hero's own decorative "&" mark. A real placeholder pair
+// reads as an actual preview of the layout instead of a broken/duplicated
+// symbol, and disappears the moment the guest fills in Step04BasicInfo.
+const PLACEHOLDER_NAMES: Record<InvitationLanguage, string> = {
+  ar: "أحمد & سارة",
+  bilingual: "أحمد & سارة",
+  en: "Ahmed & Sarah",
+  ro: "Ahmed & Sarah",
+  fr: "Ahmed & Sarah",
+  es: "Ahmed & Sarah",
+  hi: "अहमद & सारा",
+  id: "Ahmed & Sarah",
+};
+
+// Appends the Umm al-Qura Hijri calendar + a forced Latin numbering system
+// (`-u-ca-islamic-umalqura-nu-latn`) onto a base locale tag — every date
+// display on this canvas runs through this so toggling Step04BasicInfo's
+// "Hijri date" switch consistently flips weekday/month/day/year everywhere
+// (hero, invitation card, calendar widget, countdown subtitle) instead of
+// just one spot. `-nu-latn` matches this canvas's existing convention of
+// never showing Arabic-Indic digits (see calendarParts below) — Hijri or
+// Gregorian, days/years always render "19"/"1447", never "١٩"/"١٤٤٧".
+function resolveDateLocale(locale: string, useHijri: boolean) {
+  return useHijri ? `${locale}-u-ca-islamic-umalqura-nu-latn` : locale;
+}
+
+// JS `Date` has no native Hijri accessors (getMonth()/getDate() are always
+// Gregorian) — formatToParts() against the Hijri locale is what actually
+// converts the calendar system, not just the display language.
+function hijriDateParts(date: Date, locale: string) {
+  const parts = new Intl.DateTimeFormat(resolveDateLocale(locale, true), {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).formatToParts(date);
+  const get = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
+  return { weekday: get("weekday"), day: get("day"), month: get("month"), year: get("year") };
+}
+
+function formatEventDate(iso: string | null | undefined, locale: string, useHijri: boolean) {
   if (!iso) return null;
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return null;
-  return new Intl.DateTimeFormat(locale, {
+  return new Intl.DateTimeFormat(resolveDateLocale(locale, useHijri), {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -76,6 +182,66 @@ function formatEventDate(iso: string | null | undefined, locale: string) {
     hour: "numeric",
     minute: "2-digit",
   }).format(date);
+}
+
+// Short "DD/MM/YYYY" form for the closing footer — distinct from the long,
+// localized formatEventDate() used in the hero.
+function formatShortDate(iso: string | null | undefined) {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  return `${day}/${month}/${date.getFullYear()}`;
+}
+
+// Feeds the CalendarCard "desk calendar" widget — day-of-month stays plain
+// Latin digits regardless of locale (matching the countdown grid's own
+// digits, and the reference's "19", never "١٩"), while month/weekday read
+// localized. Time is pinned to en-US/hour12 so it always reads "9:00 PM"
+// like the reference's calendar face, independent of invitation language.
+// When useHijriDate is on, day/month/weekday all come from hijriDateParts
+// instead — a Hijri desk calendar showing a Gregorian day-of-month would be
+// actively wrong, not just unlocalized.
+function calendarParts(iso: string | null | undefined, locale: string, useHijri: boolean) {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  const time = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", hour12: true }).format(date);
+  if (useHijri) {
+    const hijri = hijriDateParts(date, locale);
+    return { day: hijri.day, month: hijri.month, weekday: hijri.weekday, time };
+  }
+  return {
+    day: String(date.getDate()),
+    month: new Intl.DateTimeFormat(locale, { month: "long" }).format(date),
+    weekday: new Intl.DateTimeFormat(locale, { weekday: "long" }).format(date),
+    time,
+  };
+}
+
+// The main invitation card's "يوم السبت الموافق 12.19.2026" line — weekday
+// read localized, the MM.DD.YYYY numerals always Latin (matching the
+// reference's own dot-separated date, and the countdown/calendar widgets'
+// digits elsewhere on this canvas). "يوم"/"الموافق" stay hardcoded Arabic
+// regardless of `language`, matching every other section label on this
+// canvas (برنامج الحفل, تفاصيل الحدث, الموقع...) — a known, existing
+// convention, not something introduced here. Hijri mode swaps the numeric
+// portion for "day month year هـ" (e.g. "19 رجب 1447هـ") since a Hijri
+// year has no fixed MM.DD position to dot-separate the way the Gregorian
+// calendar does.
+function formatInvitationDateLine(iso: string | null | undefined, locale: string, useHijri: boolean) {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  if (useHijri) {
+    const hijri = hijriDateParts(date, locale);
+    return `يوم ${hijri.weekday} الموافق ${hijri.day} ${hijri.month} ${hijri.year}هـ`;
+  }
+  const weekday = new Intl.DateTimeFormat(locale, { weekday: "long" }).format(date);
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `يوم ${weekday} الموافق ${month}.${day}.${date.getFullYear()}`;
 }
 
 function useCountdown(iso?: string | null) {
@@ -102,20 +268,429 @@ function useCountdown(iso?: string | null) {
 
 const RULES_DELIMITER = " · ";
 
-// Sections float as translucent cards over the persistent full-height
-// template canvas (see the scroll container below), instead of flush rows
-// that assumed a plain white background.
-const SECTION_CARD = "mx-3 my-2 rounded-2xl border border-white/60 bg-white/85 p-4 shadow-sm backdrop-blur-sm";
+// Section cards blend into whatever's behind them (template photo or plain
+// page) as tinted glass, using the --tpl-card-* custom properties a nearby
+// ancestor sets via resolveCanvasTheme() below — never a hardcoded white/
+// black split. backdrop-blur-md still softens whatever texture shows through.
+// Vertical rhythm between cards comes from the content wrapper's
+// `space-y-16`, not a per-card margin, so the page reads as a long, roomy
+// scroll rather than tightly stacked panels.
+// backdrop-blur-lg + the inset top highlight line (--tpl-card-highlight) is
+// what pushes this from "translucent panel" to a genuine frosted-glass
+// bevel — a thin brighter edge along the top inner border, the same detail
+// numinds.me's own dark templates (W038) use on their calendar/countdown/
+// program cards rather than a flat semi-transparent rectangle.
+// Briefly bumped to blur-xl alongside cardBg's lower opacity, to keep the
+// now-more-visible backdrop smooth — reverted back to blur-lg because
+// backdrop-filter's cost scales sharply with radius, and with a full
+// invitation stacking a dozen+ of these cards, blur-xl visibly hitched
+// scrolling. Legibility over the more-visible backdrop is carried by
+// textShadow's stronger layered shadow (below) instead of a heavier blur.
+//
+// content-visibility:auto turned out to matter far more than the blur radius
+// itself: opening the envelope auto-starts a slow unattended scroll ride
+// (useAutoScroll) that calls window.scrollTo() every animation frame for the
+// whole invitation — with every backdrop-blur card on the page repainting on
+// every one of those frames regardless of whether it's anywhere near the
+// viewport, that compounded into 20+ seconds of continuous main-thread
+// blocking (measured directly during the ride, not estimated). Skipping
+// layout/paint for off-screen cards cuts that cost down to roughly the
+// number of cards actually visible at once instead of all of them.
+function sectionCardClass(padding: string = "p-8") {
+  return cn(
+    "tpl-card mx-3 rounded-[24px] border backdrop-blur-lg [content-visibility:auto] [contain-intrinsic-size:1px_400px]",
+    padding,
+    "border-[var(--tpl-card-border)] bg-[var(--tpl-card-bg)] shadow-[0_8px_32px_var(--tpl-card-shadow),inset_0_1px_0_var(--tpl-card-highlight)]"
+  );
+}
+
+// Centralized typographic tone so every header/body/muted string across the
+// program, rules, accommodation, gallery, personal-message and footer
+// sections reads consistently — driven entirely by the --tpl-text-* custom
+// properties resolveCanvasTheme() sets on the canvas root, not a per-call
+// boolean, so a plain constant works fine here. Every role also carries
+// --tpl-text-shadow — a soft dark glow behind light text (legible over an
+// unpredictable full-bleed photo) or a soft light halo behind dark text
+// (legible over a bright/busy background) computed once from the resolved
+// theme's brightness, so contrast stays pixel-perfect without a per-spot
+// manual drop-shadow.
+const TEXT_SHADOW = "[text-shadow:var(--tpl-text-shadow)]";
+const TONE = {
+  heading: cn("text-[var(--tpl-text-heading)]", TEXT_SHADOW),
+  body: cn("text-[var(--tpl-text-body)]", TEXT_SHADOW),
+  strong: cn("text-[var(--tpl-text-strong)]", TEXT_SHADOW),
+  muted: cn("text-[var(--tpl-text-muted)]", TEXT_SHADOW),
+  chip: "bg-[var(--tpl-chip-bg)] text-[var(--tpl-text-muted)]",
+} as const;
+
+// --- Per-template theme resolution -----------------------------------------
+// Every color in this canvas that used to hinge on a single `hasPhoto`
+// boolean (dark glass on a full-bleed photo vs. cream/gold everywhere else)
+// now reads from the template's own PageBg/CardBg/TextColor/PrimaryAccent
+// tokens (see the Template entity's doc comments on the backend), resolved
+// once per render into CSS custom properties on the canvas root so every
+// descendant — including CalendarCard and WishesCarousel — can reference
+// them via plain `var(--tpl-*)` without any prop drilling or per-component
+// hasPhoto plumbing. A template with no palette assigned (the four legacy
+// screenshot templates, or a previewImageUrl demo with no backend template)
+// falls back to exactly the old hasPhoto-driven look, driven by isFullBleed
+// instead — so nothing regresses for templates that predate this system.
+const DEFAULT_ACCENT = "#C8A24A";
+const DEFAULT_PAGE_BG = "linear-gradient(to bottom, #F5F0E8, #ffffff)";
+const DEFAULT_PAGE_BG_SOLID = "#F5F0E8";
+
+function normalizeHex(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const match = /^#?([0-9a-fA-F]{6})$/.exec(value.trim());
+  return match ? `#${match[1]}` : null;
+}
+
+function hexToRgbTuple(hex: string): [number, number, number] {
+  const num = parseInt(hex.slice(1), 16);
+  return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
+}
+
+function withAlpha(hex: string, alphaValue: number): string {
+  const [r, g, b] = hexToRgbTuple(hex);
+  return `rgba(${r}, ${g}, ${b}, ${alphaValue})`;
+}
+
+// A solid (opaque) lightened variant of accent — for spots like the bottom
+// nav's action-button gradient, where an alpha-blended --tpl-accent-NN would
+// let whatever's behind the button show through the gradient's middle stop
+// instead of reading as a highlight.
+function lighten(hex: string, amount: number): string {
+  const [r, g, b] = hexToRgbTuple(hex);
+  const mix = (channel: number) => Math.round(channel + (255 - channel) * amount);
+  return `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`;
+}
+
+// Cheap perceived-brightness check (not gamma-correct, but plenty accurate
+// for "should this card render as light or dark glass") used only when a
+// template supplies its own CardBg — a template author picks one card color
+// per template, so this only ever runs against a handful of known values.
+function isDarkColor(hex: string): boolean {
+  const [r, g, b] = hexToRgbTuple(hex);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 < 0.5;
+}
+
+function resolveCanvasTheme(
+  template: TemplateDto | null,
+  isFullBleed: boolean,
+  // The guest's own manual pick from Step18Additional's "لون نص الدعوة"
+  // ColorField — wins over the template's own TextColor when set, so a
+  // guest who finds a template's automatic color hard to read against
+  // their chosen photo/background can just fix it themselves instead of
+  // being stuck with whatever that template's author picked.
+  textColorOverride?: string | null
+) {
+  const cardBase = normalizeHex(template?.cardBg);
+  const isDark = cardBase ? isDarkColor(cardBase) : isFullBleed;
+
+  const accent = normalizeHex(template?.primaryAccent) ?? DEFAULT_ACCENT;
+  const textColor = normalizeHex(textColorOverride) ?? normalizeHex(template?.textColor);
+  const headingColor = textColor ?? (isDark ? "#DEC1A0" : "#44403c");
+  const bodyColor = textColor ?? (isDark ? "#DEC1A0" : "#57534e");
+  const strongColor = textColor ?? (isDark ? "#DEC1A0" : "#292524");
+  const mutedColor = textColor ? withAlpha(textColor, 0.65) : isDark ? "#C4C6B8" : "#a8a29e";
+  // Shadow direction (dark glow behind light text vs. light halo behind
+  // dark text) has to track the *resolved text color's* own brightness,
+  // not the card/photo's — a manually-picked dark override on a dark
+  // template would otherwise still get a glow meant for light text,
+  // undermining the exact legibility fix this override exists for.
+  const textIsLight = textColor ? !isDarkColor(textColor) : isDark;
+
+  const cardColorBase = cardBase ?? (isDark ? "#000000" : "#ffffff");
+  // Full-bleed templates sit these "glass" surfaces directly over a real
+  // photo, whose own light/dark patches vary block-to-block regardless of
+  // the template's assigned isDark/textColor — 0.45-0.5 opacity (an older
+  // value) let too much of that unpredictable photo bleed through, so a
+  // dark-brown photo patch under light "isDark: false" text (or vice versa)
+  // could wreck contrast even though the theme's own colors were fine on
+  // paper. 0.72-0.8 (a later bump) fixed that but read as flatly opaque
+  // wherever the photo itself was already close in tone to the card (a dark
+  // night-sky template's card over its own dark sky, for instance) — the
+  // glass-over-photo look the template is going for never actually showed.
+  // Settled here at 0.62-0.68: enough of the photo still shows through for
+  // "tinted glass" to read as intended even on a same-tone photo, while
+  // sectionCardClass's stronger blur-xl (was blur-lg) smooths out whatever
+  // busy texture that lets through so it can't sit directly under text, and
+  // textShadow below picks up the rest of the contrast work.
+  const cardBg = withAlpha(cardColorBase, isDark ? 0.62 : 0.68);
+  const cardBorder = isDark ? "rgba(255,255,255,0.15)" : cardBase ? withAlpha(accent, 0.25) : "#e9dfc8";
+  const cardShadow = isDark ? "rgba(0,0,0,0.35)" : "rgba(120,95,50,0.08)";
+  // The glass bevel's inner top edge — a touch brighter than the card body,
+  // same on dark or light glass (a highlight, not a themed color).
+  const cardHighlight = isDark ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.65)";
+  // Pixel-perfect legibility over unpredictable backgrounds (a full-bleed
+  // photo, a busy page gradient) without per-spot manual drop-shadows. Two
+  // layered shadows: a tight, high-opacity one that hugs the glyph edges
+  // (does the actual contrast work, since cardBg is translucent enough now
+  // to let real photo detail through) plus the original soft wide glow for
+  // depth — a single soft blur alone got lost against busy photo texture.
+  const textShadow = textIsLight
+    ? "0 1px 2px rgba(0,0,0,0.85), 0 2px 10px rgba(0,0,0,0.5)"
+    : "0 1px 2px rgba(255,255,255,0.85), 0 2px 8px rgba(255,255,255,0.55)";
+
+  // Same reasoning as cardBg above — chips (wishes pills, countdown boxes,
+  // program-item badges) are smaller than a full card section, so an even
+  // thinner accent-only wash (the old 0.12-0.16) left them almost entirely
+  // photo-colored. Based on cardColorBase (the theme's own light/dark
+  // neutral) rather than accent, at a comparable near-opaque strength, so
+  // text over a chip gets the same reliable footing as text over a card.
+  const chipBg = withAlpha(cardColorBase, isDark ? 0.6 : 0.66);
+  // "Emphasis" is the accent role used for decorative/interactive marks
+  // (timeline dots, event tagline, "&" glow) — on a dark card the raw accent
+  // hue can read low-contrast against a busy photo, so dark mode borrows the
+  // already-tuned heading color instead of the accent itself; light mode
+  // uses the accent directly.
+  const emphasis = isDark ? headingColor : accent;
+
+  const rawPageBg = template?.pageBg?.trim() || null;
+  let pageBg = DEFAULT_PAGE_BG;
+  let pageBgSolid = DEFAULT_PAGE_BG_SOLID;
+  if (rawPageBg?.includes(",")) {
+    const [fromRaw, toRaw] = rawPageBg.split(",");
+    const from = normalizeHex(fromRaw);
+    const to = normalizeHex(toRaw) ?? from;
+    if (from) {
+      pageBg = `linear-gradient(to bottom, ${from}, ${to})`;
+      pageBgSolid = from;
+    }
+  } else if (rawPageBg) {
+    const solid = normalizeHex(rawPageBg);
+    if (solid) {
+      pageBg = solid;
+      pageBgSolid = solid;
+    }
+  }
+
+  const vars = {
+    "--tpl-page-bg": pageBg,
+    "--tpl-page-bg-solid": pageBgSolid,
+    "--tpl-card-bg": cardBg,
+    "--tpl-card-border": cardBorder,
+    "--tpl-card-shadow": cardShadow,
+    "--tpl-card-highlight": cardHighlight,
+    "--tpl-text-shadow": textShadow,
+    "--tpl-text-heading": headingColor,
+    "--tpl-text-body": bodyColor,
+    "--tpl-text-strong": strongColor,
+    "--tpl-text-muted": mutedColor,
+    "--tpl-chip-bg": chipBg,
+    "--tpl-accent": accent,
+    "--tpl-accent-light": lighten(accent, 0.35),
+    "--tpl-accent-70": withAlpha(accent, 0.7),
+    "--tpl-accent-40": withAlpha(accent, 0.4),
+    "--tpl-accent-30": withAlpha(accent, 0.3),
+    "--tpl-accent-15": withAlpha(accent, 0.15),
+    "--tpl-emphasis": emphasis,
+    "--tpl-emphasis-40": withAlpha(emphasis, 0.4),
+    "--tpl-emphasis-15": withAlpha(emphasis, 0.15),
+    "--tpl-mark": isDark ? withAlpha(headingColor, 0.85) : withAlpha(accent, 0.7),
+    "--tpl-mark-glow": withAlpha(emphasis, 0.5),
+  } as const;
+
+  return { vars, isDark };
+}
+
+const AMBIENT_VARIANTS = new Set<AmbientVariant>(["smoke", "petals", "sparkle", "snow", "none"]);
+
+// Which particle motion plays across the whole canvas (see AmbientParticles.tsx).
+// A template's own AmbientEffect always wins; an unset/unrecognized value
+// defers to the resolved theme's brightness — dark themes read as moody, so
+// they get slow rising smoke, light themes get soft twinkling sparkle —
+// rather than requiring every template to pick a variant explicitly.
+function resolveAmbientVariant(template: TemplateDto | null, isDark: boolean): AmbientVariant {
+  const raw = template?.ambientEffect;
+  if (raw && AMBIENT_VARIANTS.has(raw as AmbientVariant)) return raw as AmbientVariant;
+  return isDark ? "smoke" : "sparkle";
+}
+
+// Every template composites its live guest data differently — see the
+// Layout doc-comment on the backend's Template entity (backend/Numinds.Api/Models/Entities/Template.cs)
+// for the full rationale (in short: the four original seed templates are
+// finished preview *screenshots* with a demo couple's name already baked
+// into the pixels, which is exactly what caused names not to visibly
+// update and photos to be stretched/cropped oddly when they were reused as
+// full-page backgrounds — they were never meant to have live text
+// composited over them at all).
+type TemplateLayout = "none" | "full-bleed" | "boxed-hero" | "overlay";
+
+// "overlay" doesn't depend on a background image existing — its frame is
+// drawn in this file, not sourced from the template — so it's checked
+// before the hasBackgroundImage gate below. Every other non-"none",
+// non-"boxed-hero" value (including "full-bleed" itself, and any layout
+// string a future template introduces that this build doesn't know about
+// yet) falls back to "full-bleed", this canvas's original single-mode photo
+// treatment, so a newer backend never regresses to a blank canvas here.
+function resolveTemplateLayout(rawLayout: string | null | undefined, hasBackgroundImage: boolean): TemplateLayout {
+  if (rawLayout === "overlay") return "overlay";
+  if (!hasBackgroundImage) return "none";
+  if (rawLayout === "none") return "none";
+  if (rawLayout === "boxed-hero") return "boxed-hero";
+  return "full-bleed";
+}
+
+// Explicit initial/animate + incrementing delay per hero line, rather than
+// framer-motion's variants + staggerChildren orchestration — the hero
+// re-renders every second (the countdown ticks via useCountdown's own
+// setInterval), and a freshly-mounted countdown pill re-entering the
+// staggered parent's child list intermittently left sibling variants stuck
+// at their "hidden" values. Independent per-element animations sidestep
+// that entirely.
+function heroFade(index: number) {
+  return {
+    initial: { opacity: 0, y: 16 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.5, delay: 0.05 + index * 0.1, ease: "easeOut" as const },
+  };
+}
+
+const sectionReveal = {
+  initial: { opacity: 0, y: 40 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true, margin: "-50px" },
+  transition: { duration: 0.6, ease: "easeOut" as const },
+};
+
+// Slow, continuous Ken Burns zoom for every hero photo layer (full-bleed
+// background, hero illustration, arch-window photo) — without it a static
+// BackgroundImageUrl just sits there once its one-time entrance fade
+// finishes, which reads as "a picture" rather than "a living invitation".
+// Mirrors back down instead of resetting/jumping, and runs slow enough
+// (18s) that it's felt more than seen — the same subtle-zoom treatment
+// numinds.me's own photo templates use behind their hero.
+const kenBurns = {
+  initial: { scale: 1 },
+  animate: { scale: 1.08 },
+  transition: { duration: 18, repeat: Infinity, repeatType: "mirror" as const, ease: "easeInOut" as const },
+};
+
+// Collapses framer-motion's intersection root down to a thin band straddling
+// the viewport's vertical center (-42% off both the top and bottom edges).
+// Used only by the program timeline: with the section card's own default
+// "-50px" margin, every row within a short program sits inside the viewport
+// simultaneously and reveals as one block the moment the card scrolls into
+// view. A center-band margin instead makes each row cross that band one at a
+// time as the guest scrolls, so the timeline lights up step-by-step no
+// matter how many stops it has or how tall the card is.
+const TIMELINE_REVEAL_VIEWPORT = { once: true, margin: "-42% 0px -42% 0px" } as const;
+
+// Renders the couple's joined "First & Second" string with only the "&"
+// itself swapped to font-great-vibes — matching the reference invitation
+// markup, which sets every couple-name ampersand in a dedicated cursive
+// script while the names on either side stay in the invitation's own font.
+// Falls back to the plain string when there's no " & " to split on (a solo
+// invitationType, or a name containing no literal ampersand-joined pair),
+// so this is a pure presentational swap, never a data reshape.
+function NamesLine({ names }: { names: string }) {
+  const parts = names.split(" & ");
+  if (parts.length !== 2) return <>{names}</>;
+  const [first, second] = parts;
+  return (
+    <>
+      {first} <span className="font-great-vibes">&amp;</span> {second}
+    </>
+  );
+}
 
 // The actual invitation content + bottom nav + modals — shared by the small
 // phone-bezel mockup (PhonePreview) and the full-screen preview overlay, so
 // both surfaces render exactly the same guest-facing experience instead of
 // two versions that can drift apart.
-export function InvitationCanvas({ value, className }: { value: InvitationDetail; className?: string }) {
+export function InvitationCanvas({
+  value,
+  className,
+  variant = "embedded",
+  previewImageUrl,
+  templatePreviewMode = false,
+  readOnly = false,
+}: {
+  value: InvitationDetail;
+  className?: string;
+  // "embedded" (default): bounded to its parent's box — the small phone-bezel
+  // mockup (PhonePreview) gives this a fixed-height box, so the canvas
+  // scrolls internally and its nav/modals are positioned relative to that box.
+  // "standalone": the guest-facing /invitationpublic page — no bezel, no
+  // bounded box, the page itself scrolls natively and the nav/modals anchor
+  // to the viewport, matching numinds.me's public preview layout.
+  variant?: "embedded" | "standalone";
+  // Escape hatch for demo/showcase invitations that have no backend-hosted
+  // template (so `templates.find(...)` never resolves an imageUrl) but still
+  // want the photo hero treatment — e.g. a standalone mock built from a
+  // hand-authored InvitationDetail rather than a real draft. Ignored whenever
+  // the resolved template already carries its own imageUrl.
+  previewImageUrl?: string | null;
+  // True only for the phone-bezel preview while the designer is on
+  // StudioWizard's template-selection step (see PhonePreview's isTemplateStep)
+  // — before any real content exists yet, so the picker's job is "does this
+  // template's own visual identity look right", not "does the couple's not-
+  // yet-real placeholder text look right". Suppresses every text overlay
+  // (names/placeholder, family names, event title, thank-you, QR, and the
+  // whole invitation-card-through-footer content stack) plus the bottom nav,
+  // while leaving every background layer — photo/gradient, the overlay
+  // layout's decorative frame, hero/decoration artwork, paper grain, and
+  // AmbientParticles — rendering exactly as it otherwise would, since none
+  // of those are "content", they're the template's raw aesthetic itself.
+  templatePreviewMode?: boolean;
+  // True for every "just looking, not really RSVPing" surface: the mock
+  // catalog/homepage template preview (buildMockInvitation, no real backend
+  // invitation behind it) and the studio's own "?preview=true" full-preview
+  // of an in-progress draft (the designer checking their own design, not a
+  // guest). Passed to InteractiveRSVPModal so it skips the real
+  // POST /invitations/{id}/rsvp call — pointless for the mock's fake "demo"
+  // id, and semantically wrong for the designer's own unpublished draft,
+  // which would otherwise pollute that invitation's real RSVP list once
+  // published. The actual guest-facing link (/invitationpublic?id=X with no
+  // preview flag) leaves this false, so real guests' RSVPs still reach the
+  // owner's dashboard normally.
+  readOnly?: boolean;
+}) {
   const [templates, setTemplates] = useState<TemplateDto[]>([]);
+  // Which envelope-cover branch to render (the template's own library photo
+  // vs. a named style vs. the generic fallback) depends on `template` below,
+  // which is only known once this fetch resolves — without this flag the
+  // generic EnvelopeCover briefly flashes on first paint, then gets swapped
+  // for the template's real one the instant the fetch finishes.
+  const [templatesLoaded, setTemplatesLoaded] = useState(false);
   const [openModal, setOpenModal] = useState<string | null>(null);
   const [cameraOpen, setCameraOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  // Owned here (not inside MusicPlayerModal) so the track keeps playing
+  // across the modal opening/closing, and so the envelope's "OPEN" tap can
+  // start it directly.
+  const music = useMusicPlayer(value.musicUrl, value.musicStartSeconds ?? 0);
+  const { audioRef: musicAudioRef, youtubeContainerRef: musicYoutubeContainerRef } = music;
+  const standalone = variant === "standalone";
+  // Owned here rather than inside EnvelopeCover — it needs to drive the
+  // *canvas's* scroll position (window in standalone, scrollRef in
+  // embedded), which EnvelopeCover has no reference to.
+  const autoScroll = useAutoScroll({ standalone, containerRef: scrollRef });
+
+  // Hands control back to the guest the moment they touch the page
+  // themselves — wheel/touch/pointer are genuine input gestures, unlike the
+  // `scroll` events autoScroll's own rAF loop produces by writing
+  // scrollTop/scrollTo, so this can't fight its own programmatic scrolling.
+  useEffect(() => {
+    if (!autoScroll.isActive) return;
+    const target: Window | HTMLDivElement | null = standalone ? window : scrollRef.current;
+    if (!target) return;
+    const handleInteraction = () => autoScroll.pauseForInteraction();
+    target.addEventListener("wheel", handleInteraction, { passive: true });
+    target.addEventListener("touchstart", handleInteraction, { passive: true });
+    target.addEventListener("pointerdown", handleInteraction, { passive: true });
+    return () => {
+      target.removeEventListener("wheel", handleInteraction);
+      target.removeEventListener("touchstart", handleInteraction);
+      target.removeEventListener("pointerdown", handleInteraction);
+    };
+    // autoScroll is a fresh object every render — depending on the two
+    // stable members this effect actually reads (isActive, the memoized
+    // pauseForInteraction) instead of the whole object avoids re-attaching
+    // these listeners on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoScroll.isActive, autoScroll.pauseForInteraction, standalone]);
 
   useEffect(() => {
     let cancelled = false;
@@ -123,17 +698,65 @@ export function InvitationCanvas({ value, className }: { value: InvitationDetail
       .then((list) => {
         if (!cancelled) setTemplates(list);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setTemplatesLoaded(true);
+      });
     return () => {
       cancelled = true;
     };
   }, []);
 
   const template = templates.find((item) => item.id === value.templateId) ?? null;
+  // backgroundImageUrl (not imageUrl!) is the compositable asset — imageUrl
+  // is purely the picker-grid thumbnail and may have baked-in demo text.
+  // previewImageUrl (no backend template resolved) always renders
+  // full-bleed, matching this prop's original single-mode demo purpose.
+  const backgroundImageUrl = template?.backgroundImageUrl ?? previewImageUrl ?? null;
+  const usingPreviewImage = !template?.backgroundImageUrl && Boolean(previewImageUrl);
+  const templateLayout: TemplateLayout = template
+    ? resolveTemplateLayout(template.layout, Boolean(template.backgroundImageUrl))
+    : previewImageUrl
+      ? "full-bleed"
+      : "none";
+  const isFullBleed = templateLayout === "full-bleed";
+  const isBoxedHero = templateLayout === "boxed-hero";
+  const isOverlay = templateLayout === "overlay";
+  // The hero's arch-window frame (further below) is the shared "bounded
+  // photo card" treatment for both full-bleed (where it's an accent on top
+  // of the full-page photo) and boxed-hero (where it's the *only* photo on
+  // the canvas) — so it reads heroImageUrl for either. "overlay" never gets
+  // a photo at all, only its drawn frame.
+  const heroImageUrl = isFullBleed || isBoxedHero ? backgroundImageUrl : null;
+  // Decorative artwork (floral wreath, graduation cap, balloon cluster...)
+  // independent of BackgroundImageUrl/Layout — a template with no photo at
+  // all (Layout "overlay"/"none") still gets these, which is exactly what
+  // was missing before: those templates rendered nothing between the hero
+  // label and the names/main card, just empty space. heroIllustrationUrl
+  // only renders when heroImageUrl doesn't already occupy that spot (a
+  // photo template's arch frame is that template's own illustration slot);
+  // decorationImageUrl is independent and can accompany either.
+  const heroIllustrationUrl = !heroImageUrl ? (template?.heroIllustrationUrl ?? null) : null;
+  const decorationImageUrl = template?.decorationImageUrl ?? null;
+  // Resolves the template's own PageBg/CardBg/TextColor/PrimaryAccent
+  // tokens into the --tpl-* CSS custom properties every section below reads
+  // — see resolveCanvasTheme's doc comment. `theme.isDark` is the only
+  // remaining boolean threaded through JSX below, for the handful of spots
+  // (forced-white hero text over an unpredictable full-bleed photo, a
+  // drop-shadow that only matters over a photo) that can't be expressed as
+  // a plain CSS variable.
+  const theme = resolveCanvasTheme(template, isFullBleed, value.textColor);
+  const ambientVariant = resolveAmbientVariant(template, theme.isDark);
+  // The guest's own Step04BasicInfo font pick always wins; otherwise the
+  // template supplies its own default (see Template.DefaultNamesFont) so a
+  // script-styled template like w019 doesn't read in the same font as a
+  // bold-caps one like w024 just because neither has a background photo.
+  const namesFont = value.namesFont || template?.defaultNamesFont || "font-cinzel";
 
   const language = resolveLanguage(value.language);
   const isRtl = RTL_LANGUAGES.has(language);
   const labels = NAV_LABELS[language];
+  const countdownLabels = COUNTDOWN_LABELS[language];
 
   const names = [value.firstName, value.invitationType === "couple" ? value.secondName : null]
     .filter(Boolean)
@@ -141,8 +764,14 @@ export function InvitationCanvas({ value, className }: { value: InvitationDetail
   const familyNames = value.hideFamilyNames
     ? ""
     : [value.familyName1, value.familyName2].filter(Boolean).join(" & ");
-  const eventDate = formatEventDate(value.eventDateTime, LOCALE_TAGS[language]);
+  const useHijri = Boolean(value.useHijriDate);
+  const eventDate = formatEventDate(value.eventDateTime, LOCALE_TAGS[language], useHijri);
+  const invitationDateLine = formatInvitationDateLine(value.eventDateTime, LOCALE_TAGS[language], useHijri);
   const countdown = useCountdown(value.eventDateTime);
+  const calendar = calendarParts(value.eventDateTime, LOCALE_TAGS[language], useHijri);
+  const primaryVenue = value.venues[0] ?? null;
+  const occasion = resolveOccasionTheme(value.occasionType);
+  const OccasionIcon = occasion.icon;
   const rules = (value.eventRulesText ?? "").split(RULES_DELIMITER).map((rule) => rule.trim()).filter(Boolean);
 
   const navItems: BottomBarItem[] = [
@@ -173,7 +802,7 @@ export function InvitationCanvas({ value, className }: { value: InvitationDetail
   function renderModalBody(key: string) {
     switch (key) {
       case "contact":
-        return <ContactModal contacts={value.contacts} />;
+        return <ContactModal contacts={value.contacts} isRtl={isRtl} />;
       case "location":
         return <LocationModal venues={value.venues} openMapsLabel={isRtl ? "افتح خرائط جوجل" : "Open Google Maps"} />;
       case "music": {
@@ -181,28 +810,47 @@ export function InvitationCanvas({ value, className }: { value: InvitationDetail
         return (
           <MusicPlayerModal
             title={value.musicTitle}
-            url={value.musicUrl}
-            coverImageUrl={template?.imageUrl}
+            coverImageUrl={heroImageUrl}
             coverColor={preset?.color}
             fallbackLabel={labels.music}
+            player={music}
           />
         );
       }
       case "gift":
         return <GiftModal value={value} isRtl={isRtl} />;
       case "rsvp":
-        return <InteractiveRSVPModal value={value} isRtl={isRtl} />;
+        return <InteractiveRSVPModal value={value} isRtl={isRtl} readOnly={readOnly} />;
       default:
         return null;
     }
   }
 
+  // The envelope-open cover is a guest-facing entry animation — the studio's
+  // own embedded phone-bezel mockup (where the designer is actively typing
+  // and expects to see every keystroke reflected immediately) never shows
+  // it, and neither does a not-yet-named draft.
+  const showEnvelope = standalone && Boolean(names);
+
   return (
     <div
       dir={isRtl ? "rtl" : "ltr"}
       lang={LOCALE_TAGS[language]}
+      // Backdrop-blur on ~15 stacked cards, repainted on every single
+      // scrollTo() call of the unattended auto-scroll ride (useAutoScroll),
+      // measured directly at 20+ seconds of continuous main-thread blocking
+      // for the ride alone — content-visibility helps but doesn't remove
+      // this, since every card still has to pay the blur cost once it
+      // actually reaches the viewport during the ride. data-riding drops
+      // backdrop-filter entirely (see globals.css) for exactly the window
+      // where nothing is holding the frame steady long enough to notice —
+      // full glass quality is back the instant the guest touches the screen
+      // and the ride pauses, or once it finishes.
+      data-riding={autoScroll.isActive && !autoScroll.isPaused ? "true" : undefined}
+      style={{ ...theme.vars, background: "var(--tpl-page-bg)" } as CSSProperties}
       className={cn(
-        "relative flex flex-col overflow-hidden bg-gradient-to-b from-[#F5F0E8] to-white",
+        "relative",
+        standalone ? "w-full" : "flex flex-col overflow-hidden",
         isRtl ? "text-right" : "text-left",
         className
       )}
@@ -210,208 +858,884 @@ export function InvitationCanvas({ value, className }: { value: InvitationDetail
       {/* Scrollable canvas: the template image + its darkening overlay are
           absolutely sized to match the *entire* content height below (not
           just the hero), so the background never runs out and shows a cream
-          gap, no matter how far the user scrolls. */}
-      <div ref={scrollRef} className="relative flex-1 overflow-y-auto scroll-smooth">
-        {template?.imageUrl && (
+          gap, no matter how far the user scrolls. In standalone mode there's
+          no bounded box to scroll within — the page itself scrolls, and the
+          image/overlay still stretch to fill this div because its height is
+          set by the in-flow content below (absolutely positioned children
+          don't participate in that calculation). */}
+      <div
+        ref={standalone ? undefined : scrollRef}
+        className={cn("relative", standalone ? "" : "flex-1 overflow-y-auto scroll-smooth")}
+      >
+        {/* Only full-bleed stretches a photo behind the entire scrollable
+            canvas — boxed-hero's photo stays confined to the arch-window
+            frame further down, and overlay never has a background photo at
+            all (heroImageUrl is null for both, so this simply doesn't
+            render, but the isFullBleed check is the actual source of truth
+            in case that ever changes). */}
+        {isFullBleed && heroImageUrl && (
           <>
-            <Image src={template.imageUrl} alt="" fill sizes="480px" className="object-cover" />
+            <div className="absolute inset-0 overflow-hidden">
+              <motion.div className="absolute inset-0" {...kenBurns}>
+                {isVideoSource(heroImageUrl) ? (
+                  <video
+                    src={heroImageUrl}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                ) : canUseNextImage(heroImageUrl) ? (
+                  <Image
+                    src={heroImageUrl}
+                    alt=""
+                    fill
+                    // Always unoptimized here (not just usingPreviewImage) —
+                    // next/image's own resizer picks a width purely from this
+                    // `fill` container's CSS *width* (~480px), oblivious to the
+                    // fact that object-cover in this narrow-but-tall box (the
+                    // canvas's real, much taller scroll height) actually needs
+                    // resolution matched to *height*. That mismatch was
+                    // serving a 480x320 source stretched to cover thousands of
+                    // px tall — a visibly blurry background. SeedTemplates.cs's
+                    // BackgroundImageUrl already requests an appropriately-sized
+                    // crop straight from Unsplash (?w=1200), so skipping
+                    // next/image's local re-resize here serves that resolution
+                    // as-is instead of a second, worse guess on top of it.
+                    unoptimized
+                    className="object-cover"
+                  />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={heroImageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                )}
+              </motion.div>
+            </div>
             <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/35 to-black/70" />
           </>
         )}
 
-        <div className="relative z-10 pb-20">
-          {/* Hero */}
-          <div className="flex min-h-full flex-col items-center justify-center gap-3 px-6 py-10 text-center">
-            {familyNames && (
-              <p
-                className={cn(
-                  "text-[11px] tracking-wide",
-                  value.familyNamesFont || "font-cinzel",
-                  template?.imageUrl ? "text-white/80" : "text-gray-500"
+        {/* The template's decorative artwork, promoted to a full-screen
+            background — `fill` + object-cover renders it absolutely
+            positioned edge-to-edge (absolute inset-0, 100% width/height),
+            exactly like the full-bleed photo above, instead of floating as
+            a small centered box inside the hero's own padding/flex
+            constraints. Only ever set for a template with no BackgroundImageUrl
+            (heroIllustrationUrl is null whenever heroImageUrl is present —
+            see its resolution above), so this and the full-bleed block
+            never both render at once. */}
+        {heroIllustrationUrl && (
+          <>
+            <div className="absolute inset-0 overflow-hidden">
+              <motion.div className="absolute inset-0" {...kenBurns}>
+                {isVideoSource(heroIllustrationUrl) ? (
+                  <video
+                    src={heroIllustrationUrl}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                ) : canUseNextImage(heroIllustrationUrl) ? (
+                  <Image
+                    src={heroIllustrationUrl}
+                    alt=""
+                    fill
+                    // Always unoptimized — see the matching comment on the
+                    // full-bleed Image above; same next/image width-vs-height
+                    // mismatch, same fix.
+                    unoptimized
+                    className="object-cover"
+                  />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={heroIllustrationUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
                 )}
+              </motion.div>
+            </div>
+            <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/35 to-black/70" />
+          </>
+        )}
+
+        {/* Decorative frame for the "overlay" layout — a hand-drawn gold
+            corner flourish rather than a background photo, since an
+            overlay template carries no compositable image at all. Fixed to
+            the viewport (not the scrolling content) so it reads as a
+            constant "frame" around the canvas the way a physical card's
+            printed border would, instead of scrolling away after the hero. */}
+        {isOverlay && (
+          <div
+            aria-hidden
+            className={cn(
+              "pointer-events-none z-[6]",
+              standalone ? "fixed inset-4" : "absolute inset-3"
+            )}
+          >
+            <div className="absolute inset-0 rounded-[28px] border border-[var(--tpl-accent-30)]" />
+            <div className="absolute inset-[6px] rounded-[22px] border border-[var(--tpl-accent-15)]" />
+            {(["-top-1 -start-1", "-top-1 -end-1", "-bottom-1 -start-1", "-bottom-1 -end-1"] as const).map(
+              (corner) => (
+                <span
+                  key={corner}
+                  className={cn(
+                    "absolute size-3 rotate-45 border border-[var(--tpl-accent-40)] bg-[var(--tpl-page-bg-solid)]",
+                    corner
+                  )}
+                />
+              )
+            )}
+          </div>
+        )}
+
+        {/* Warm paper/canvas grain over the whole canvas (photo or plain
+            gradient alike) — faint enough to stay invisible as a texture in
+            isolation, but it's what keeps every flat gold gradient from
+            reading as a digital wash. */}
+        <div className="paper-texture pointer-events-none absolute inset-0 z-[5] opacity-[0.07]" aria-hidden />
+
+        <AmbientParticles standalone={standalone} variant={ambientVariant} />
+
+        <div className="relative z-10 space-y-16 pb-32">
+          {/* Hero — fades and slides each line in with an incrementing delay
+              on mount, so the couple's names and date settle into place
+              instead of popping in all at once. Each line's delay is fixed
+              at mount time (not tied to render count), so the countdown's
+              once-a-second re-render never restarts or disturbs them. */}
+          <div className="flex min-h-full flex-col items-center justify-center gap-3 px-6 py-10 text-center">
+            {/* The hero's only "&" glyph now lives inside the names line
+                below (real names via NamesLine, or PLACEHOLDER_NAMES on a
+                still-blank draft) — a separate always-on decorative mark
+                used to sit here too, which meant a blank draft showed two
+                disconnected ampersands stacked on top of each other. One
+                authoritative "&", always attached to an actual name pair,
+                reads as an invitation instead of a broken glyph. */}
+            {!templatePreviewMode && familyNames && (
+              <motion.p
+                {...heroFade(0)}
+                className={cn("text-[11px] tracking-wide", value.familyNamesFont || "font-cinzel", TONE.body)}
               >
                 {familyNames}
-              </p>
+              </motion.p>
             )}
-            {value.eventTitle && (
-              <p
+            {!templatePreviewMode && value.eventTitle && (
+              <motion.p
+                {...heroFade(1)}
                 className={cn(
-                  "text-sm",
-                  value.eventTitleFont || "font-cinzel",
-                  template?.imageUrl ? "text-white/90" : "text-gold"
+                  "text-base tracking-[0.2em] text-[var(--tpl-emphasis)]",
+                  TEXT_SHADOW,
+                  value.eventTitleFont || "font-cinzel"
                 )}
               >
                 {value.eventTitle}
-              </p>
+              </motion.p>
             )}
-            {names ? (
-              <p
-                className={cn(
-                  "text-2xl",
-                  value.namesFont || "font-cinzel",
-                  template?.imageUrl ? "text-white drop-shadow" : "text-gray-900"
-                )}
-              >
-                {names}
-              </p>
+
+            {/* Arched window image frame — a warm-backlit arch "window"
+                onto the template's photo. Doubles as two different things
+                depending on templateLayout: for full-bleed it's an accent
+                on top of the full-page photo behind it; for boxed-hero it
+                *is* the only photo on the canvas, since that layout has no
+                full-page background at all — matching the reference's own
+                "small bounded photo card in the hero, plain theme
+                everywhere else" template style rather than stretching the
+                same photo behind the whole page regardless of how tall it
+                gets. Fixed w-36/h-56 box + object-cover keeps the crop
+                intentional and consistent instead of the ad-hoc
+                over-zoom/stretch a naive full-height background produces
+                on a portrait-oriented source photo. */}
+            {heroImageUrl && template?.heroFrameStyle === "archIslamic" && (
+              <motion.div {...heroFade(2)}>
+                <ArchIslamicHeroFrame
+                  imageUrl={heroImageUrl}
+                  unoptimized={usingPreviewImage}
+                  kenBurnsProps={kenBurns}
+                  accent={theme.vars["--tpl-accent"]}
+                />
+              </motion.div>
+            )}
+            {heroImageUrl && template?.heroFrameStyle !== "archIslamic" && (
+              <motion.div {...heroFade(2)} className="relative mx-auto mt-1 w-36">
+                <span
+                  aria-hidden
+                  className="absolute inset-x-0 -top-4 mx-auto h-40 w-40 rounded-full bg-[radial-gradient(circle,var(--tpl-accent-40),transparent_70%)] blur-2xl"
+                />
+                <div className="relative h-56 w-36 overflow-hidden rounded-t-[72px] border border-white/30 shadow-[0_0_30px_rgba(255,214,160,0.35)]">
+                  <motion.div className="absolute inset-0" {...kenBurns}>
+                    {isVideoSource(heroImageUrl) ? (
+                      <video
+                        src={heroImageUrl}
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        className="absolute inset-0 h-full w-full object-cover"
+                      />
+                    ) : canUseNextImage(heroImageUrl) ? (
+                      <Image src={heroImageUrl} alt="" fill unoptimized={usingPreviewImage} className="object-cover" />
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={heroImageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                    )}
+                  </motion.div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/5 to-transparent" />
+                </div>
+              </motion.div>
+            )}
+
+            {!templatePreviewMode &&
+              (value.useNameImage && value.nameImageUrl ? (
+                <motion.div {...heroFade(3)} className="mx-auto w-40">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={value.nameImageUrl} alt={names} className="w-full object-contain drop-shadow" />
+                </motion.div>
+              ) : (
+                <motion.p
+                  {...heroFade(3)}
+                  className={cn(
+                    "text-4xl font-light",
+                    namesFont,
+                    names ? TONE.strong : cn(TONE.strong, "opacity-50"),
+                    theme.isDark && "drop-shadow"
+                  )}
+                >
+                  <NamesLine names={names || PLACEHOLDER_NAMES[language]} />
+                </motion.p>
+              ))}
+            {!templatePreviewMode && value.thankYouImageUrl ? (
+              <motion.img
+                {...heroFade(4)}
+                src={value.thankYouImageUrl}
+                alt=""
+                className="mt-1 max-h-16 max-w-[60%] object-contain"
+              />
             ) : (
-              <p className={cn("font-cinzel text-4xl", template?.imageUrl ? "text-white/80" : "text-gold/40")}>
-                &amp;
-              </p>
+              !templatePreviewMode && value.thankYouText && (
+                <motion.p
+                  {...heroFade(4)}
+                  className="mt-1 text-[10px] uppercase tracking-widest"
+                  style={{ color: theme.isDark ? "#ffffff" : (value.thankYouTextColor ?? "#111111") }}
+                >
+                  {value.thankYouText}
+                </motion.p>
+              )
             )}
-            {value.invitationText && (
-              <p
-                className={cn(
-                  "max-w-[85%] text-[11px] leading-relaxed",
-                  value.generalTextFont || "font-sans",
-                  template?.imageUrl ? "text-white/85" : "text-gray-600"
-                )}
-              >
-                {value.invitationText}
-              </p>
-            )}
-            {eventDate && (
-              <p className={cn("text-xs", template?.imageUrl ? "text-white/90" : "text-gray-500")}>{eventDate}</p>
-            )}
-            {countdown && (
-              <div
-                className={cn(
-                  "flex items-center gap-2 rounded-full px-3 py-1 text-[10px]",
-                  template?.imageUrl ? "bg-white/15 text-white" : "bg-gold/10 text-gold"
-                )}
-              >
-                <span>{countdown.days}ي</span>
-                <span>{countdown.hours}س</span>
-                <span>{countdown.minutes}د</span>
-                <span>{countdown.seconds}ث</span>
-              </div>
-            )}
-            {value.thankYouText && (
-              <p
-                className="mt-1 text-[10px] uppercase tracking-widest"
-                style={{ color: template?.imageUrl ? "#ffffff" : (value.thankYouTextColor ?? "#111111") }}
-              >
-                {value.thankYouText}
-              </p>
-            )}
-            {value.enableQrEntry && (
-              <QrCodeIcon className={cn("mt-2 size-6", template?.imageUrl ? "text-white/70" : "text-gray-400")} />
+            {!templatePreviewMode && value.enableQrEntry && (
+              <motion.div {...heroFade(5)}>
+                <QrCodeIcon className={cn("mt-2 size-6", TONE.muted)} />
+              </motion.div>
             )}
           </div>
 
-          {/* Program */}
-          {value.showEventProgram && value.programItems.length > 0 && (
-            <div className={SECTION_CARD}>
-              <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-gray-700">
-                <ClipboardListIcon className="size-3.5 text-gold" />
-                برنامج الحفل
-              </p>
-              <ul className="space-y-1.5">
-                {value.programItems.map((item, index) => (
-                  <li key={index} className="flex items-center justify-between text-[11px] text-gray-600">
-                    <span>{item.title}</span>
-                    {item.time && <span className="text-gray-400">{item.time}</span>}
-                  </li>
-                ))}
-              </ul>
-            </div>
+          {/* Section-divider decoration — a small recurring ornament (a
+              thin floral sprig, a graduation tassel flourish, a confetti
+              scatter...) the template supplies to break up the gap between
+              the hero and the main card, instead of leaving that stretch of
+              the page bare. Independent of heroIllustrationUrl above: a
+              photo template (full-bleed/boxed-hero) has no hero illustration
+              slot but can still carry this. Deliberately one fixed size
+              everywhere (unlike the hero illustration) since it's a subtle
+              recurring accent, not a per-occasion centerpiece. */}
+          {decorationImageUrl && (
+            <motion.div {...sectionReveal} className="relative mx-auto size-20 opacity-80">
+              {canUseNextImage(decorationImageUrl) ? (
+                <Image
+                  src={decorationImageUrl}
+                  alt=""
+                  fill
+                  unoptimized={usingPreviewImage}
+                  className="object-contain"
+                />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={decorationImageUrl} alt="" className="absolute inset-0 h-full w-full object-contain" />
+              )}
+            </motion.div>
           )}
 
-          {/* Rules */}
-          {value.showEventRules && rules.length > 0 && (
-            <div className={SECTION_CARD}>
-              <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-gray-700">
-                <ClipboardListIcon className="size-3.5 text-gold" />
-                تفاصيل الحدث
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {rules.map((rule) => (
-                  <span key={rule} className="rounded-full bg-gold/10 px-2 py-0.5 text-[10px] text-gold">
-                    {rule}
-                  </span>
-                ))}
-              </div>
-            </div>
+          {!templatePreviewMode && template?.dateRevealStyle === "scratch" && (
+            <ScratchDateCard
+              eventDateTime={value.eventDateTime}
+              locale={LOCALE_TAGS[language]}
+              isRtl={isRtl}
+              accent={theme.vars["--tpl-accent"]}
+            />
           )}
 
-          {/* Accommodation */}
+          {/* Everything from here through the closing footer is the guest's
+              actual content — venue, program, rules, gallery, wishes... —
+              none of which exists yet while the designer is still on the
+              template-selection step, and all of which would just be
+              "أحمد & سارة"/placeholder clutter over the template's own
+              artwork if it rendered there. templatePreviewMode skips this
+              entire stack (but not the background layer above it) for
+              exactly that one step. */}
+          {!templatePreviewMode && (
+            <>
+              {/* Main invitation card — the reference's calligraphic centerpiece:
+              title, formal invitation copy, the short day/date line, venue
+              name, the "بانتظار تشريفكم" tag note, and the couple's names
+              closing it out, all inside one glass card rather than a single
+              plain paragraph. Title + flanking icon swap per occasionType
+              (resolveOccasionTheme) — "دعوة زفاف" with rings for a wedding,
+              "حفل تخرج" with a graduation cap, etc. */}
+          {value.invitationText && template?.invitationCardStyle === "archIslamic" && (
+            <ArchIslamicInvitationCard
+              firstName={value.firstName ?? ""}
+              secondName={value.invitationType === "couple" ? value.secondName : null}
+              namesFont={namesFont}
+              familyName1={value.familyName1}
+              familyName2={value.familyName2}
+              invitationText={value.invitationText}
+              occasionTitle={occasion.title}
+              isRtl={isRtl}
+              accent={theme.vars["--tpl-accent"]}
+            />
+          )}
+          {value.invitationText && template?.invitationCardStyle !== "archIslamic" && (
+            <motion.div {...sectionReveal} className={cn(sectionCardClass(), "flex flex-col items-center gap-4 text-center")}>
+              <p className={cn("flex items-center gap-2 font-cinzel text-2xl tracking-wide", TONE.heading)}>
+                <OccasionIcon aria-hidden className="size-5 text-[var(--tpl-accent-70)]" />
+                {occasion.title}
+                <OccasionIcon aria-hidden className="size-5 text-[var(--tpl-accent-70)]" />
+              </p>
+              <p className={cn("text-base leading-relaxed", value.generalTextFont || "font-sans", TONE.body)}>
+                {value.invitationText}
+              </p>
+              {invitationDateLine && <p className={cn("text-sm font-medium", TONE.strong)}>{invitationDateLine}</p>}
+              {primaryVenue?.name && (
+                <p className={cn("text-sm", TONE.heading)}>
+                  <span aria-hidden>❀</span> {primaryVenue.name} <span aria-hidden>❀</span>
+                </p>
+              )}
+              <p className={cn("text-xs leading-relaxed", TONE.muted)}>
+                🏷️ بانتظار تشريفكم لنا لنحتفل معاً بهذه المناسبة السعيدة ... 💐👰🏻‍♀️🤵🏻
+              </p>
+              {names && (
+                <p className={cn("mt-1 text-lg", namesFont, TONE.strong)}>
+                  <NamesLine names={names} />
+                </p>
+              )}
+            </motion.div>
+          )}
+
+          {/* Location/venue card — always-visible summary (hotel name +
+              full address) distinct from the bottom-nav Location modal,
+              which adds the embedded map/"Open Google Maps" action on top
+              of this same info. */}
+          {primaryVenue && (
+            <motion.div {...sectionReveal} className={cn(sectionCardClass(), "text-center")}>
+              <p className={cn("mb-2 flex items-center justify-center gap-1.5 text-[11px] font-semibold", TONE.heading)}>
+                <MapPinIcon className="size-3.5 text-[var(--tpl-accent)]" />
+                الموقع
+              </p>
+              <p className={cn("text-sm font-medium", TONE.strong)}>{primaryVenue.name}</p>
+              {primaryVenue.address && (
+                <p className={cn("mt-1 text-xs leading-relaxed", TONE.body)}>{primaryVenue.address}</p>
+              )}
+            </motion.div>
+          )}
+
+          {/* Accommodation — not part of the reference's own flow (it has no
+              lodging section), but a real toggle this app supports beyond
+              pure fidelity-cloning, so it stays, placed next to the venue
+              info it's thematically closest to rather than dropped. */}
           {value.showAccommodation && value.accommodations.length > 0 && (
-            <div className={SECTION_CARD}>
-              <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-gray-700">
-                <BedDoubleIcon className="size-3.5 text-gold" />
+            <motion.div {...sectionReveal} className={sectionCardClass()}>
+              <p className={cn("mb-2 flex items-center gap-1.5 text-[11px] font-semibold", TONE.heading)}>
+                <BedDoubleIcon className="size-3.5 text-[var(--tpl-accent)]" />
                 أين تقيمون
               </p>
               <div className="space-y-2">
                 {value.accommodations.map((hotel, index) => (
-                  <div key={index} className="rounded-lg bg-gray-50 px-2.5 py-2">
-                    <p className="text-[11px] font-medium text-gray-800">{hotel.name || "—"}</p>
+                  <div key={index} className={cn("rounded-xl px-2.5 py-2", TONE.chip)}>
+                    <p className={cn("text-[11px] font-medium", TONE.strong)}>{hotel.name || "—"}</p>
                   </div>
                 ))}
               </div>
-            </div>
+            </motion.div>
           )}
 
-          {/* Gallery */}
-          {value.galleryImages.filter(Boolean).length > 0 && (
-            <div className={SECTION_CARD}>
-              <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-gray-700">
-                <ImageIcon className="size-3.5 text-gold" />
-                معرض الصور
-              </p>
-              <div className="grid grid-cols-3 gap-1.5">
-                {value.galleryImages.filter(Boolean).map((url, index) => (
-                  <div key={index} className="aspect-square overflow-hidden rounded-md bg-gray-100">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={url} alt="" className="size-full object-cover" />
+          {/* Save-the-date desk calendar widget — its own distinct framed
+              object rather than another glass section card, matching the
+              reference's torn-calendar-page treatment, plus the
+              "احفظ الموعد" button that hands the guest a real .ics file. */}
+          {calendar && (
+            <CalendarCard
+              month={calendar.month}
+              day={calendar.day}
+              weekday={calendar.weekday}
+              time={calendar.time}
+              eventIso={value.eventDateTime ?? null}
+              eventTitle={value.eventTitle}
+              venueName={primaryVenue?.name}
+            />
+          )}
+
+          {/* Countdown — its own widget (heading + live 4-box grid) rather
+              than merged into the calendar card above, matching the
+              reference's separate "العد التنازلي" section. */}
+          {countdown && (
+            <motion.div
+              {...sectionReveal}
+              className={cn(sectionCardClass(), "flex flex-col items-center gap-3 text-center")}
+            >
+              {eventDate && <p className={cn("text-xs", TONE.muted)}>{eventDate}</p>}
+              <p className={cn("text-[11px] font-semibold", TONE.heading)}>العد التنازلي</p>
+              <div className="grid w-full grid-cols-4 gap-2">
+                {[
+                  [countdown.days, countdownLabels.days],
+                  [countdown.hours, countdownLabels.hours],
+                  [countdown.minutes, countdownLabels.minutes],
+                  [countdown.seconds, countdownLabels.seconds],
+                ].map(([value, label]) => (
+                  <div
+                    key={label}
+                    className="rounded-xl border border-[var(--tpl-card-border)] bg-[var(--tpl-chip-bg)] p-3 text-center"
+                  >
+                    <p className={cn("text-base font-medium", TONE.strong)}>{value}</p>
+                    <p className={cn("mt-0.5 text-[10px]", TONE.muted)}>{label}</p>
                   </div>
                 ))}
               </div>
-            </div>
+            </motion.div>
+          )}
+
+          {/* Program — a scroll-driven timeline. Every node starts as a
+              hollow ring with a bare, unfilled rail; only the row currently
+              crossing the viewport's vertical center (TIMELINE_REVEAL_VIEWPORT)
+              lights up — its ring fills solid and glows, and the rail
+              segment below it pours in — so the schedule reveals one stop at
+              a time as the guest scrolls, instead of the whole list
+              appearing together the moment the card comes into view. */}
+          {value.showEventProgram && value.programItems.length > 0 && (
+            <motion.div {...sectionReveal} className={sectionCardClass("p-4")}>
+              <p className={cn("mb-8 flex items-center gap-1.5 text-[11px] font-semibold", TONE.heading)}>
+                <ClipboardListIcon className="size-3.5 text-[var(--tpl-accent)]" />
+                برنامج الحفل
+              </p>
+              <ul>
+                {value.programItems.map((item, index) => {
+                  const isLast = index === value.programItems.length - 1;
+                  return (
+                    <motion.li
+                      key={index}
+                      initial={{ opacity: 0.35, x: isRtl ? 12 : -12 }}
+                      whileInView={{ opacity: 1, x: 0 }}
+                      viewport={TIMELINE_REVEAL_VIEWPORT}
+                      transition={{ duration: 0.35, ease: "easeOut" }}
+                      className="flex gap-3"
+                    >
+                      <div className="flex flex-col items-center">
+                        {/* Hollow ring, always present, so a not-yet-reached
+                            stop still reads as a placeholder on the rail
+                            rather than empty space. */}
+                        <span className="relative mt-1 size-2.5 shrink-0 rounded-full border border-[var(--tpl-emphasis-40)]">
+                          {/* Solid glowing fill — only painted in once this
+                              row crosses the center band. */}
+                          <motion.span
+                            initial={{ scale: 0, opacity: 0, boxShadow: "0 0 0 0 rgba(200,162,74,0)" }}
+                            whileInView={{ scale: 1, opacity: 1, boxShadow: "0 0 10px 3px var(--tpl-accent-40)" }}
+                            viewport={TIMELINE_REVEAL_VIEWPORT}
+                            transition={{ duration: 0.3, ease: "easeOut" }}
+                            className="absolute inset-0 rounded-full bg-[var(--tpl-emphasis)]"
+                          />
+                        </span>
+                        {!isLast && (
+                          <span className="relative w-px flex-1 overflow-hidden">
+                            <span className="absolute inset-0 bg-[var(--tpl-emphasis-15)]" />
+                            {/* Fill overlay — scales in from the top only
+                                once *this* row (not the card as a whole)
+                                crosses the center band, so the rail pours
+                                downward in step with the guest's scroll
+                                instead of being fully drawn on mount. */}
+                            <motion.span
+                              initial={{ scaleY: 0 }}
+                              whileInView={{ scaleY: 1 }}
+                              viewport={TIMELINE_REVEAL_VIEWPORT}
+                              transition={{ duration: 0.4, delay: 0.05, ease: "easeOut" }}
+                              style={{ transformOrigin: "top" }}
+                              className="absolute inset-0 bg-[var(--tpl-emphasis)]"
+                            />
+                          </span>
+                        )}
+                      </div>
+                      <div
+                        className={cn(
+                          "flex flex-1 items-center justify-between text-[11px]",
+                          isLast ? "pb-0" : "pb-4"
+                        )}
+                      >
+                        {/* A crisp drop shadow (dark themes only) rather than
+                            the shared TONE palette alone — this row's text
+                            sits directly on whatever backdrop peeks through
+                            the card's glass, so a dark/photo theme needs the
+                            strongest legibility guarantee on the canvas. */}
+                        <span className={cn("font-medium", TONE.body, theme.isDark && "drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]")}>
+                          {item.title}
+                        </span>
+                        {item.time && (
+                          <span className={cn("font-medium", TONE.muted, theme.isDark && "drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]")}>
+                            {item.time}
+                          </span>
+                        )}
+                      </div>
+                    </motion.li>
+                  );
+                })}
+              </ul>
+            </motion.div>
+          )}
+
+          {/* Rules */}
+          {value.showEventRules && rules.length > 0 && (
+            <motion.div {...sectionReveal} className={sectionCardClass()}>
+              <p className={cn("mb-6 flex items-center gap-1.5 text-[11px] font-semibold", TONE.heading)}>
+                <ClipboardListIcon className="size-3.5 text-[var(--tpl-accent)]" />
+                تفاصيل الحدث
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {rules.map((rule) => (
+                  <span
+                    key={rule}
+                    className={cn(
+                      "rounded-full border border-[var(--tpl-accent-40)] bg-[var(--tpl-chip-bg)] px-2.5 py-1 text-[10px] font-medium text-[var(--tpl-emphasis)]",
+                      theme.isDark && "drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]"
+                    )}
+                  >
+                    {rule}
+                  </span>
+                ))}
+              </div>
+            </motion.div>
           )}
 
           {/* Personal message */}
           {value.showPersonalMessage && value.personalMessageText && (
-            <div className={cn(SECTION_CARD, "text-center")}>
+            <motion.div {...sectionReveal} className={cn(sectionCardClass(), "text-center")}>
               {value.personalMessageTitle && (
-                <p className="text-[11px] font-semibold text-gray-700">{value.personalMessageTitle}</p>
+                <p className={cn("text-[11px] font-semibold", TONE.heading)}>{value.personalMessageTitle}</p>
               )}
-              <p className="mt-1 text-[11px] leading-relaxed text-gray-600">{value.personalMessageText}</p>
+              <p className={cn("mt-1 text-[11px] leading-relaxed", TONE.body)}>{value.personalMessageText}</p>
               {value.personalMessageSignature && (
-                <p className="mt-1 text-[10px] text-gold">{value.personalMessageSignature}</p>
+                <p className="mt-1 text-[10px] text-[var(--tpl-accent)]">{value.personalMessageSignature}</p>
               )}
-            </div>
+            </motion.div>
+          )}
+
+          {/* Gallery — unlike the other sections this renders directly on
+              the canvas background with no glass card (matches the
+              reference: a plain heading + 2-column grid, no border/blur). */}
+          {value.galleryImages.filter(Boolean).length > 0 && (
+            <motion.div {...sectionReveal} className="px-4">
+              <h3 className={cn("mb-4 flex items-center justify-center gap-1.5 text-xl font-normal", TONE.muted)}>
+                <ImageIcon className="size-4 text-[var(--tpl-accent)]" />
+                لحظات من الحفل
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                {value.galleryImages.filter(Boolean).map((url, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, scale: 0.85 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ once: true, amount: 0.6 }}
+                    transition={{ duration: 0.4, delay: index * 0.06, ease: "easeOut" }}
+                    className="aspect-square overflow-hidden rounded-3xl bg-white/55 backdrop-blur-[12px]"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt="" className="size-full object-cover" />
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Guest wishes — live attendee count (sum of confirmed RSVP
+              guest counts) plus the messages guests left when RSVPing.
+              Derived from real submissions (backend RsvpAttendingCount /
+              RsvpWishes), not fabricated — so it only renders when there's
+              actually something to show. */}
+          {value.rsvpShowLiveCount && value.rsvpAttendingCount > 0 && (
+            <motion.div {...sectionReveal} className="text-center">
+              <p className={cn("mb-2 flex items-center justify-center gap-2 text-xs", TONE.heading)}>عدد الحضور</p>
+              <p className={cn("mb-3 text-4xl font-light", TONE.strong)}>{value.rsvpAttendingCount}</p>
+            </motion.div>
+          )}
+
+          {value.rsvpShowMessage && value.rsvpWishes.length > 0 && (
+            <motion.div {...sectionReveal} className="px-4">
+              <p className={cn("mb-2 flex items-center justify-center gap-2 text-xs", TONE.heading)}>التهاني</p>
+              <WishesCarousel wishes={value.rsvpWishes} />
+            </motion.div>
+          )}
+
+          {/* Closing footer — names, short date, and the Numinds mark that
+              close out every guest-facing invitation page. */}
+          {(names || value.eventDateTime) && (
+            <motion.div
+              {...sectionReveal}
+              className="flex flex-col items-center gap-2 px-6 py-8 text-center"
+            >
+              {names && (
+                <p className={cn("text-sm", namesFont, TONE.muted)}>
+                  <NamesLine names={names} />
+                </p>
+              )}
+              {formatShortDate(value.eventDateTime) && (
+                <p className={cn("text-xs", TONE.muted)}>{formatShortDate(value.eventDateTime)}</p>
+              )}
+              <HeartIcon className="size-3.5 text-[var(--tpl-accent)] opacity-60" />
+              <p className="text-[9px] uppercase tracking-widest text-olive-vivid">Made by ZAYTORA</p>
+            </motion.div>
+          )}
+            </>
           )}
         </div>
       </div>
 
-      <BottomBar items={navItems} activeKey={openModal} onSelect={handleNavSelect} />
-
-      {openModal && (
-        <>
-          <button
-            type="button"
-            aria-label="إغلاق"
-            onClick={() => setOpenModal(null)}
-            className="absolute inset-0 z-40 bg-black/30"
-          />
-          <div className="absolute inset-x-3 bottom-20 z-50 flex max-h-[70%] flex-col overflow-hidden rounded-3xl border border-white/40 bg-white/95 shadow-[0_8px_40px_rgba(0,0,0,0.18)] backdrop-blur-2xl">
-            <div className="relative flex shrink-0 items-center justify-center border-b border-gray-100/80 bg-gradient-to-r from-gray-50/60 to-white/60 px-4 py-2.5">
-              <h3 className="text-xs font-semibold tracking-wide text-gray-700">{modalTitles[openModal]}</h3>
-              <button
-                type="button"
-                onClick={() => setOpenModal(null)}
-                aria-label="إغلاق"
-                className="absolute end-3 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-full transition-colors hover:bg-gray-100"
-              >
-                <XIcon className="size-3.5 text-gray-500" />
-              </button>
-            </div>
-            <div className="min-h-0 flex-1 overflow-y-auto p-4">{renderModalBody(openModal)}</div>
-          </div>
-        </>
+      {!templatePreviewMode && (
+        <BottomBar items={navItems} activeKey={openModal} onSelect={handleNavSelect} standalone={standalone} />
       )}
 
-      {cameraOpen && <CameraOverlay isRtl={isRtl} onClose={() => setCameraOpen(false)} />}
+      {/* Floating auto-scroll pause/resume — shown only while a ride is
+          underway (from envelope-open until it reaches the bottom).
+          stopPropagation on pointerdown keeps the interaction-pause
+          listener above from immediately re-pausing right after a tap here
+          resumes it. */}
+      {autoScroll.isActive && (
+        <motion.button
+          type="button"
+          onClick={autoScroll.togglePause}
+          onPointerDown={(event) => event.stopPropagation()}
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.8 }}
+          whileTap={{ scale: 0.9 }}
+          aria-label={autoScroll.isPaused ? "استئناف التمرير التلقائي" : "إيقاف التمرير التلقائي"}
+          className={cn(
+            "flex size-11 items-center justify-center rounded-full border border-white/30 bg-black/40 text-white shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur-md",
+            standalone ? "fixed bottom-24 end-4 z-[999]" : "absolute bottom-20 end-3 z-30"
+          )}
+        >
+          {autoScroll.isPaused ? <PlayIcon className="size-4 ms-0.5" /> : <PauseIcon className="size-4" />}
+        </motion.button>
+      )}
+
+      <AnimatePresence>
+        {openModal && (
+          <>
+            <motion.button
+              key="modal-backdrop"
+              type="button"
+              aria-label="إغلاق"
+              onClick={() => setOpenModal(null)}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className={cn("z-40 bg-black/30", standalone ? "fixed inset-0" : "absolute inset-0")}
+            />
+            <motion.div
+              key="modal-sheet"
+              initial={{ y: "100%", opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: "100%", opacity: 0 }}
+              transition={{ type: "spring", damping: 28, stiffness: 320 }}
+              className={cn(
+                "z-50 flex max-h-[70%] flex-col overflow-hidden rounded-3xl border border-white/40 bg-white/95 shadow-[0_8px_40px_rgba(0,0,0,0.18)] backdrop-blur-2xl",
+                standalone ? "fixed inset-x-4 bottom-20 mx-auto max-w-[400px]" : "absolute inset-x-3 bottom-20"
+              )}
+            >
+              <div className="relative flex shrink-0 items-center justify-center border-b border-gray-100/80 bg-gradient-to-r from-gray-50/60 to-white/60 px-4 py-2.5">
+                <h3 className="text-xs font-semibold tracking-wide text-gray-700">{modalTitles[openModal]}</h3>
+                <button
+                  type="button"
+                  onClick={() => setOpenModal(null)}
+                  aria-label="إغلاق"
+                  className="absolute end-3 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-full transition-colors hover:bg-gray-100"
+                >
+                  <XIcon className="size-3.5 text-gray-500" />
+                </button>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto p-4">{renderModalBody(openModal)}</div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {cameraOpen && (
+        <CameraOverlay
+          isRtl={isRtl}
+          onClose={() => setCameraOpen(false)}
+          standalone={standalone}
+          names={names}
+          eventDate={eventDate}
+        />
+      )}
+
+      {/* Which envelope-cover branch below applies depends on `template`,
+          which isn't resolved until the templates fetch above finishes — a
+          neutral loading cover here (instead of nothing) keeps the guest
+          from ever seeing the raw, uncovered invitation content or the
+          generic fallback envelope flash before the template's real one
+          swaps in. */}
+      {showEnvelope && !templatesLoaded && (
+        <div
+          className={cn(
+            "z-[1000] flex items-center justify-center bg-black",
+            standalone ? "fixed inset-0" : "absolute inset-0"
+          )}
+        >
+          <LoaderIcon className="size-6 animate-spin text-white/70" />
+        </div>
+      )}
+      {showEnvelope && templatesLoaded && !template?.envelopePhotoUrl && template?.envelopeStyle === "waxseal" && (
+        <WaxSealEnvelopeCover
+          firstName={value.firstName ?? ""}
+          secondName={value.invitationType === "couple" ? value.secondName : null}
+          namesFont={value.envelopeNameFont}
+          onOpen={() => {
+            if (music.canPlay) music.play();
+            autoScroll.start();
+          }}
+          standalone={standalone}
+        />
+      )}
+      {showEnvelope && templatesLoaded && !template?.envelopePhotoUrl && template?.envelopeStyle === "crimsonSeal" && (
+        <CrimsonWaxSealEnvelopeCover
+          onOpen={() => {
+            if (music.canPlay) music.play();
+            autoScroll.start();
+          }}
+          standalone={standalone}
+        />
+      )}
+      {showEnvelope && templatesLoaded && !template?.envelopePhotoUrl && template?.envelopeStyle === "oliveSeal" && (
+        <OliveWaxSealEnvelopeCover
+          onOpen={() => {
+            if (music.canPlay) music.play();
+            autoScroll.start();
+          }}
+          standalone={standalone}
+        />
+      )}
+      {showEnvelope && templatesLoaded && !template?.envelopePhotoUrl && template?.envelopeStyle === "navyGoldSeal" && (
+        <NavyGoldWaxSealEnvelopeCover
+          onOpen={() => {
+            if (music.canPlay) music.play();
+            autoScroll.start();
+          }}
+          standalone={standalone}
+        />
+      )}
+      {/* An admin-assigned library envelope (see /admin/envelopes and
+          TemplateEditModal's "envelope from library" picker) wins over
+          every named envelopeStyle below when set — an explicitly chosen
+          real photo beats a generic hand-drawn style. Which of these four
+          mounts depends on the envelope's own shape (Envelope.openingStyle,
+          picked when the admin added it): a flat diamond-flap envelope
+          peels open from the seal (PhotoWaxSealEnvelopeCover); a rolled,
+          string-tied scroll unrolls instead (ScrollUnrollEnvelopeCover); a
+          photo split into two equal panels either slides apart straight
+          (DoorSlideEnvelopeCover) or hinges open in 3D like a real door
+          (DoorFoldEnvelopeCover) — both independent of the seal position,
+          genuinely different physical motions from each other and from the
+          other two styles. */}
+      {showEnvelope && templatesLoaded && template?.envelopePhotoUrl && template?.envelopeOpeningStyle === "scroll" && (
+        <ScrollUnrollEnvelopeCover
+          imageSrc={template.envelopePhotoUrl}
+          imageAlt=""
+          sealXPercent={template.envelopeSealXPercent ?? 50}
+          sealYPercent={template.envelopeSealYPercent ?? 50}
+          onOpen={() => {
+            if (music.canPlay) music.play();
+            autoScroll.start();
+          }}
+          standalone={standalone}
+        />
+      )}
+      {showEnvelope && templatesLoaded && template?.envelopePhotoUrl && template?.envelopeOpeningStyle === "doorSlide" && (
+        <DoorSlideEnvelopeCover
+          imageSrc={template.envelopePhotoUrl}
+          imageAlt=""
+          onOpen={() => {
+            if (music.canPlay) music.play();
+            autoScroll.start();
+          }}
+          standalone={standalone}
+        />
+      )}
+      {showEnvelope && templatesLoaded && template?.envelopePhotoUrl && template?.envelopeOpeningStyle === "doorFold" && (
+        <DoorFoldEnvelopeCover
+          imageSrc={template.envelopePhotoUrl}
+          imageAlt=""
+          onOpen={() => {
+            if (music.canPlay) music.play();
+            autoScroll.start();
+          }}
+          standalone={standalone}
+        />
+      )}
+      {showEnvelope &&
+        templatesLoaded &&
+        template?.envelopePhotoUrl &&
+        template?.envelopeOpeningStyle !== "scroll" &&
+        template?.envelopeOpeningStyle !== "doorSlide" &&
+        template?.envelopeOpeningStyle !== "doorFold" && (
+        <PhotoWaxSealEnvelopeCover
+          imageSrc={template.envelopePhotoUrl}
+          imageAlt=""
+          sealXPercent={template.envelopeSealXPercent ?? 50}
+          sealYPercent={template.envelopeSealYPercent ?? 50}
+          foldPoints={template.envelopeFoldPoints ?? []}
+          onOpen={() => {
+            if (music.canPlay) music.play();
+            autoScroll.start();
+          }}
+          standalone={standalone}
+        />
+      )}
+      {showEnvelope &&
+        templatesLoaded &&
+        !template?.envelopePhotoUrl &&
+        template?.envelopeStyle !== "waxseal" &&
+        template?.envelopeStyle !== "crimsonSeal" &&
+        template?.envelopeStyle !== "oliveSeal" &&
+        template?.envelopeStyle !== "navyGoldSeal" && (
+        <EnvelopeCover
+          firstName={value.firstName ?? ""}
+          secondName={value.invitationType === "couple" ? value.secondName : null}
+          namesFont={value.envelopeNameFont}
+          backgroundImageUrl={heroImageUrl}
+          unoptimized={usingPreviewImage}
+          onOpen={() => {
+            // Runs inside the same click as a real user gesture, which is
+            // what lets the browser's autoplay policy allow this to
+            // actually start producing sound instead of silently failing.
+            if (music.canPlay) music.play();
+            autoScroll.start();
+          }}
+          standalone={standalone}
+        />
+      )}
+
+      {/* Mounted once at the canvas root (not inside the Music modal) so the
+          track keeps playing in the background across the modal opening and
+          closing, and so the envelope's "OPEN" tap can start it directly.
+          preload="auto" (not "metadata") so the browser starts buffering the
+          actual audio bytes from the moment the envelope mounts — by the
+          time a guest taps to open it, play() has real data to start from
+          instead of needing to fetch it first, which is what made music feel
+          like it started a beat after the touch rather than with it. */}
+      {music.mode === "html5" && music.effectiveUrl && (
+        <audio key={music.effectiveUrl} ref={musicAudioRef} src={music.effectiveUrl} preload="auto" />
+      )}
+      {music.mode === "youtube" && (
+        <div className="pointer-events-none size-px overflow-hidden opacity-0" aria-hidden>
+          <div ref={musicYoutubeContainerRef} />
+        </div>
+      )}
     </div>
   );
 }

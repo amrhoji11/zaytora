@@ -1,4 +1,9 @@
+"use client";
+
 import { PlusIcon, TrashIcon } from "@/components/icons";
+import { useLanguage } from "@/context/LanguageContext";
+
+const COPY = { ar: "حذف", en: "Delete" };
 
 export function ListEditor<T>({
   items,
@@ -19,6 +24,7 @@ export function ListEditor<T>({
   itemLabel?: string;
   max?: number;
 }) {
+  const { language } = useLanguage();
   function addItem() {
     onChange([...items, createItem()]);
   }
@@ -36,24 +42,24 @@ export function ListEditor<T>({
   return (
     <div className="space-y-3">
       {items.length === 0 && emptyLabel && (
-        <p className="rounded-xl border border-dashed border-gray-200 py-6 text-center text-sm text-gray-400">
+        <p className="rounded-xl border border-dashed border-border py-6 text-center text-sm text-muted-foreground">
           {emptyLabel}
         </p>
       )}
 
       {items.map((item, index) => (
-        <div key={index} className="relative rounded-xl border border-gray-200 p-3">
+        <div key={index} className="relative rounded-xl border border-border bg-background/5 p-3">
           <button
             type="button"
             onClick={() => removeItem(index)}
-            aria-label="حذف"
-            className="absolute left-3 top-3 text-gray-300 transition-colors hover:text-rose-500"
+            aria-label={COPY[language]}
+            className="absolute left-3 top-3 text-muted-foreground transition-colors hover:text-rose-700 dark:text-rose-400"
           >
             <TrashIcon className="size-4" />
           </button>
           <div className="space-y-2 pl-8">
             {itemLabel && (
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 {itemLabel} {index + 1}
               </p>
             )}

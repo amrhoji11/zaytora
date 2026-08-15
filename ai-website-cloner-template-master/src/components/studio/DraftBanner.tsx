@@ -3,6 +3,24 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { XIcon } from "@/components/icons";
+import { useLanguage } from "@/context/LanguageContext";
+
+const COPY = {
+  ar: {
+    close: "إغلاق",
+    title: "لديك دعوة سابقة",
+    subtitle: "دعوة بدون عنوان",
+    resume: "متابعة آخر دعوة",
+    openDashboard: "فتح لوحة التحكم",
+  },
+  en: {
+    close: "Close",
+    title: "You have a previous invitation",
+    subtitle: "Untitled invitation",
+    resume: "Continue last invitation",
+    openDashboard: "Open dashboard",
+  },
+};
 
 const LAST_INVITATION_KEY = "numinds:lastInvitationId";
 const DISMISSED_KEY = "numinds:draftBannerDismissed";
@@ -21,6 +39,17 @@ export function readLastInvitationId(): string | null {
   return window.localStorage.getItem(LAST_INVITATION_KEY);
 }
 
+// Called on logout — this key is browser-scoped, not account-scoped, so
+// without clearing it here, signing out and into a different account on
+// the same device would have this banner offer to "continue" the previous
+// account's invitation (which the new account can't actually save changes
+// to, since it doesn't own it).
+export function forgetLastInvitation() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(LAST_INVITATION_KEY);
+  window.sessionStorage.removeItem(DISMISSED_KEY);
+}
+
 export function DraftBanner({
   previousDraftId,
   currentInvitationId,
@@ -28,6 +57,8 @@ export function DraftBanner({
   previousDraftId: string | null;
   currentInvitationId?: string;
 }) {
+  const { language } = useLanguage();
+  const t = COPY[language];
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
@@ -55,25 +86,25 @@ export function DraftBanner({
       <button
         type="button"
         onClick={dismiss}
-        aria-label="إغلاق"
-        className="absolute left-4 top-4 text-gray-400 transition-colors hover:text-gray-600"
+        aria-label={t.close}
+        className="absolute left-4 top-4 text-muted-foreground transition-colors hover:text-foreground"
       >
         <XIcon className="size-4" />
       </button>
-      <p className="font-medium text-gray-900">لديك دعوة سابقة</p>
-      <p className="mt-0.5 text-sm text-gray-500">دعوة بدون عنوان</p>
+      <p className="font-medium text-foreground">{t.title}</p>
+      <p className="mt-0.5 text-sm text-muted-foreground">{t.subtitle}</p>
       <div className="mt-3 flex gap-2">
         <Link
           href={`/studio?invitationId=${draftId}`}
           className="rounded-xl bg-gold px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gold/90"
         >
-          متابعة آخر دعوة
+          {t.resume}
         </Link>
         <Link
           href="/dashboard"
-          className="rounded-xl border border-gold/30 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gold/5"
+          className="rounded-xl border border-border bg-background/5 px-4 py-2 text-sm font-medium text-body-foreground transition-colors hover:bg-background/10"
         >
-          فتح لوحة التحكم
+          {t.openDashboard}
         </Link>
       </div>
     </div>

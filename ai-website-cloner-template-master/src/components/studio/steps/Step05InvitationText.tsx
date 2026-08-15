@@ -1,10 +1,40 @@
+"use client";
+
 import { ToggleField } from "@/components/studio/fields/ToggleField";
 import { TextField } from "@/components/studio/fields/TextField";
 import { TextareaField } from "@/components/studio/fields/TextareaField";
 import { FontSelect } from "@/components/studio/fields/FontSelect";
 import { HintBox } from "@/components/studio/fields/HintBox";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/context/LanguageContext";
 import type { InvitationDetail } from "@/types/studio";
+
+const COPY = {
+  ar: {
+    hint: 'مثال: اسم العائلة: آل الراشد · نص الدعوة: "يتشرفون بدعوتكم لحضور حفل زفافهم..."',
+    hideFamilyNames: "إخفاء أسماء العائلات",
+    hideFamilyNamesDescription: "لن تظهر أسماء العائلات في الدعوة والمشاركة",
+    familyName1: "اسم العائلة (الأول)",
+    familyName1Placeholder: "آل الراشد",
+    familyName2: "اسم العائلة (الثاني)",
+    familyName2Placeholder: "آل المهنا",
+    familyNamesFont: "خط أسماء العائلات",
+    invitationText: "نص الدعوة",
+    invitationTextPlaceholder: "يتشرفون بدعوتكم...",
+  },
+  en: {
+    hint: 'Example: family name: "Al Rashid" · invitation text: "You are cordially invited to their wedding celebration..."',
+    hideFamilyNames: "Hide family names",
+    hideFamilyNamesDescription: "Family names won't appear in the invitation or when sharing",
+    familyName1: "Family name (first)",
+    familyName1Placeholder: "Al Rashid",
+    familyName2: "Family name (second)",
+    familyName2Placeholder: "Al Muhanna",
+    familyNamesFont: "Family names font",
+    invitationText: "Invitation text",
+    invitationTextPlaceholder: "You are cordially invited...",
+  },
+};
 
 export function Step05InvitationText({
   value,
@@ -13,13 +43,16 @@ export function Step05InvitationText({
   value: InvitationDetail;
   onChange: (patch: Partial<InvitationDetail>) => void;
 }) {
+  const { language } = useLanguage();
+  const t = COPY[language];
+
   return (
     <div className="space-y-5">
-      <HintBox>مثال: اسم العائلة: آل الراشد · نص الدعوة: &quot;يتشرفون بدعوتكم لحضور حفل زفافهم...&quot;</HintBox>
+      <HintBox>{t.hint}</HintBox>
 
       <ToggleField
-        label="إخفاء أسماء العائلات"
-        description="لن تظهر أسماء العائلات في الدعوة والمشاركة"
+        label={t.hideFamilyNames}
+        description={t.hideFamilyNamesDescription}
         checked={value.hideFamilyNames}
         onChange={(hideFamilyNames) => onChange({ hideFamilyNames })}
       />
@@ -28,20 +61,20 @@ export function Step05InvitationText({
         <>
           <div className="grid grid-cols-2 gap-3">
             <TextField
-              label="اسم العائلة (الأول)"
+              label={t.familyName1}
               value={value.familyName1 ?? ""}
-              placeholder="آل الراشد"
+              placeholder={t.familyName1Placeholder}
               onChange={(familyName1) => onChange({ familyName1 })}
             />
             <TextField
-              label="اسم العائلة (الثاني)"
+              label={t.familyName2}
               value={value.familyName2 ?? ""}
-              placeholder="آل المهنا"
+              placeholder={t.familyName2Placeholder}
               onChange={(familyName2) => onChange({ familyName2 })}
             />
           </div>
           <FontSelect
-            label="خط أسماء العائلات"
+            label={t.familyNamesFont}
             value={value.familyNamesFont ?? ""}
             onChange={(familyNamesFont) => onChange({ familyNamesFont })}
           />
@@ -54,9 +87,9 @@ export function Step05InvitationText({
       )}
 
       <TextareaField
-        label="نص الدعوة"
+        label={t.invitationText}
         value={value.invitationText ?? ""}
-        placeholder="يتشرفون بدعوتكم..."
+        placeholder={t.invitationTextPlaceholder}
         onChange={(invitationText) => onChange({ invitationText })}
       />
     </div>

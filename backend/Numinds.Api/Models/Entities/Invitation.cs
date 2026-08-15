@@ -5,6 +5,13 @@ public class Invitation
     public Guid Id { get; set; }
     public Guid? UserId { get; set; }
     public ApplicationUser? User { get; set; }
+
+    // Identifies an anonymous (not-yet-signed-in) creator via a long-lived
+    // tracking cookie, so the 5-invitation cap can apply before an account
+    // exists too. Cleared implicitly once UserId is set (Update claims the
+    // draft, but leaves GuestId as a harmless historical breadcrumb).
+    public Guid? GuestId { get; set; }
+
     public Guid? TemplateId { get; set; }
     public Template? Template { get; set; }
 
@@ -12,6 +19,8 @@ public class Invitation
     public string Status { get; set; } = "draft";
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+
+    public List<RsvpResponse> Responses { get; set; } = [];
 
     // Step 1 — Invitation Language
     public string? Language { get; set; }
@@ -33,6 +42,10 @@ public class Invitation
     public bool UseHijriDate { get; set; }
     public string? ThankYouText { get; set; }
     public string? ThankYouTextColor { get; set; }
+    // Set when the user picked one of Step04BasicInfo's pre-made suggestion
+    // cards instead of typing custom text — takes rendering priority over
+    // ThankYouText when present (see InvitationCanvas.tsx).
+    public string? ThankYouImageUrl { get; set; }
 
     // Step 5 — The Invitation (family names + text)
     public bool HideFamilyNames { get; set; }
@@ -65,7 +78,7 @@ public class Invitation
     public string? PersonalMessageText { get; set; }
     public string? PersonalMessageSignature { get; set; }
 
-    // Step 12 — Contacts (JSON array of { name, role, phone }, up to 5)
+    // Step 12 — Contacts (JSON array of { name, role, phone, whatsapp }, up to 5)
     public string ContactsJson { get; set; } = "[]";
 
     // Step 13 — Music
@@ -75,6 +88,20 @@ public class Invitation
     // Step 14 — Gift
     public bool EnableGifts { get; set; }
     public string? GiftIban { get; set; }
+    // Whether EnableGifts's processing fee should actually be charged at
+    // checkout (PaymentPhase/OrdersController) — separate from EnableGifts
+    // itself so the guest can keep gifts on for guests while opting out of
+    // covering the fee.
+    public bool GiftFeeCoverage { get; set; }
+    public string? GiftMessage { get; set; }
+    public bool GiftBankTransferEnabled { get; set; }
+    public string? GiftAccountHolderName { get; set; }
+    public string? GiftQrImageUrl { get; set; }
+    public bool GiftWishlistEnabled { get; set; }
+    // JSON array of { name, link, imageUrl } — same reasoning as
+    // VenuesJson/ContactsJson below: a guest's wishlist is small and only
+    // ever read back whole, not queried into.
+    public string GiftWishlistItemsJson { get; set; } = "[]";
 
     // Step 15 — Camera controls
     public bool HideCameraButton { get; set; }
@@ -95,4 +122,9 @@ public class Invitation
     // Step 18 — Additional settings
     public string? GeneralTextFont { get; set; }
     public string? EnvelopeNameFont { get; set; }
+    // Overrides every heading/body/strong/muted color the canvas would
+    // otherwise resolve from Template.TextColor/dark-vs-light theme (see
+    // InvitationCanvas.tsx's resolveCanvasTheme) — lets a guest fix text
+    // that's hard to read against their chosen template's background.
+    public string? TextColor { get; set; }
 }

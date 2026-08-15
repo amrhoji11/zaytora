@@ -27,6 +27,7 @@ public class UpdateInvitationRequest
     public bool? UseHijriDate { get; set; }
     public string? ThankYouText { get; set; }
     public string? ThankYouTextColor { get; set; }
+    public string? ThankYouImageUrl { get; set; }
 
     public bool? HideFamilyNames { get; set; }
     public string? FamilyName1 { get; set; }
@@ -59,6 +60,13 @@ public class UpdateInvitationRequest
 
     public bool? EnableGifts { get; set; }
     public string? GiftIban { get; set; }
+    public bool? GiftFeeCoverage { get; set; }
+    public string? GiftMessage { get; set; }
+    public bool? GiftBankTransferEnabled { get; set; }
+    public string? GiftAccountHolderName { get; set; }
+    public string? GiftQrImageUrl { get; set; }
+    public bool? GiftWishlistEnabled { get; set; }
+    public List<WishlistItemDto>? GiftWishlistItems { get; set; }
 
     public bool? HideCameraButton { get; set; }
     public bool? HideSaveButton { get; set; }
@@ -75,4 +83,5 @@ public class UpdateInvitationRequest
 
     public string? GeneralTextFont { get; set; }
     public string? EnvelopeNameFont { get; set; }
+    public string? TextColor { get; set; }
 }

@@ -4,8 +4,183 @@ export interface TemplateDto {
   id: string;
   code: string;
   category: string;
+  // The picker-grid thumbnail (Step03Template) — may be a finished preview
+  // screenshot with demo names/dates baked into its pixels. Never composite
+  // this behind live guest text; that's what backgroundImageUrl is for.
   imageUrl: string;
+  // The clean, text-free asset InvitationCanvas actually renders behind the
+  // couple's live names/dates, per `layout`. Null for a template whose only
+  // known asset is the (possibly baked-text) imageUrl thumbnail above — the
+  // canvas falls back to the plain cream/gold theme in that case.
+  backgroundImageUrl?: string | null;
+  // How backgroundImageUrl gets composited, when present: "full-bleed"
+  // (stretches behind the whole page), "boxed-hero" (confined to a rounded
+  // card in the hero only), "overlay" (decorative frame layered on top of
+  // the cream theme, no background photo), or "none" (no compositing).
+  // Deliberately a plain string, not a union, so an API response carrying a
+  // layout value this frontend build doesn't recognize yet still parses —
+  // InvitationCanvas falls back to "full-bleed" for any non-"none" value it
+  // doesn't otherwise handle, rather than throwing.
+  layout?: string | null;
+  // Theme palette tokens InvitationCanvas resolves into CSS custom
+  // properties (see resolveCanvasTheme in InvitationCanvas.tsx) — plain hex
+  // colors, or two comma-separated hex stops for pageBg's gradient. Null on
+  // any template without an assigned palette; the canvas falls back to its
+  // original hasPhoto-driven look (dark glass on a full-bleed photo, cream/
+  // gold otherwise) in that case, so this is purely additive.
+  pageBg?: string | null;
+  cardBg?: string | null;
+  textColor?: string | null;
+  primaryAccent?: string | null;
+  // One of FontSelect's own option values ("font-cinzel" | "font-serif" |
+  // "font-sans" | "italic font-serif") the template wants applied to the
+  // couple's live names when the guest hasn't picked their own font via
+  // Step04BasicInfo. Null falls back to the app-wide default (font-cinzel).
+  defaultNamesFont?: string | null;
+  // Decorative artwork independent of backgroundImageUrl/layout, so a
+  // photo-less template isn't limited to flat color + border.
+  // heroIllustrationUrl renders full-screen (same object-cover treatment as
+  // backgroundImageUrl's full-bleed layout), only when there's no background
+  // photo already filling that slot; decorationImageUrl is a smaller
+  // object-contain divider ornament between the hero and the main card,
+  // independent of layout. Each template should point at its own distinct
+  // heroIllustrationUrl — reusing one across templates makes them render
+  // with the same background.
+  heroIllustrationUrl?: string | null;
+  decorationImageUrl?: string | null;
+  // Which ambient particle animation AmbientParticles.tsx renders across the
+  // whole canvas: "smoke" | "petals" | "sparkle" | "snow" | "none". Null
+  // defers to the resolved theme's isDark ("smoke" when dark, "sparkle"
+  // when light) rather than requiring every template to set this.
+  ambientEffect?: string | null;
+  // Four opt-in "scene style" switches InvitationCanvas branches on for
+  // rendering behavior the palette/layout/ambient tokens above can't express
+  // — each swaps out one specific block for a fully different treatment, but
+  // only when set; unset/unrecognized values keep every template's original
+  // rendering exactly as before these existed.
+  // envelopeStyle: "waxseal" swaps the tap-to-open cover for an embossed
+  // wax-seal envelope with a shimmer + light-beam crossfade open.
+  envelopeStyle?: string | null;
+  // heroFrameStyle: "archIslamic" swaps the hero's plain arch-window photo
+  // frame for a wider scalloped Mughal-arch frame with pillar/lantern
+  // decoration.
+  heroFrameStyle?: string | null;
+  // dateRevealStyle: "scratch" adds a "scratch to reveal the date" section
+  // right after the hero.
+  dateRevealStyle?: string | null;
+  // invitationCardStyle: "archIslamic" swaps the main invitation card for a
+  // pointed-arch card with Bismillah calligraphy + parent names.
+  invitationCardStyle?: string | null;
+  // Which Envelope (see the admin "Envelopes" library, /admin/envelopes)
+  // this template is assigned, plus that envelope's own photo/seal position
+  // resolved inline by the API — PhotoWaxSealEnvelopeCover renders straight
+  // off envelopePhotoUrl/envelopeSealXPercent/envelopeSealYPercent without a
+  // second fetch. Takes priority over envelopeStyle above when set (see
+  // InvitationCanvas.tsx's envelope-cover branch order).
+  envelopeId?: string | null;
+  envelopePhotoUrl?: string | null;
+  envelopeSealXPercent?: number | null;
+  envelopeSealYPercent?: number | null;
+  // "flap" (default), "scroll", "doorSlide", or "doorFold" — which cover
+  // component InvitationCanvas mounts for envelopePhotoUrl above (see
+  // Envelope.openingStyle).
+  envelopeOpeningStyle?: string | null;
+  // Only meaningful when envelopeOpeningStyle is "flap" — see
+  // EnvelopeFoldPoint below.
+  envelopeFoldPoints?: EnvelopeFoldPoint[];
   isPopular: boolean;
+  isHomepageFeatured: boolean;
+  isActive: boolean;
+  usageCount: number;
+}
+
+// Body for POST/PUT /api/templates — the admin "create/edit template" flow
+// (src/app/admin/video-templates). Id/Code/UsageCount are server-owned: Code
+// is auto-generated from category (see TemplatesController.GenerateCode).
+export interface TemplateWriteRequest {
+  category: string;
+  imageUrl: string;
+  backgroundImageUrl?: string | null;
+  layout: string;
+  pageBg?: string | null;
+  cardBg?: string | null;
+  textColor?: string | null;
+  primaryAccent?: string | null;
+  defaultNamesFont?: string | null;
+  heroIllustrationUrl?: string | null;
+  decorationImageUrl?: string | null;
+  ambientEffect?: string | null;
+  envelopeStyle?: string | null;
+  heroFrameStyle?: string | null;
+  dateRevealStyle?: string | null;
+  invitationCardStyle?: string | null;
+  // Which Envelope to assign, by id — null/empty clears the assignment.
+  envelopeId?: string | null;
+  isPopular: boolean;
+  isActive: boolean;
+}
+
+// The admin-managed envelope-photo library (/admin/envelopes) — add a photo
+// + seal position once, then assign it to any number of templates via
+// TemplateWriteRequest.envelopeId instead of re-uploading/re-positioning
+// per template.
+// "flap": a flat diamond-cut envelope, opened by peeling its four corners
+// back from the seal (PhotoWaxSealEnvelopeCover.tsx). "scroll": a rolled,
+// string-tied letter, opened by unrolling it (ScrollUnrollEnvelopeCover.tsx).
+// "doorSlide"/"doorFold": a photo split straight down the middle into two
+// equal panels, independent of the seal position — "doorSlide" pulls each
+// panel straight out sideways (DoorSlideEnvelopeCover.tsx), "doorFold"
+// hinges each panel open in 3D like a real door swinging on its frame
+// (DoorFoldEnvelopeCover.tsx). None of the four look alike physically, so
+// each needs its own open animation.
+export type EnvelopeOpeningStyle = "flap" | "scroll" | "doorSlide" | "doorFold";
+
+// Only meaningful when openingStyle is "flap" — the single point (as a
+// percentage of the photo's own width/height) where one fold line reaches
+// the photo's edge. The other end of that fold is always the envelope's own
+// seal, so it doesn't need storing here. A real envelope's flap layout
+// varies photo to photo (one flap, two, four, an uneven mix, hinged at
+// whatever edges are actually visible) — this is drawn per envelope by the
+// admin (FoldLineDrawer.tsx) rather than picked from a fixed shape, and
+// envelopeFlapGeometry.ts turns however many of these exist into correctly
+// shaped, correctly hinged flaps. Empty/absent falls back to the classic
+// four-symmetric-flaps model (still correct for a diamond-fold envelope
+// where all four really do meet at a shared center point).
+export interface EnvelopeFoldPoint {
+  x: number;
+  y: number;
+}
+
+export interface EnvelopeDto {
+  id: string;
+  name: string;
+  photoUrl: string;
+  sealXPercent: number;
+  sealYPercent: number;
+  openingStyle: EnvelopeOpeningStyle;
+  foldPoints: EnvelopeFoldPoint[];
+  isActive: boolean;
+  templateCount: number;
+}
+
+export interface EnvelopeWriteRequest {
+  name: string;
+  photoUrl: string;
+  sealXPercent: number;
+  sealYPercent: number;
+  openingStyle: EnvelopeOpeningStyle;
+  foldPoints: EnvelopeFoldPoint[];
+  isActive: boolean;
+}
+
+// POST /api/envelopes/image response.
+export interface EnvelopeImageUploadResponse {
+  url: string;
+}
+
+// POST /api/templates/image response.
+export interface TemplateImageUploadResponse {
+  url: string;
 }
 
 export interface UserDto {
@@ -13,14 +188,335 @@ export interface UserDto {
   displayName: string;
   email: string;
   avatarUrl?: string;
+  phoneNumber?: string | null;
+  isAdmin: boolean;
+}
+
+// PATCH /api/users/{id}/role — "Admin" to promote, null to demote back to a
+// regular user (only one role currently exists, so this is a binary toggle).
+export interface ChangeUserRoleRequest {
+  role: "Admin" | null;
+}
+
+// Envelope shared by every paginated admin list endpoint (Orders/Partners/
+// Reviews/Users) — page is 1-based, totalCount is the full match count
+// (before the current page's slice) so the caller can compute total pages.
+export interface PagedResult<T> {
+  items: T[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}
+
+// Query params shared by every paginated admin list endpoint.
+export interface PagedQuery {
+  search?: string;
+  page?: number;
+  pageSize?: number;
 }
 
 export interface CreateInvitationRequest {
   templateId?: string;
 }
 
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface RegisterRequest {
+  displayName: string;
+  email: string;
+  password: string;
+  phoneNumber?: string;
+}
+
+// PATCH /api/account/me — empty string clears the phone number.
+export interface UpdateProfileRequest {
+  phoneNumber?: string;
+}
+
 export interface InvitationDto {
   id: string;
   status: string;
   editUrl: string;
+}
+
+// Row shape for GET /api/invitations — the dashboard's bookings table.
+export interface InvitationSummaryDto {
+  id: string;
+  bookingId: string;
+  status: string;
+  isPaid: boolean;
+  createdAt: string;
+  eventDateTime?: string | null;
+  responseCount: number;
+  galleryCount: number;
+  firstName?: string | null;
+  secondName?: string | null;
+}
+
+// GET/POST /api/support-messages — the "Contact Us" form and its admin inbox.
+export interface SupportMessageDto {
+  id: string;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  receivedAt: string;
+  read: boolean;
+}
+
+export interface SupportMessageSubmissionRequest {
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+}
+
+// Body for POST /api/invitations/{id}/rsvp — submitted by a guest, not the
+// invitation's owner.
+export interface RsvpSubmissionRequest {
+  guestName: string;
+  attending?: boolean | null;
+  guestCount?: number | null;
+  message?: string | null;
+}
+
+// Row shape for GET /api/invitations/{id}/rsvp — the owner's dashboard
+// "Responses" modal (one row per guest submission), distinct from the
+// guest-facing wishes feed which only surfaces the message text.
+export interface ContactWhatsAppNumberDto {
+  // ISO 3166-1 alpha-2 (e.g. "SA", "GB") — ContactUsView derives both the
+  // flag emoji and the "WHATSAPP SA" label from this.
+  countryCode: string;
+  phoneNumber: string;
+}
+
+// GET /api/contact-settings — backs the public /contact-us page.
+export interface ContactSettingsDto {
+  email: string;
+  secondaryEmail?: string | null;
+  responseTimeText: string;
+  availabilityText: string;
+  availableWorldwide: boolean;
+  instagramUrl?: string | null;
+  tikTokUrl?: string | null;
+  whatsAppNumbers: ContactWhatsAppNumberDto[];
+}
+
+// Payload for PUT /api/contact-settings (src/app/admin/settings).
+export type ContactSettingsWriteRequest = ContactSettingsDto;
+
+export interface RsvpResponseDto {
+  id: string;
+  guestName: string;
+  attending?: boolean | null;
+  guestCount?: number | null;
+  message?: string | null;
+  createdAt: string;
+}
+
+// GET/PUT /api/payment-settings (admin only) — the admin's own receiving
+// account for manual bank-transfer checkout. Never carries a CVV/expiry.
+export interface PaymentSettingsDto {
+  recipientName: string;
+  accountNumber: string;
+  bankName?: string | null;
+  iban?: string | null;
+  instructions?: string | null;
+}
+
+export type PaymentSettingsWriteRequest = PaymentSettingsDto;
+
+// GET (public) / PUT (admin) /api/pricing-settings.
+export interface PricingSettingsDto {
+  basePriceUsd: number;
+  qrRateUsd: number;
+  giftFeePercent: number;
+  defaultPartnerDiscountType: "percent" | "fixed";
+  defaultPartnerDiscountValue: number;
+  platformDiscountType: "percent" | "fixed";
+  platformDiscountValue: number;
+  platformDiscountCode: string;
+}
+
+export type PricingSettingsWriteRequest = PricingSettingsDto;
+
+export type PaymentStatus = "paid" | "pending" | "failed";
+
+export interface OrderDto {
+  id: string;
+  invitationId: string;
+  customerName: string;
+  customerEmail: string;
+  qrEnabled: boolean;
+  qrGuestCount?: number | null;
+  giftFeeCoverage: boolean;
+  promoCodeUsed?: string | null;
+  amountUsd: number;
+  currency: string;
+  convertedAmount: number;
+  paymentStatus: PaymentStatus;
+  adminNote?: string | null;
+  createdAt: string;
+  paidAt?: string | null;
+  invitationEditUrl?: string | null;
+  templateCode?: string | null;
+}
+
+// POST /api/orders — creates a pending order; the server computes the
+// authoritative amountUsd itself (from PricingSettings + any promo code).
+// currency/convertedAmount are only what the customer was shown, for the receipt.
+export interface CreateOrderRequest {
+  invitationId: string;
+  customerName: string;
+  customerEmail: string;
+  enableQrEntry: boolean;
+  qrGuestCount?: number | null;
+  enableGifts: boolean;
+  giftFeeCoverage: boolean;
+  promoCode?: string | null;
+  currency: string;
+  convertedAmount: number;
+}
+
+export interface OrderCreatedResponse {
+  order: OrderDto;
+  paymentSettings: PaymentSettingsDto;
+}
+
+export interface UpdateOrderStatusRequest {
+  status: "paid" | "failed";
+  adminNote?: string | null;
+}
+
+export type PartnerCategory = "eventPlanner" | "photographer" | "designer" | "other";
+export type PartnerStatus = "pending" | "approved" | "rejected";
+
+// GET /api/partners (admin) — full shape for /admin/partners.
+export interface PartnerDto {
+  id: string;
+  businessName: string;
+  applicantName: string;
+  email: string;
+  category: PartnerCategory;
+  country: string;
+  countryFlag: string;
+  whatsapp: string;
+  tagline?: string | null;
+  instagramUrl?: string | null;
+  tikTokUrl?: string | null;
+  facebookUrl?: string | null;
+  websiteUrl?: string | null;
+  logoUrl?: string | null;
+  status: PartnerStatus;
+  active: boolean;
+  promoCode?: string | null;
+  usageCount: number;
+  revenueUsd: number;
+  discountType?: "percent" | "fixed" | null;
+  discountValue?: number | null;
+  submittedAt: string;
+  approvedAt?: string | null;
+}
+
+// GET /api/partners/approved (public) — /OurPartners.
+export interface ApprovedPartnerDto {
+  id: string;
+  name: string;
+  category: PartnerCategory;
+  country: string;
+  countryFlag: string;
+  tagline?: string | null;
+  whatsapp: string;
+  instagramUrl?: string | null;
+  tikTokUrl?: string | null;
+  facebookUrl?: string | null;
+  websiteUrl?: string | null;
+  logoUrl?: string | null;
+}
+
+// POST /api/partners — PartnerApplicationModal's submission.
+export interface PartnerApplicationRequest {
+  businessName: string;
+  applicantName: string;
+  email: string;
+  category: PartnerCategory;
+  country: string;
+  countryFlag: string;
+  whatsapp: string;
+  tagline?: string | null;
+  instagramUrl?: string | null;
+  tikTokUrl?: string | null;
+  facebookUrl?: string | null;
+  websiteUrl?: string | null;
+  logoUrl?: string | null;
+}
+
+// POST /api/partners/logo response.
+export interface PartnerLogoUploadResponse {
+  url: string;
+}
+
+export interface UpdatePartnerDiscountRequest {
+  discountType: "percent" | "fixed";
+  discountValue: number;
+  promoCode?: string;
+}
+
+export interface ThankYouSuggestionDto {
+  id: string;
+  label: string;
+  imageUrl: string;
+  isActive: boolean;
+  sortOrder: number;
+}
+
+export interface ThankYouSuggestionWriteRequest {
+  label: string;
+  imageUrl: string;
+  isActive: boolean;
+  sortOrder: number;
+}
+
+// POST /api/thank-you-suggestions/image response.
+export interface ThankYouSuggestionImageUploadResponse {
+  url: string;
+}
+
+// PUT /api/partners/me — the logged-in partner's own profile editor.
+export interface UpdateMyPartnerProfileRequest {
+  businessName: string;
+  whatsapp: string;
+  tagline?: string | null;
+  instagramUrl?: string | null;
+  tikTokUrl?: string | null;
+  facebookUrl?: string | null;
+  websiteUrl?: string | null;
+  logoUrl?: string | null;
+}
+
+export type ReviewStatus = "pending" | "approved" | "rejected";
+
+export interface ReviewDto {
+  id: string;
+  rating: number;
+  name: string;
+  title?: string | null;
+  body: string;
+  country: string;
+  countryFlag: string;
+  submittedAt: string;
+  status: ReviewStatus;
+}
+
+// POST /api/reviews — WriteReviewModal's submission.
+export interface ReviewSubmissionRequest {
+  rating: number;
+  name: string;
+  title?: string | null;
+  body: string;
+  country: string;
+  countryFlag: string;
 }

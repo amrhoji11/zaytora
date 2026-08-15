@@ -1,9 +1,72 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
 import { TextField } from "@/components/studio/fields/TextField";
 import { DateTimeField } from "@/components/studio/fields/DateTimeField";
 import { ColorField } from "@/components/studio/fields/ColorField";
 import { FontSelect } from "@/components/studio/fields/FontSelect";
+import { ToggleField } from "@/components/studio/fields/ToggleField";
+import { PlusIcon, TrashIcon } from "@/components/icons";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/context/LanguageContext";
+import { listActiveThankYouSuggestions } from "@/lib/services/thankYouSuggestions.service";
 import type { InvitationDetail } from "@/types/studio";
+import type { ThankYouSuggestionDto } from "@/types/api";
+
+const COPY = {
+  ar: {
+    eventTitle: "عنوان الحدث",
+    eventTitlePlaceholder: "حفل الزفاف",
+    eventTitleFont: "خط عنوان الحدث",
+    invitationType: "نوع الدعوة",
+    individual: "🧍 فردي",
+    couple: "💑 زوجين",
+    firstName: "الاسم الأول",
+    firstNamePlaceholder: "أحمد",
+    secondName: "الاسم الثاني",
+    secondNamePlaceholder: "سارة",
+    namesFont: "خط الأسماء",
+    nameImage: "شعار / صورة الاسم",
+    nameImageDescription: "استبدل الاسم بصورة شعار في القسم الأول من الدعوة.",
+    uploadNameImage: "ارفع الشعار أو صورة الاسم",
+    deleteImageAria: "حذف الصورة",
+    eventDateTime: "تاريخ ووقت الحدث",
+    detectedTimezone: (tz: string) => `المنطقة الزمنية المكتشفة: ${tz}`,
+    hijriDate: "التاريخ الهجري",
+    hijriDateDescription: "عرض التاريخ بالتقويم الهجري (أم القرى) في الدعوة بدلاً من الميلادي",
+    thankYouText: "نص الشكر",
+    thankYouTextColor: "لون النص",
+    tabSuggestions: "اقتراحات",
+    tabCustom: "نص الشكر",
+    suggestionsEmpty: "لا توجد اقتراحات متاحة حالياً.",
+  },
+  en: {
+    eventTitle: "Event title",
+    eventTitlePlaceholder: "Wedding celebration",
+    eventTitleFont: "Event title font",
+    invitationType: "Invitation type",
+    individual: "🧍 Individual",
+    couple: "💑 Couple",
+    firstName: "First name",
+    firstNamePlaceholder: "Ahmed",
+    secondName: "Second name",
+    secondNamePlaceholder: "Sarah",
+    namesFont: "Names font",
+    nameImage: "Logo / name image",
+    nameImageDescription: "Replace the names with a logo image in the invitation's opening section.",
+    uploadNameImage: "Upload logo or name image",
+    deleteImageAria: "Delete image",
+    eventDateTime: "Event date and time",
+    detectedTimezone: (tz: string) => `Detected timezone: ${tz}`,
+    hijriDate: "Hijri date",
+    hijriDateDescription: "Show the date on the invitation using the Hijri (Umm al-Qura) calendar instead of Gregorian",
+    thankYouText: "Thank you text",
+    thankYouTextColor: "Text color",
+    tabSuggestions: "Suggestions",
+    tabCustom: "Thank you text",
+    suggestionsEmpty: "No suggestions available yet.",
+  },
+};
 
 function toDateTimeLocal(value?: string | null) {
   if (!value) return "";
@@ -17,28 +80,72 @@ export function Step04BasicInfo({
   value: InvitationDetail;
   onChange: (patch: Partial<InvitationDetail>) => void;
 }) {
+  const { language } = useLanguage();
+  const t = COPY[language];
+  const nameImageInputRef = useRef<HTMLInputElement>(null);
+  const [thankYouTab, setThankYouTab] = useState<"suggestions" | "custom">(
+    value.thankYouImageUrl ? "suggestions" : "custom"
+  );
+  const [suggestions, setSuggestions] = useState<ThankYouSuggestionDto[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    listActiveThankYouSuggestions()
+      .then((data) => {
+        if (!cancelled) setSuggestions(data);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function handleNameImageSelected(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+    onChange({ nameImageUrl: dataUrl });
+  }
+
+  // Detected once on mount, the same way the reference site surfaces a
+  // read-only "detected timezone" line next to the date field — only fills
+  // it in when the draft doesn't already have one, so it never clobbers a
+  // value the guest deliberately set (or that came back from the backend).
+  useEffect(() => {
+    if (value.timezone) return;
+    const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (detected) onChange({ timezone: detected });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div className="space-y-5">
       <TextField
-        label="عنوان الحدث"
+        label={t.eventTitle}
         required
         value={value.eventTitle ?? ""}
-        placeholder="حفل الزفاف"
+        placeholder={t.eventTitlePlaceholder}
         onChange={(eventTitle) => onChange({ eventTitle })}
       />
       <FontSelect
-        label="خط عنوان الحدث"
+        label={t.eventTitleFont}
         value={value.eventTitleFont ?? ""}
         onChange={(eventTitleFont) => onChange({ eventTitleFont })}
       />
       {value.eventTitle && (
-        <div className="rounded-xl border border-gray-100 bg-gold/5 px-4 py-5 text-center">
-          <p className={cn("text-lg text-gray-800", value.eventTitleFont || "font-cinzel")}>{value.eventTitle}</p>
+        <div className="rounded-xl border border-border bg-gold/5 px-4 py-5 text-center">
+          <p className={cn("text-lg text-foreground", value.eventTitleFont || "font-cinzel")}>{value.eventTitle}</p>
         </div>
       )}
 
       <div>
-        <p className="mb-1.5 text-sm text-gray-700">نوع الدعوة</p>
+        <p className="mb-1.5 text-sm text-body-foreground">{t.invitationType}</p>
         <div className="grid grid-cols-2 gap-3">
           {(["individual", "couple"] as const).map((type) => (
             <button
@@ -48,11 +155,11 @@ export function Step04BasicInfo({
               className={cn(
                 "rounded-xl border-2 py-2.5 text-sm font-medium transition-all",
                 value.invitationType === type
-                  ? "border-gold bg-gold/10 text-gray-900"
-                  : "border-gray-200 text-gray-600 hover:border-gold/40"
+                  ? "border-gold bg-gold/10 text-foreground"
+                  : "border-border text-body-foreground hover:border-gold/40"
               )}
             >
-              {type === "individual" ? "🧍 فردي" : "💑 زوجين"}
+              {type === "individual" ? t.individual : t.couple}
             </button>
           ))}
         </div>
@@ -60,29 +167,29 @@ export function Step04BasicInfo({
 
       <div className="grid grid-cols-2 gap-3">
         <TextField
-          label="الاسم الأول"
+          label={t.firstName}
           required
           value={value.firstName ?? ""}
-          placeholder="أحمد"
+          placeholder={t.firstNamePlaceholder}
           onChange={(firstName) => onChange({ firstName })}
         />
         {value.invitationType === "couple" && (
           <TextField
-            label="الاسم الثاني"
+            label={t.secondName}
             required
             value={value.secondName ?? ""}
-            placeholder="سارة"
+            placeholder={t.secondNamePlaceholder}
             onChange={(secondName) => onChange({ secondName })}
           />
         )}
       </div>
       <FontSelect
-        label="خط الأسماء"
+        label={t.namesFont}
         value={value.namesFont ?? ""}
         onChange={(namesFont) => onChange({ namesFont })}
       />
       {value.firstName && (
-        <div className="rounded-xl border border-gray-100 bg-gold/5 px-4 py-5 text-center">
+        <div className="rounded-xl border border-border bg-gold/5 px-4 py-5 text-center">
           <p className={cn("text-lg text-gold", value.namesFont || "font-cinzel")}>
             {value.firstName}
             {value.invitationType === "couple" && value.secondName ? ` & ${value.secondName}` : ""}
@@ -90,24 +197,121 @@ export function Step04BasicInfo({
         </div>
       )}
 
+      <ToggleField
+        label={t.nameImage}
+        description={t.nameImageDescription}
+        checked={value.useNameImage}
+        onChange={(useNameImage) => onChange({ useNameImage })}
+      />
+      {value.useNameImage && (
+        <div>
+          <input
+            ref={nameImageInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleNameImageSelected}
+          />
+          {value.nameImageUrl ? (
+            <div className="relative w-40">
+              <div className="aspect-[4/8] overflow-hidden rounded-xl border border-border bg-background/5">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={value.nameImageUrl} alt="" className="size-full object-cover" />
+              </div>
+              <button
+                type="button"
+                onClick={() => onChange({ nameImageUrl: null })}
+                aria-label={t.deleteImageAria}
+                className="absolute -top-2 -end-2 flex size-5 items-center justify-center rounded-full bg-background text-muted-foreground shadow transition-colors hover:text-rose-700 dark:text-rose-400"
+              >
+                <TrashIcon className="size-3" />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => nameImageInputRef.current?.click()}
+              className="flex w-full flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-gold/40 py-6 text-gold transition-colors hover:bg-gold/5"
+            >
+              <PlusIcon className="size-5" />
+              <span className="text-xs font-medium">{t.uploadNameImage}</span>
+            </button>
+          )}
+        </div>
+      )}
+
       <DateTimeField
-        label="تاريخ ووقت الحدث"
+        label={t.eventDateTime}
         required
         value={toDateTimeLocal(value.eventDateTime)}
         onChange={(eventDateTime) => onChange({ eventDateTime })}
       />
+      {value.timezone && <p className="text-xs text-muted-foreground">{t.detectedTimezone(value.timezone)}</p>}
+      <ToggleField
+        label={t.hijriDate}
+        description={t.hijriDateDescription}
+        checked={value.useHijriDate}
+        onChange={(useHijriDate) => onChange({ useHijriDate })}
+      />
 
-      <TextField
-        label="نص الشكر"
-        value={value.thankYouText ?? ""}
-        placeholder="WITH LOVE AND GRATITUDE"
-        onChange={(thankYouText) => onChange({ thankYouText })}
-      />
-      <ColorField
-        label="لون النص"
-        value={value.thankYouTextColor ?? "#111111"}
-        onChange={(thankYouTextColor) => onChange({ thankYouTextColor })}
-      />
+      <div>
+        <div className="mb-3 flex items-center gap-1 rounded-full border border-border bg-background/5 p-1">
+          {(["suggestions", "custom"] as const).map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setThankYouTab(tab)}
+              className={cn(
+                "flex-1 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors",
+                thankYouTab === tab ? "bg-gold text-white" : "text-body-foreground hover:bg-gold/5"
+              )}
+            >
+              {tab === "suggestions" ? t.tabSuggestions : t.tabCustom}
+            </button>
+          ))}
+        </div>
+
+        {thankYouTab === "suggestions" ? (
+          suggestions.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">{t.suggestionsEmpty}</p>
+          ) : (
+            <div className="grid grid-cols-4 gap-2">
+              {suggestions.map((suggestion) => {
+                const selected = value.thankYouImageUrl === suggestion.imageUrl;
+                return (
+                  <button
+                    key={suggestion.id}
+                    type="button"
+                    onClick={() => onChange({ thankYouImageUrl: suggestion.imageUrl, thankYouText: "" })}
+                    title={suggestion.label}
+                    className={cn(
+                      "aspect-square overflow-hidden rounded-xl border-2 bg-background/5 transition-colors",
+                      selected ? "border-gold" : "border-transparent hover:border-gold/40"
+                    )}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={suggestion.imageUrl} alt={suggestion.label} className="size-full object-cover" />
+                  </button>
+                );
+              })}
+            </div>
+          )
+        ) : (
+          <div className="space-y-5">
+            <TextField
+              label={t.thankYouText}
+              value={value.thankYouText ?? ""}
+              placeholder="WITH LOVE AND GRATITUDE"
+              onChange={(thankYouText) => onChange({ thankYouText, thankYouImageUrl: "" })}
+            />
+            <ColorField
+              label={t.thankYouTextColor}
+              value={value.thankYouTextColor ?? "#111111"}
+              onChange={(thankYouTextColor) => onChange({ thankYouTextColor })}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

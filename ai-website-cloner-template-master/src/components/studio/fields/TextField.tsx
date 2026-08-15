@@ -16,7 +16,7 @@ export function TextField({
   return (
     <div>
       {label && (
-        <label className="mb-1.5 block text-sm text-gray-700">
+        <label className="mb-1.5 block text-sm text-body-foreground">
           {label}
           {required && <span className="text-rose-500"> *</span>}
         </label>
@@ -26,7 +26,7 @@ export function TextField({
         value={value}
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm text-gray-900 outline-none transition-colors focus:border-gold"
+        className="w-full rounded-xl border border-border bg-background/5 px-3.5 py-2.5 text-sm text-foreground outline-none transition-colors focus:border-gold"
       />
     </div>
   );

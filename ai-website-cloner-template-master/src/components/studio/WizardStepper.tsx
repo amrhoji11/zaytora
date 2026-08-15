@@ -22,7 +22,7 @@ export function WizardStepper({ activePhase }: { activePhase: (typeof PHASES)[nu
                 className={cn(
                   "flex size-8 items-center justify-center rounded-full text-sm font-semibold transition-colors",
                   (state === "active" || state === "done") && "bg-gold text-white",
-                  state === "upcoming" && "bg-gray-100 text-gray-400"
+                  state === "upcoming" && "bg-background/10 text-muted-foreground"
                 )}
               >
                 {state === "done" ? <CheckIcon className="size-4" /> : index + 1}
@@ -30,7 +30,7 @@ export function WizardStepper({ activePhase }: { activePhase: (typeof PHASES)[nu
               <span
                 className={cn(
                   "text-xs font-medium",
-                  state === "upcoming" ? "text-gray-400" : "text-gold"
+                  state === "upcoming" ? "text-muted-foreground" : "text-gold"
                 )}
               >
                 {phase.label}
@@ -41,7 +41,7 @@ export function WizardStepper({ activePhase }: { activePhase: (typeof PHASES)[nu
               // i.e. the whole Design->Preview->Payment run behind the
               // active phase renders as a fully filled progress line, not a
               // faded one.
-              <div className={cn("mx-2 h-px flex-1", state === "done" ? "bg-gold" : "bg-gray-200")} />
+              <div className={cn("mx-2 h-px flex-1", state === "done" ? "bg-gold" : "bg-background/10")} />
             )}
           </div>
         );

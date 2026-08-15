@@ -1,10 +1,57 @@
+"use client";
+
 import { useEffect, useRef, useState } from "react";
 import { TextField } from "@/components/studio/fields/TextField";
 import { HintBox } from "@/components/studio/fields/HintBox";
 import { CheckIcon, LinkIcon, MusicIcon, PauseIcon, PlayIcon, RefreshIcon, TrashIcon, UploadIcon } from "@/components/icons";
 import { cn } from "@/lib/utils";
 import { PRESET_TRACKS, trackLabel } from "@/lib/musicLibrary";
+import { useMusicPlayer } from "@/components/studio/phone-preview/useMusicPlayer";
+import { useLanguage } from "@/context/LanguageContext";
 import type { InvitationDetail } from "@/types/studio";
+
+const COPY = {
+  ar: {
+    hint: "اختر مقطوعة من المكتبة أو ارفع ملفك الخاص — تعزف الموسيقى عند فتح الدعوة.",
+    library: "مكتبة الموسيقى",
+    localFile: "ملف محلي",
+    replaceAria: "استبدال بملف محلي",
+    replaceTitle: "استبدال بملف محلي (اختبار)",
+    pause: "إيقاف مؤقت",
+    play: "تشغيل",
+    trackTitle: "اسم المقطوعة / الفنان",
+    trackTitlePlaceholder: "مثال: Can't Help Falling in Love",
+    uploadFile: "رفع ملف",
+    youtubeLink: "يوتيوب / رابط",
+    startTime: "وقت بدء الموسيقى",
+    hours: "ساعات (H)",
+    minutes: "دقائق (M)",
+    seconds: "ثواني (S)",
+    startHint: (s: number) => `ستبدأ الموسيقى من هذه النقطة (${s}s)`,
+    removeMusic: "إزالة الموسيقى",
+    viaYoutube: "التشغيل عبر يوتيوب",
+  },
+  en: {
+    hint: "Choose a track from the library or upload your own — the music plays when the invitation opens.",
+    library: "Music library",
+    localFile: "local file",
+    replaceAria: "Replace with local file",
+    replaceTitle: "Replace with local file (testing)",
+    pause: "Pause",
+    play: "Play",
+    trackTitle: "Track name / artist",
+    trackTitlePlaceholder: "e.g. Can't Help Falling in Love",
+    uploadFile: "Upload file",
+    youtubeLink: "YouTube / link",
+    startTime: "Music start time",
+    hours: "Hours (H)",
+    minutes: "Minutes (M)",
+    seconds: "Seconds (S)",
+    startHint: (s: number) => `Music will start from this point (${s}s)`,
+    removeMusic: "Remove music",
+    viaYoutube: "Playing via YouTube",
+  },
+};
 
 function secondsToHms(total: number) {
   const clamped = Math.max(0, Math.floor(total || 0));
@@ -26,14 +73,14 @@ export function Step13Music({
   value: InvitationDetail;
   onChange: (patch: Partial<InvitationDetail>) => void;
 }) {
-  const [playingId, setPlayingId] = useState<string | null>(null);
+  const { language } = useLanguage();
+  const t = COPY[language];
+  const [previewTrackId, setPreviewTrackId] = useState<string | null>(null);
   const [showLinkInput, setShowLinkInput] = useState(false);
-  // Per-preset local overrides — this template ships no licensed audio, so
-  // during testing a real file can be dropped in for any one preset slot
-  // instead of its SoundHelix stand-in, without touching the others.
+  // Per-preset local overrides — lets a preset slot be swapped for a locally
+  // uploaded file instead of its YouTube source, without touching the others.
   const [overrides, setOverrides] = useState<Record<string, string>>({});
   const overrideTargetRef = useRef<string | null>(null);
-  const audioRef = useRef<HTMLAudioElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const overrideInputRef = useRef<HTMLInputElement>(null);
 
@@ -43,40 +90,35 @@ export function Step13Music({
     return overrides[track.id] ?? track.url;
   }
 
-  // playingId only ever reflects the audio element's own pause/ended/error
-  // events — not a manually-set flag — so the row highlight can't drift out
-  // of sync with what's actually making sound.
+  const previewTrack = PRESET_TRACKS.find((track) => track.id === previewTrackId) ?? null;
+  const previewUrl = previewTrack ? trackUrl(previewTrack) : null;
+  const preview = useMusicPlayer(previewUrl);
+  // Rows can't call preview.play() the instant they're clicked — for a
+  // YouTube-backed track the IFrame Player is still being created
+  // asynchronously at that point, so play() would land on a null ref and do
+  // nothing. Both backends set a real duration once genuinely ready
+  // (loadedmetadata for <audio>, onReady for YouTube), so that's used as the
+  // "safe to play" signal instead. Guarded per-url so a manual pause
+  // afterwards doesn't get immediately overridden by this effect replaying it.
+  const autoplayedUrlRef = useRef<string | null>(null);
   useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    const onPause = () => setPlayingId(null);
-    audio.addEventListener("pause", onPause);
-    audio.addEventListener("ended", onPause);
-    audio.addEventListener("error", onPause);
-    return () => {
-      audio.removeEventListener("pause", onPause);
-      audio.removeEventListener("ended", onPause);
-      audio.removeEventListener("error", onPause);
-    };
-  }, []);
+    if (!previewUrl || preview.duration <= 0) return;
+    if (autoplayedUrlRef.current === previewUrl) return;
+    autoplayedUrlRef.current = previewUrl;
+    preview.play();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [previewUrl, preview.duration]);
 
   function selectTrack(track: (typeof PRESET_TRACKS)[number]) {
     onChange({ musicUrl: trackUrl(track), musicTitle: trackLabel(track) });
   }
 
   function togglePreview(track: (typeof PRESET_TRACKS)[number]) {
-    const audio = audioRef.current;
-    if (!audio) return;
-    if (playingId === track.id) {
-      audio.pause();
+    if (previewTrackId === track.id) {
+      preview.togglePlay();
       return;
     }
-    // Switching tracks while another preview is active: reassigning src on
-    // the shared element implicitly stops whatever was playing, load()
-    // makes the reset explicit, then play() starts the new track fresh.
-    audio.src = trackUrl(track);
-    audio.load();
-    audio.play().then(() => setPlayingId(track.id)).catch(() => setPlayingId(null));
+    setPreviewTrackId(track.id);
   }
 
   function requestOverride(trackId: string) {
@@ -127,15 +169,16 @@ export function Step13Music({
   }
 
   function removeMusic() {
-    if (playingId) audioRef.current?.pause();
-    setPlayingId(null);
+    preview.pause();
+    setPreviewTrackId(null);
     setShowLinkInput(false);
     onChange({ musicUrl: null, musicTitle: null, musicStartSeconds: null });
   }
 
   return (
     <div className="space-y-5">
-      <audio ref={audioRef} className="hidden" />
+      <audio key={preview.effectiveUrl} ref={preview.audioRef} src={preview.effectiveUrl ?? undefined} className="hidden" />
+      <div ref={preview.youtubeContainerRef} className="hidden" />
       <input
         ref={overrideInputRef}
         type="file"
@@ -144,15 +187,17 @@ export function Step13Music({
         onChange={handleOverrideSelected}
       />
 
-      <HintBox>اختر مقطوعة من المكتبة أو ارفع ملفك الخاص — تعزف الموسيقى عند فتح الدعوة.</HintBox>
+      <HintBox>{t.hint}</HintBox>
 
       {/* Preset library */}
       <div>
-        <p className="mb-2 text-sm text-gray-700">مكتبة الموسيقى</p>
+        <p className="mb-2 text-sm text-body-foreground">{t.library}</p>
         <div className="space-y-2">
           {PRESET_TRACKS.map((track) => {
             const selected = value.musicUrl === trackUrl(track);
-            const playing = playingId === track.id;
+            const isPreviewTrack = previewTrackId === track.id;
+            const playing = isPreviewTrack && preview.isPlaying;
+            const loading = isPreviewTrack && !preview.isPlaying && !preview.loadError && preview.duration <= 0;
             const overridden = Boolean(overrides[track.id]);
             return (
               <div
@@ -165,7 +210,7 @@ export function Step13Music({
                 }}
                 className={cn(
                   "flex items-center gap-3 rounded-xl border-2 px-3.5 py-2.5 text-sm transition-colors",
-                  selected ? "border-gold bg-gold/5" : "border-gray-200 hover:border-gold/40"
+                  selected ? "border-gold bg-gold/5" : "border-border hover:border-gold/40"
                 )}
               >
                 <span
@@ -175,11 +220,12 @@ export function Step13Music({
                   <MusicIcon className="size-4" />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate font-medium text-gray-800">{track.title}</span>
-                  {track.artist && (
-                    <span className="block truncate text-xs text-gray-400">
+                  <span className="block truncate font-medium text-foreground">{track.title}</span>
+                  {(track.artist || overridden || isPreviewTrack) && (
+                    <span className="block truncate text-xs text-muted-foreground">
                       {track.artist}
-                      {overridden && <span className="text-gold"> · ملف محلي</span>}
+                      {overridden && <span className="text-gold"> · {t.localFile}</span>}
+                      {!overridden && isPreviewTrack && <span className="text-gold"> · {t.viaYoutube}</span>}
                     </span>
                   )}
                 </span>
@@ -194,9 +240,9 @@ export function Step13Music({
                     event.stopPropagation();
                     requestOverride(track.id);
                   }}
-                  aria-label="استبدال بملف محلي"
-                  title="استبدال بملف محلي (اختبار)"
-                  className="flex size-8 shrink-0 items-center justify-center rounded-full border border-gray-200 text-gray-400 transition-colors hover:border-gold/40 hover:text-gold"
+                  aria-label={t.replaceAria}
+                  title={t.replaceTitle}
+                  className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:border-gold/40 hover:text-gold"
                 >
                   <RefreshIcon className="size-3.5" />
                 </button>
@@ -206,8 +252,11 @@ export function Step13Music({
                     event.stopPropagation();
                     togglePreview(track);
                   }}
-                  aria-label={playing ? "إيقاف مؤقت" : "تشغيل"}
-                  className="flex size-8 shrink-0 items-center justify-center rounded-full border border-gray-200 text-gray-600 transition-colors hover:border-gold/40 hover:text-gold"
+                  aria-label={playing ? t.pause : t.play}
+                  className={cn(
+                    "flex size-8 shrink-0 items-center justify-center rounded-full border border-border text-body-foreground transition-colors hover:border-gold/40 hover:text-gold",
+                    loading && "animate-pulse"
+                  )}
                 >
                   {playing ? <PauseIcon className="size-3.5" /> : <PlayIcon className="size-3.5 ms-0.5" />}
                 </button>
@@ -218,11 +267,11 @@ export function Step13Music({
       </div>
 
       {/* Custom upload / link */}
-      <div className="space-y-3 border-t border-gray-100 pt-4">
+      <div className="space-y-3 border-t border-border pt-4">
         <TextField
-          label="اسم المقطوعة / الفنان"
+          label={t.trackTitle}
           value={value.musicTitle ?? ""}
-          placeholder="مثال: Can't Help Falling in Love"
+          placeholder={t.trackTitlePlaceholder}
           onChange={(musicTitle) => onChange({ musicTitle })}
         />
 
@@ -240,18 +289,18 @@ export function Step13Music({
             className="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-gold/40 py-2.5 text-sm font-medium text-gold transition-colors hover:bg-gold/5"
           >
             <UploadIcon className="size-4" />
-            رفع ملف
+            {t.uploadFile}
           </button>
           <button
             type="button"
             onClick={() => setShowLinkInput((open) => !open)}
             className={cn(
               "flex items-center justify-center gap-1.5 rounded-xl border py-2.5 text-sm font-medium transition-colors",
-              showLinkInput ? "border-gold bg-gold/5 text-gold" : "border-gray-200 text-gray-600 hover:border-gold/40"
+              showLinkInput ? "border-gold bg-gold/5 text-gold" : "border-border text-body-foreground hover:border-gold/40"
             )}
           >
             <LinkIcon className="size-4" />
-            يوتيوب / رابط
+            {t.youtubeLink}
           </button>
         </div>
 
@@ -265,8 +314,8 @@ export function Step13Music({
       </div>
 
       {/* Start time */}
-      <div className="space-y-2 border-t border-gray-100 pt-4">
-        <p className="text-sm text-gray-700">وقت بدء الموسيقى</p>
+      <div className="space-y-2 border-t border-border pt-4">
+        <p className="text-sm text-body-foreground">{t.startTime}</p>
         <div className="grid grid-cols-3 gap-2">
           <div>
             <input
@@ -274,9 +323,9 @@ export function Step13Music({
               min={0}
               value={h}
               onChange={(event) => updateStart({ h: Number(event.target.value) })}
-              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-center text-sm outline-none focus:border-gold"
+              className="w-full rounded-xl border border-border bg-background/5 px-3 py-2 text-center text-sm text-foreground outline-none focus:border-gold"
             />
-            <p className="mt-1 text-center text-[11px] text-gray-400">ساعات (H)</p>
+            <p className="mt-1 text-center text-[11px] text-muted-foreground">{t.hours}</p>
           </div>
           <div>
             <input
@@ -285,9 +334,9 @@ export function Step13Music({
               max={59}
               value={m}
               onChange={(event) => updateStart({ m: Number(event.target.value) })}
-              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-center text-sm outline-none focus:border-gold"
+              className="w-full rounded-xl border border-border bg-background/5 px-3 py-2 text-center text-sm text-foreground outline-none focus:border-gold"
             />
-            <p className="mt-1 text-center text-[11px] text-gray-400">دقائق (M)</p>
+            <p className="mt-1 text-center text-[11px] text-muted-foreground">{t.minutes}</p>
           </div>
           <div>
             <input
@@ -296,22 +345,22 @@ export function Step13Music({
               max={59}
               value={s}
               onChange={(event) => updateStart({ s: Number(event.target.value) })}
-              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-center text-sm outline-none focus:border-gold"
+              className="w-full rounded-xl border border-border bg-background/5 px-3 py-2 text-center text-sm text-foreground outline-none focus:border-gold"
             />
-            <p className="mt-1 text-center text-[11px] text-gray-400">ثواني (S)</p>
+            <p className="mt-1 text-center text-[11px] text-muted-foreground">{t.seconds}</p>
           </div>
         </div>
-        <p className="text-xs text-gray-400">ستبدأ الموسيقى من هذه النقطة ({value.musicStartSeconds ?? 0}s)</p>
+        <p className="text-xs text-muted-foreground">{t.startHint(value.musicStartSeconds ?? 0)}</p>
       </div>
 
       {value.musicUrl && (
         <button
           type="button"
           onClick={removeMusic}
-          className="flex w-full items-center justify-center gap-1.5 rounded-xl py-2 text-sm font-medium text-rose-500 transition-colors hover:bg-rose-50"
+          className="flex w-full items-center justify-center gap-1.5 rounded-xl py-2 text-sm font-medium text-rose-700 dark:text-rose-400 transition-colors hover:bg-rose-100 dark:bg-rose-950/30"
         >
           <TrashIcon className="size-3.5" />
-          إزالة الموسيقى
+          {t.removeMusic}
         </button>
       )}
     </div>

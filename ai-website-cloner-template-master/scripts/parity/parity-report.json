@@ -1,0 +1,130 @@
+{
+  "reference": {
+    "pageScrollHeight": 4976,
+    "firstCard": {
+      "text": "يتــشرفـــون بــدعـوتـكم حـضور",
+      "borderRadius": "24px",
+      "padding": "32px",
+      "background": "rgba(255, 255, 255, 0.08)",
+      "backdropFilter": "blur(16px)",
+      "border": "1px solid rgba(255, 255, 255, 0.2)",
+      "boxShadow": "rgba(0, 0, 0, 0.15) 0px 8px 32px 0px",
+      "color": "rgb(196, 198, 184)",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "lineHeight": "24px"
+    },
+    "cardCount": 14,
+    "cardSample": [
+      {
+        "text": "يتــشرفـــون بــدعـوتـكم حـضور",
+        "borderRadius": "24px",
+        "padding": "32px",
+        "background": "rgba(255, 255, 255, 0.08)",
+        "backdropFilter": "blur(16px)",
+        "border": "1px solid rgba(255, 255, 255, 0.2)",
+        "boxShadow": "rgba(0, 0, 0, 0.15) 0px 8px 32px 0px",
+        "color": "rgb(196, 198, 184)",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "24px"
+      },
+      {
+        "text": "العد التنازلي142أيام23ساعات20د",
+        "borderRadius": "24px",
+        "padding": "16px",
+        "background": "rgba(255, 255, 255, 0.08)",
+        "backdropFilter": "blur(16px)",
+        "border": "1px solid rgba(255, 255, 255, 0.2)",
+        "boxShadow": "rgba(0, 0, 0, 0.15) 0px 8px 32px 0px",
+        "color": "rgb(196, 198, 184)",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "24px"
+      },
+      {
+        "text": "برنامج المناسبة",
+        "borderRadius": "24px",
+        "padding": "16px",
+        "background": "rgba(255, 255, 255, 0.08)",
+        "backdropFilter": "blur(16px)",
+        "border": "1px solid rgba(255, 255, 255, 0.2)",
+        "boxShadow": "rgba(0, 0, 0, 0.15) 0px 8px 32px 0px",
+        "color": "rgb(196, 198, 184)",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "24px"
+      }
+    ],
+    "bottomNav": null,
+    "heroTitle": {
+      "text": "حـفـل زفـاف",
+      "borderRadius": "0px",
+      "padding": "0px",
+      "background": "rgba(0, 0, 0, 0)",
+      "backdropFilter": "none",
+      "border": "0px solid rgb(229, 229, 229)",
+      "boxShadow": "none",
+      "color": "rgb(222, 193, 160)",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "lineHeight": "24px"
+    }
+  },
+  "local": {
+    "pageScrollHeight": 3258,
+    "firstCard": {
+      "text": "تواصلموسيقىالموقعهديةتأكيد الح",
+      "borderRadius": "14px",
+      "padding": "8px 4px",
+      "background": "rgba(217, 217, 217, 0.19)",
+      "backdropFilter": "blur(14px)",
+      "border": "",
+      "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.25) 0px 0px 2px 0px",
+      "color": "lab(2.75381 0 0)",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "lineHeight": "24px"
+    },
+    "cardCount": 1,
+    "cardSample": [
+      {
+        "text": "تواصلموسيقىالموقعهديةتأكيد الح",
+        "borderRadius": "14px",
+        "padding": "8px 4px",
+        "background": "rgba(217, 217, 217, 0.19)",
+        "backdropFilter": "blur(14px)",
+        "border": "",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.25) 0px 0px 2px 0px",
+        "color": "lab(2.75381 0 0)",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "24px"
+      }
+    ],
+    "bottomNav": {
+      "width": 358,
+      "height": 64,
+      "borderRadius": "14px",
+      "background": "rgba(217, 217, 217, 0.19)",
+      "backdropFilter": "blur(14px)"
+    },
+    "heroTitle": {
+      "text": "حفل زفاف",
+      "borderRadius": "0px",
+      "padding": "0px",
+      "background": "rgba(0, 0, 0, 0)",
+      "backdropFilter": "none",
+      "border": "0px solid lab(90.952 -0.0000596046 0)",
+      "boxShadow": "none",
+      "color": "rgb(222, 193, 160)",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "lineHeight": "24px"
+    }
+  },
+  "diff": {
+    "scrollHeightDeltaPx": -1718,
+    "cardCountDelta": -13
+  }
+}

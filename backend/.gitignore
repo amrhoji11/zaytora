@@ -3,10 +3,22 @@ bin/
 obj/
 *.user
 
+## Never commit real secrets — appsettings.json/appsettings.Development.json
+## only ever hold local/placeholder values; production connection strings,
+## the Resend API key, and Google OAuth credentials must be supplied via
+## environment variables or a secrets manager on the actual host, not a file
+## in this repo. This also covers a future appsettings.Production.json.
+appsettings.Production.json
+appsettings.*.local.json
+*.secrets.json
+
 ## EF Core local SQLite dev databases
 *.db
 *.db-shm
 *.db-wal
+
+## User-uploaded partner logos (served via app.UseStaticFiles())
+Numinds.Api/wwwroot/uploads/
 
 ## IDE
 .vs/

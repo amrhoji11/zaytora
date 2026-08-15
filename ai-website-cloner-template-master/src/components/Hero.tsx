@@ -17,6 +17,28 @@ import {
 } from "@/components/icons";
 import { InvitationPreviewModal } from "@/components/InvitationPreviewModal";
 import { createInvitation } from "@/lib/services/invitations.service";
+import { useLanguage } from "@/context/LanguageContext";
+
+const COPY = {
+  ar: {
+    titleLine1: "صمّم دعوتك الرقمية",
+    titleAccent: "المثالية",
+    subtitle: "تصاميم فاخرة. مشاركة فورية. استجابات سلسة.",
+    creating: "جارٍ الإنشاء...",
+    create: "✨ إنشاء دعوة",
+    browseTemplates: "تصفح القوالب",
+    previewSample: "عرض نموذج الدعوة",
+  },
+  en: {
+    titleLine1: "Design your perfect",
+    titleAccent: "digital invitation",
+    subtitle: "Luxury designs. Instant sharing. Seamless RSVPs.",
+    creating: "Creating...",
+    create: "✨ Create Invitation",
+    browseTemplates: "Browse Templates",
+    previewSample: "View sample invitation",
+  },
+};
 
 interface FloatingBadge {
   icon: ComponentType<{ className?: string }>;
@@ -131,6 +153,8 @@ function FloatingBadgeStack({
 
 export function Hero() {
   const router = useRouter();
+  const { language } = useLanguage();
+  const t = COPY[language];
   const [previewOpen, setPreviewOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
@@ -157,10 +181,10 @@ export function Hero() {
     <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
       {/* Faint grid/dot pattern layer */}
       <div
-        className="absolute inset-0 opacity-[0.03]"
+        className="absolute inset-0 opacity-[0.05]"
         style={{
           backgroundImage:
-            "radial-gradient(circle at 1px 1px, #000 1px, transparent 0)",
+            "radial-gradient(circle at 1px 1px, #fff 1px, transparent 0)",
           backgroundSize: "24px 24px",
         }}
       />
@@ -172,14 +196,12 @@ export function Hero() {
       <div className="relative z-10 max-w-7xl mx-auto px-4 py-20 grid lg:grid-cols-2 gap-12 items-center">
         {/* Col 1: text */}
         <div className="text-center lg:text-left">
-          <h1 className="font-cinzel text-4xl md:text-5xl lg:text-6xl font-semibold text-gray-900 leading-tight mb-4">
-            صمّم دعوتك الرقمية{" "}
-            <span className="text-gradient-gold">المثالية</span>
+          <h1 className="font-cinzel text-4xl md:text-5xl lg:text-6xl font-semibold text-foreground leading-tight mb-4">
+            {t.titleLine1}{" "}
+            <span className="text-gradient-gold">{t.titleAccent}</span>
           </h1>
 
-          <p className="text-lg text-gray-600 mb-8 max-w-lg mx-auto lg:mx-0">
-            تصاميم فاخرة. مشاركة فورية. استجابات سلسة.
-          </p>
+          <p className="text-lg text-body-foreground mb-8 max-w-lg mx-auto lg:mx-0">{t.subtitle}</p>
 
           <div className="flex flex-col sm:flex-row items-center gap-3">
             <button
@@ -188,27 +210,27 @@ export function Hero() {
               disabled={isCreating}
               className="w-full sm:w-auto rounded-2xl px-7 py-3.5 text-sm font-semibold text-white transition-all duration-200 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.97] disabled:opacity-60 disabled:pointer-events-none"
               style={{
-                background: "linear-gradient(135deg, #1a1a1a, #2d2d2d)",
+                background: "linear-gradient(135deg, #C8A24A, #A68832)",
               }}
             >
-              {isCreating ? "جارٍ الإنشاء..." : "✨ إنشاء دعوة"}
+              {isCreating ? t.creating : t.create}
             </button>
 
             <button
               type="button"
               onClick={scrollToTemplates}
-              className="w-full sm:w-auto rounded-2xl px-6 py-3.5 text-sm font-semibold text-gray-800 bg-white/72 border border-[#C8A24A]/30"
+              className="w-full sm:w-auto rounded-2xl px-6 py-3.5 text-sm font-semibold text-foreground bg-background/10 border border-[#C8A24A]/30"
             >
-              تصفح القوالب
+              {t.browseTemplates}
             </button>
 
             <button
               type="button"
               onClick={() => setPreviewOpen(true)}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-3.5 text-sm text-gray-600"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-3.5 text-sm text-body-foreground"
             >
               <EyeIcon className="w-4 h-4" />
-              عرض نموذج الدعوة
+              {t.previewSample}
             </button>
           </div>
         </div>
@@ -225,7 +247,7 @@ export function Hero() {
               <div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-16 h-3 bg-gray-900 rounded-full z-20" />
 
               {/* Screen */}
-              <div className="relative bg-white rounded-[1.85rem] overflow-hidden aspect-[9/18]">
+              <div className="relative bg-background rounded-[1.85rem] overflow-hidden aspect-[9/18]">
                 <Image
                   src="/images/hero/invitation-preview.jpg"
                   alt="Invitation preview"

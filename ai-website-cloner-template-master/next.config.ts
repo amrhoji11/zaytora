@@ -21,8 +21,22 @@ function apiImageRemotePattern() {
 
 const nextConfig: NextConfig = {
   images: {
-    // Lets next/image render template thumbnails served by the ASP.NET Core API.
-    remotePatterns: apiImageRemotePattern(),
+    remotePatterns: [
+      // Lets next/image render template thumbnails served by the ASP.NET Core API.
+      ...apiImageRemotePattern(),
+      // The stock-photo backgroundImageUrl values SeedTemplates.cs seeds for
+      // the full-bleed/boxed-hero demo templates (see backend/Numinds.Api/Data/SeedTemplates.cs).
+      { protocol: "https", hostname: "images.unsplash.com", pathname: "/**" },
+    ],
+    // Next 16 added a hard SSRF guard that refuses to optimize any remote
+    // image whose host resolves to a private/loopback IP — which is exactly
+    // what "localhost" (our own ASP.NET Core API in dev) resolves to, so
+    // every backend-hosted photo (envelope library, thank-you suggestions,
+    // etc.) got silently rejected with "url parameter is not allowed"
+    // despite matching remotePatterns above. Safe here since the "local
+    // network" being allowed is this same machine's own backend, not an
+    // arbitrary attacker-supplied target.
+    dangerouslyAllowLocalIP: true,
   },
 };
 

@@ -26,6 +26,21 @@ interface RequestOptions extends Omit<RequestInit, "body"> {
 
 const DEFAULT_TIMEOUT_MS = 10_000;
 
+// ASP.NET Core Identity only ever returns 401 for a missing/invalid/expired
+// auth cookie — a role check failure is 403, not 401 — so any 401 reliably
+// means "not authenticated," never "authenticated but not allowed." That
+// makes it safe for AuthContext to treat every 401 as a real "the session
+// just ended" signal and clear `user`, instead of the UI carrying on as if
+// still logged in while every subsequent action quietly 401s. A guest who
+// was never logged in triggers this too (e.g. the anonymous GET /account/me
+// check on every page) — harmless, since `user` is already null there.
+type UnauthorizedListener = () => void;
+let unauthorizedListener: UnauthorizedListener | null = null;
+
+export function setUnauthorizedListener(listener: UnauthorizedListener | null) {
+  unauthorizedListener = listener;
+}
+
 interface ProblemDetails {
   title?: string;
   detail?: string;
@@ -73,6 +88,9 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   const payload = isJson ? await response.json().catch(() => undefined) : undefined;
 
   if (!response.ok) {
+    if (response.status === 401) {
+      unauthorizedListener?.();
+    }
     const problem = payload as ProblemDetails | undefined;
     const message = problem?.title ?? problem?.detail ?? problem?.message ?? response.statusText;
     throw new ApiError(message, response.status, payload);
@@ -81,9 +99,29 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   return payload as T;
 }
 
+// Collapses concurrent identical GET calls into a single network request —
+// several independent components (e.g. the homepage's QuoteCarousel and
+// TestimonialsSection both calling listApprovedReviews()) otherwise each
+// fire their own fetch for the exact same data on the same render pass.
+// Entries are removed as soon as the request settles, so this only dedupes
+// genuinely overlapping calls — it's not a cache and never serves stale data.
+const inFlightGets = new Map<string, Promise<unknown>>();
+
+function dedupedGet<T>(path: string, options?: RequestOptions): Promise<T> {
+  if (options) return request<T>(path, { ...options, method: "GET" });
+
+  const existing = inFlightGets.get(path);
+  if (existing) return existing as Promise<T>;
+
+  const promise = request<T>(path, { method: "GET" }).finally(() => {
+    inFlightGets.delete(path);
+  });
+  inFlightGets.set(path, promise);
+  return promise;
+}
+
 export const apiClient = {
-  get: <T>(path: string, options?: RequestOptions) =>
-    request<T>(path, { ...options, method: "GET" }),
+  get: <T>(path: string, options?: RequestOptions) => dedupedGet<T>(path, options),
   post: <T>(path: string, body?: unknown, options?: RequestOptions) =>
     request<T>(path, { ...options, method: "POST", body }),
   put: <T>(path: string, body?: unknown, options?: RequestOptions) =>
