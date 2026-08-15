@@ -48,6 +48,8 @@ const COPY = {
     genericError: "حدث خطأ، حاول مرة أخرى.",
     showPassword: "إظهار كلمة المرور",
     hidePassword: "إخفاء كلمة المرور",
+    googleNotConfigured: "تسجيل الدخول عبر Google غير متاح حالياً. الرجاء استخدام البريد الإلكتروني.",
+    externalLoginFailed: "تعذّر تسجيل الدخول، حاول مرة أخرى.",
   },
   en: {
     welcome: "Welcome to ZAYTORA",
@@ -74,6 +76,8 @@ const COPY = {
     genericError: "Something went wrong. Please try again.",
     showPassword: "Show password",
     hidePassword: "Hide password",
+    googleNotConfigured: "Google sign-in isn't available right now. Please use email instead.",
+    externalLoginFailed: "Sign-in failed, please try again.",
   },
 };
 
@@ -158,8 +162,19 @@ export function AuthCard({ initialView }: { initialView: "signin" | "signup" }) 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [resetSent, setResetSent] = useState(false);
+
+  // Surfaces the backend's redirect-back error codes (from the Google
+  // external-login flow) as a one-time banner instead of silently dropping
+  // the user back on a blank login form with no explanation.
+  const externalLoginError = searchParams.get("error");
+  const [error, setError] = useState<string | null>(
+    externalLoginError === "google-not-configured"
+      ? t.googleNotConfigured
+      : externalLoginError === "external-login-failed"
+        ? t.externalLoginFailed
+        : null
+  );
 
   const BackChevron = language === "ar" ? ChevronRightIcon : ChevronLeftIcon;
 

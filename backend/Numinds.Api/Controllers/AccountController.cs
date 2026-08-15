@@ -195,6 +195,16 @@ public class AccountController(
     [HttpGet("external-login/google")]
     public IActionResult ExternalLoginGoogle([FromQuery] string returnUrl = "/dashboard")
     {
+        // Program.cs only registers the Google auth handler once real
+        // credentials are configured (via env vars/user-secrets); challenging
+        // an unregistered scheme throws and 500s instead of failing
+        // gracefully, so guard it here the same way the frontend button is
+        // meant to be hidden until Google sign-in is actually set up.
+        if (string.IsNullOrWhiteSpace(configuration["Authentication:Google:ClientId"]))
+        {
+            return Redirect($"{FrontendBaseUrl}/login?error=google-not-configured");
+        }
+
         var callbackUrl = $"{Request.Scheme}://{Request.Host}" +
             $"/api/account/external-login/callback?returnUrl={Uri.EscapeDataString(returnUrl)}";
         var properties = signInManager.ConfigureExternalAuthenticationProperties(GoogleDefaults.AuthenticationScheme, callbackUrl);
