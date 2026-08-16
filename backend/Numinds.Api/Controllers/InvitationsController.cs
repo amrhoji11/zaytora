@@ -124,10 +124,18 @@ public class InvitationsController(
             .ToListAsync(cancellationToken);
 
         var summaries = invitations
-            .Select((invitation, index) => new InvitationSummaryDto
+            .Select(invitation => new InvitationSummaryDto
             {
                 Id = invitation.Id.ToString(),
-                BookingId = $"ND{1001 + index}",
+                // Derived from the invitation's own id (matches the admin
+                // orders list's order.id.slice(0,8).toUpperCase() pattern) so
+                // it's unique across every account, not just within this
+                // caller's own list — the old "ND1001, ND1002..." scheme
+                // recomputed a fresh index per request, so *every* customer's
+                // first invitation showed as "ND1001", making the number
+                // useless for identifying a specific invitation in support
+                // conversations or the admin panel.
+                BookingId = $"ND-{invitation.Id.ToString("N")[..8].ToUpper()}",
                 Status = invitation.Status,
                 IsPaid = invitation.Status is "paid" or "shared",
                 CreatedAt = invitation.CreatedAt,
