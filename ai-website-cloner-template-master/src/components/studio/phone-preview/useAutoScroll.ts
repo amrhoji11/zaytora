@@ -57,7 +57,12 @@ export function useAutoScroll({
       return {
         top: window.scrollY,
         max: document.documentElement.scrollHeight - window.innerHeight,
-        set: (value) => window.scrollTo(0, value),
+        // Explicit "instant" is required — the page has a global
+        // `scroll-behavior: smooth`, and without overriding it here, every
+        // one of this rAF loop's ~60 calls/sec starts a brand new smooth
+        // scroll animation that cancels the previous one before it makes
+        // any real progress, so the page never actually visibly moves.
+        set: (value) => window.scrollTo({ top: value, left: 0, behavior: "instant" }),
       };
     }
     const el = containerRef.current;

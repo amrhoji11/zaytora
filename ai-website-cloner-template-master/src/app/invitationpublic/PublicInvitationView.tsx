@@ -94,18 +94,33 @@ export function PublicInvitationView() {
       </div>
 
       {isPreview && (
-        <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center overflow-hidden">
-          <span
-            className="select-none whitespace-nowrap rounded bg-black bg-opacity-60 px-3 py-1 uppercase text-white/90"
-            style={{
-              fontSize: "clamp(30px, 8vw, 120px)",
-              fontWeight: 800,
-              letterSpacing: "0.25em",
-              transform: "scale(0.85)",
-            }}
+        // A tiled, low-opacity diagonal stamp (like a stock-photo preview
+        // watermark) rather than one giant centered word — that earlier
+        // version was `fixed inset-0`, so it stayed pinned to the viewport
+        // center no matter how far the guest scrolled, permanently blocking
+        // the view of whatever content was underneath instead of just
+        // marking the page as a preview.
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-40 select-none overflow-hidden"
+          style={{
+            backgroundImage:
+              "repeating-linear-gradient(-35deg, transparent 0, transparent 60px, rgba(0,0,0,0.09) 60px, rgba(0,0,0,0.09) 61px)",
+          }}
+        >
+          <div
+            className="absolute inset-0 grid grid-cols-2"
+            style={{ gridAutoRows: "160px" }}
           >
-            Preview
-          </span>
+            {Array.from({ length: 40 }).map((_, index) => (
+              <span
+                key={index}
+                className="flex -rotate-[35deg] items-center justify-center whitespace-nowrap text-xs font-bold uppercase tracking-[0.3em] text-black/10"
+              >
+                Preview
+              </span>
+            ))}
+          </div>
         </div>
       )}
     </div>
