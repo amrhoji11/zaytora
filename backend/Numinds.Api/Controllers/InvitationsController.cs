@@ -262,7 +262,21 @@ public class InvitationsController(
         if (request.SecondName is not null) invitation.SecondName = request.SecondName;
         if (request.NamesFont is not null) invitation.NamesFont = request.NamesFont;
         if (request.UseNameImage is not null) invitation.UseNameImage = request.UseNameImage.Value;
-        if (request.EventDateTime is not null) invitation.EventDateTime = request.EventDateTime;
+        if (request.EventDateTime is not null)
+        {
+            // The studio's <input type="datetime-local"> sends a bare
+            // "wall-clock" string with no offset (e.g. "2026-12-25T18:00"),
+            // which System.Text.Json deserializes as Kind=Unspecified.
+            // Npgsql refuses to write that to a `timestamptz` column
+            // ("Cannot write DateTime with Kind=Unspecified..."), throwing
+            // and failing SaveChangesAsync below — which silently discards
+            // every *other* field in this same patch too (firstName,
+            // eventTitle, everything), not just the date. SpecifyKind only
+            // relabels the value as UTC without shifting the clock reading;
+            // the guest's actual offset is already carried separately in
+            // Timezone, exactly as it always was.
+            invitation.EventDateTime = DateTime.SpecifyKind(request.EventDateTime.Value, DateTimeKind.Utc);
+        }
         if (request.Timezone is not null) invitation.Timezone = request.Timezone;
         if (request.UseHijriDate is not null) invitation.UseHijriDate = request.UseHijriDate.Value;
         if (request.ThankYouText is not null) invitation.ThankYouText = request.ThankYouText;
