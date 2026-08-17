@@ -144,14 +144,35 @@ export function CameraOverlay({
     setPhoto(canvas.toDataURL("image/jpeg", 0.92));
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (!photo) return;
     setSaving(true);
-    const link = document.createElement("a");
-    link.href = photo;
-    link.download = "invitation-photo.jpg";
-    link.click();
-    window.setTimeout(() => setSaving(false), 900);
+    try {
+      // iOS Safari, and in-app browsers built on it (Messenger's included),
+      // never reliably honor <a download> — it just navigates to the raw
+      // image instead of saving it. The Web Share API is what actually
+      // triggers the native "Save Image" sheet on those same browsers.
+      if (typeof navigator.share === "function" && typeof navigator.canShare === "function") {
+        const blob = await (await fetch(photo)).blob();
+        const file = new File([blob], "invitation-photo.jpg", { type: "image/jpeg" });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file] });
+          return;
+        }
+      }
+    } catch (error) {
+      // The guest dismissing the native share sheet also rejects this
+      // promise (AbortError) — that's a deliberate choice, not a failure
+      // that should fall through to the manual-save prompt below.
+      if ((error as DOMException)?.name === "AbortError") return;
+    } finally {
+      setSaving(false);
+    }
+    // Web Share (or file-sharing specifically) isn't available here — the
+    // one technique that works across every iOS browser and in-app webview
+    // without exception is opening the image directly, so the guest can
+    // long-press it and choose "Add to Photos" from the native menu.
+    window.open(photo, "_blank");
   }
 
   return (
