@@ -39,9 +39,11 @@ export function useAutoScroll({
   // to keep ticking reliably inside iOS in-app browsers (Messenger,
   // Instagram, etc.), which have a documented history of throttling
   // requestAnimationFrame far more aggressively than setInterval for an
-  // actively-visible page. 100ms (10fps) is still smooth enough for a slow
-  // ambient scroll like this — it doesn't need 60fps precision.
-  const TICK_MS = 100;
+  // actively-visible page. Must stay close to a real frame interval (~60fps)
+  // though — the earlier 100ms (10fps) tick advanced the scroll position in
+  // visibly discrete ~5.5px jumps instead of a continuous glide, which read
+  // as trembling/jittering on every device, not just the ones rAF throttles.
+  const TICK_MS = 16;
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastTsRef = useRef<number | null>(null);
