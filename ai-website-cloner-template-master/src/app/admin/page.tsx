@@ -70,22 +70,31 @@ export default function AdminOverviewPage() {
 
   useEffect(() => {
     let cancelled = false;
-    // pageSize:500 rather than the paginated admin/orders and admin/partners
-    // pages' default page — the KPIs/charts here need every row to compute
-    // real totals, not just the latest page. Good enough until order/partner
-    // volume outgrows a single page's worth of aggregation.
-    Promise.all([listOrders({ pageSize: 500 }), listPartners({ pageSize: 500 })])
-      .then(([ordersData, partnersData]) => {
-        if (cancelled) return;
-        setOrders(ordersData.items);
-        setPartners(partnersData.items);
-      })
-      .catch((error) => console.error("[admin] failed to load overview data:", error))
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+    function load(showLoadingState: boolean) {
+      if (showLoadingState) setLoading(true);
+      // pageSize:500 rather than the paginated admin/orders and admin/partners
+      // pages' default page — the KPIs/charts here need every row to compute
+      // real totals, not just the latest page. Good enough until order/partner
+      // volume outgrows a single page's worth of aggregation.
+      return Promise.all([listOrders({ pageSize: 500 }), listPartners({ pageSize: 500 })])
+        .then(([ordersData, partnersData]) => {
+          if (cancelled) return;
+          setOrders(ordersData.items);
+          setPartners(partnersData.items);
+        })
+        .catch((error) => console.error("[admin] failed to load overview data:", error))
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+    }
+    load(true);
+    // Keeps the KPI tiles/charts current when a new order comes in or an
+    // admin approves one from another tab/device, without requiring a
+    // manual reload of this page.
+    const intervalId = window.setInterval(() => load(false), 15_000);
     return () => {
       cancelled = true;
+      window.clearInterval(intervalId);
     };
   }, []);
 

@@ -134,11 +134,23 @@ export default function AdminOrdersPage() {
     load();
   }, [load]);
 
+  // Keeps this page (and its revenue/order-count tiles) in sync with orders
+  // placed or approved from a *different* session — an admin approving one
+  // from their phone, or a customer checking out right now — without the
+  // person sitting on this page needing to hit refresh themselves.
+  useEffect(() => {
+    const id = window.setInterval(load, 15_000);
+    return () => window.clearInterval(id);
+  }, [load]);
+
   async function handleStatusChange(id: string, status: "paid" | "failed") {
     setUpdatingId(id);
     try {
-      const updated = await updateOrderStatus(id, { status });
-      setOrders((current) => current.map((order) => (order.id === id ? updated : order)));
+      await updateOrderStatus(id, { status });
+      // Re-fetches rather than patching `orders` in place — a status flip
+      // also changes allPaidTotal (revenue/order-count tiles above), which
+      // was previously left stale until the next manual reload.
+      await load();
     } catch (error) {
       console.error("[admin/orders] failed to update order status:", error);
     } finally {
