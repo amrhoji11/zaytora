@@ -58,6 +58,7 @@ const COPY = {
     check: "تحقق",
     invalidCode: "الكود غير صالح",
     discountBadge: "تم تطبيق خصم الشريك 🏷️",
+    partnerCodePendingCheckout: "لا يمكن معاينة كود الشريك هنا — سيتم التحقق منه وتطبيق الخصم تلقائياً عند إتمام الطلب.",
     nameLabel: "الاسم الكامل",
     emailLabel: "البريد الإلكتروني",
     currencyLabel: "العملة",
@@ -82,6 +83,7 @@ const COPY = {
     check: "Check",
     invalidCode: "Invalid code",
     discountBadge: "Partner Discount Applied 🏷️",
+    partnerCodePendingCheckout: "This code can't be previewed here — it'll be checked and applied automatically when you place the order.",
     nameLabel: "Full name",
     emailLabel: "Email",
     currencyLabel: "Currency",
@@ -136,6 +138,13 @@ export function PaymentPhase({
   const [partnerCode, setPartnerCode] = useState("");
   const [appliedDiscount, setAppliedDiscount] = useState<{ type: "percent" | "fixed"; value: number } | null>(null);
   const partnerDiscountApplied = appliedDiscount !== null;
+  // checkPartnerCode can only preview the single platform-wide code
+  // client-side — per-partner codes are looked up server-side only, at
+  // order creation. Without this, clicking "تحقق" on a real partner code
+  // visibly did *nothing* (no badge, no message), indistinguishable from a
+  // typo'd/invalid code, even though the discount does apply correctly once
+  // the order is placed.
+  const [checkedUnknownCode, setCheckedUnknownCode] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -189,6 +198,7 @@ export function PaymentPhase({
     setAppliedDiscount(
       isPlatformCode ? { type: pricing.platformDiscountType, value: pricing.platformDiscountValue } : null
     );
+    setCheckedUnknownCode(!isPlatformCode);
   }
 
   async function handlePlaceOrder() {
@@ -283,6 +293,7 @@ export function PaymentPhase({
               onChange={(event) => {
                 setPartnerCode(event.target.value);
                 setAppliedDiscount(null);
+                setCheckedUnknownCode(false);
               }}
               placeholder={t.partnerCodePlaceholder}
               className="flex-1 rounded-xl border border-border bg-background/5 px-3.5 py-2.5 text-sm text-foreground outline-none transition-colors focus:border-gold"
@@ -299,6 +310,11 @@ export function PaymentPhase({
           {partnerDiscountApplied && (
             <p className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-950/50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-400">
               {t.discountBadge}
+            </p>
+          )}
+          {checkedUnknownCode && !partnerDiscountApplied && (
+            <p className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-sky-100 dark:bg-sky-950/50 px-2.5 py-1 text-xs font-medium text-sky-700 dark:text-sky-400">
+              {t.partnerCodePendingCheckout}
             </p>
           )}
         </div>
