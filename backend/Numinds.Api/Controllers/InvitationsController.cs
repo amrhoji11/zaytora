@@ -117,7 +117,14 @@ public class InvitationsController(
 
         var invitations = await db.Invitations
             .AsNoTracking()
-            .Where(i => userId != null ? i.UserId == userId : i.GuestId == guestId)
+            // GuestId is never cleared once an invitation is claimed (see
+            // OwnsInvitation) — without the UserId == null check, the
+            // anonymous browser that originally created a draft keeps
+            // listing it here forever, even after it's since been claimed
+            // by a real account elsewhere. Clicking into it then correctly
+            // 403s (OwnsInvitation no longer matches by GuestId once
+            // claimed), so the guest saw it listed but couldn't open it.
+            .Where(i => userId != null ? i.UserId == userId : (i.GuestId == guestId && i.UserId == null))
             .Where(HasContent)
             .Include(i => i.Responses)
             .OrderBy(i => i.CreatedAt)
