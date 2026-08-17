@@ -126,6 +126,20 @@ export function useAutoScroll({
   }, [tick]);
 
   const start = useCallback(() => {
+    // Touch devices skip the automated ride entirely and just leave
+    // scrolling to the guest's own finger — this rAF-driven writer of
+    // window.scrollY/scrollTop has repeatedly proven unreliable specifically
+    // on iOS Safari (a fully instant, non-"smooth" write to the top-level
+    // page scroll from JS, outside a native touch gesture, isn't
+    // consistently honored there — first showing up as a visible
+    // shake/jitter, then as no movement at all after chasing that). Native
+    // touch scrolling is the browser's own built-in mechanism and always
+    // works regardless of any of this; on mobile, a guest controlling their
+    // own scroll speed with a thumb is arguably the better experience
+    // anyway. Desktop (mouse/trackpad) keeps the "sit back and watch" ride.
+    if (typeof window !== "undefined" && (navigator.maxTouchPoints > 0 || "ontouchstart" in window)) {
+      return;
+    }
     pausedRef.current = false;
     activeRef.current = true;
     lastTsRef.current = null;
