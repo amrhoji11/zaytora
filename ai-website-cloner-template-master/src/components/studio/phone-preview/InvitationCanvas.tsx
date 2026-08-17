@@ -832,6 +832,23 @@ export function InvitationCanvas({
   // it, and neither does a not-yet-named draft.
   const showEnvelope = standalone && Boolean(names);
 
+  // Shared by every envelope variant's onOpen. music.play() has to run
+  // synchronously inside the click so the browser's autoplay policy allows
+  // it, but autoScroll.start() is deliberately deferred a beat: the
+  // envelope cover itself fades out (and then unmounts) over its own
+  // ~500ms transition, and starting the ride's scroll ticks immediately
+  // meant they landed right on top of that fade-out/unmount's own reflow —
+  // real-device screen recordings showed a single stutter at almost exactly
+  // that mark (a frozen frame or two, then a catch-up jump), not a
+  // continuous jitter. Letting the cover's own transition finish first
+  // before the ride's timer starts competing for the main thread removes
+  // that collision without changing how anything looks or sounds.
+  const ENVELOPE_TRANSITION_MS = 550;
+  function handleEnvelopeOpen() {
+    if (music.canPlay) music.play();
+    window.setTimeout(() => autoScroll.start(), ENVELOPE_TRANSITION_MS);
+  }
+
   return (
     <div
       dir={isRtl ? "rtl" : "ltr"}
@@ -1595,37 +1612,25 @@ export function InvitationCanvas({
           firstName={value.firstName ?? ""}
           secondName={value.invitationType === "couple" ? value.secondName : null}
           namesFont={value.envelopeNameFont}
-          onOpen={() => {
-            if (music.canPlay) music.play();
-            autoScroll.start();
-          }}
+          onOpen={handleEnvelopeOpen}
           standalone={standalone}
         />
       )}
       {showEnvelope && templatesLoaded && !template?.envelopePhotoUrl && template?.envelopeStyle === "crimsonSeal" && (
         <CrimsonWaxSealEnvelopeCover
-          onOpen={() => {
-            if (music.canPlay) music.play();
-            autoScroll.start();
-          }}
+          onOpen={handleEnvelopeOpen}
           standalone={standalone}
         />
       )}
       {showEnvelope && templatesLoaded && !template?.envelopePhotoUrl && template?.envelopeStyle === "oliveSeal" && (
         <OliveWaxSealEnvelopeCover
-          onOpen={() => {
-            if (music.canPlay) music.play();
-            autoScroll.start();
-          }}
+          onOpen={handleEnvelopeOpen}
           standalone={standalone}
         />
       )}
       {showEnvelope && templatesLoaded && !template?.envelopePhotoUrl && template?.envelopeStyle === "navyGoldSeal" && (
         <NavyGoldWaxSealEnvelopeCover
-          onOpen={() => {
-            if (music.canPlay) music.play();
-            autoScroll.start();
-          }}
+          onOpen={handleEnvelopeOpen}
           standalone={standalone}
         />
       )}
@@ -1648,10 +1653,7 @@ export function InvitationCanvas({
           imageAlt=""
           sealXPercent={template.envelopeSealXPercent ?? 50}
           sealYPercent={template.envelopeSealYPercent ?? 50}
-          onOpen={() => {
-            if (music.canPlay) music.play();
-            autoScroll.start();
-          }}
+          onOpen={handleEnvelopeOpen}
           standalone={standalone}
         />
       )}
@@ -1659,10 +1661,7 @@ export function InvitationCanvas({
         <DoorSlideEnvelopeCover
           imageSrc={template.envelopePhotoUrl}
           imageAlt=""
-          onOpen={() => {
-            if (music.canPlay) music.play();
-            autoScroll.start();
-          }}
+          onOpen={handleEnvelopeOpen}
           standalone={standalone}
         />
       )}
@@ -1670,10 +1669,7 @@ export function InvitationCanvas({
         <DoorFoldEnvelopeCover
           imageSrc={template.envelopePhotoUrl}
           imageAlt=""
-          onOpen={() => {
-            if (music.canPlay) music.play();
-            autoScroll.start();
-          }}
+          onOpen={handleEnvelopeOpen}
           standalone={standalone}
         />
       )}
@@ -1689,10 +1685,7 @@ export function InvitationCanvas({
           sealXPercent={template.envelopeSealXPercent ?? 50}
           sealYPercent={template.envelopeSealYPercent ?? 50}
           foldPoints={template.envelopeFoldPoints ?? []}
-          onOpen={() => {
-            if (music.canPlay) music.play();
-            autoScroll.start();
-          }}
+          onOpen={handleEnvelopeOpen}
           standalone={standalone}
         />
       )}
@@ -1709,13 +1702,7 @@ export function InvitationCanvas({
           namesFont={value.envelopeNameFont}
           backgroundImageUrl={heroImageUrl}
           unoptimized={usingPreviewImage}
-          onOpen={() => {
-            // Runs inside the same click as a real user gesture, which is
-            // what lets the browser's autoplay policy allow this to
-            // actually start producing sound instead of silently failing.
-            if (music.canPlay) music.play();
-            autoScroll.start();
-          }}
+          onOpen={handleEnvelopeOpen}
           standalone={standalone}
         />
       )}
