@@ -126,6 +126,23 @@ const COUNTDOWN_LABELS: Record<InvitationLanguage, { days: string; hours: string
   id: { days: "Hari", hours: "Jam", minutes: "Menit", seconds: "Detik" },
 };
 
+// Replaces the ticking countdown grid once the event's own start time has
+// passed — a countdown frozen at "00 00 00 00" reads as broken, not as "the
+// event is happening now", and stays wrong forever after (a guest reopening
+// the link as a keepsake weeks later would see the same frozen zeros). A
+// warm, time-agnostic line works whether it's read right at doors-open or
+// long after, without presuming the reader actually attended.
+const COUNTDOWN_STARTED_MESSAGE: Record<InvitationLanguage, string> = {
+  ar: "كان يوماً لا يُنسى، شكراً لحضوركم",
+  bilingual: "كان يوماً لا يُنسى، شكراً لحضوركم",
+  en: "It was an unforgettable day — thank you for being with us",
+  ro: "A fost o zi de neuitat — mulțumim că ați fost alături de noi",
+  fr: "Ce fut une journée inoubliable — merci d'avoir été avec nous",
+  es: "Fue un día inolvidable — gracias por acompañarnos",
+  hi: "यह एक यादगार दिन था — साथ होने के लिए धन्यवाद",
+  id: "Ini adalah hari yang tak terlupakan — terima kasih telah hadir",
+};
+
 // Shown in the hero (via NamesLine, so the "&" still gets its own
 // font-great-vibes treatment) in place of the couple's real names on a
 // still-blank draft — every template used to fall back to a single bare "&"
@@ -257,12 +274,13 @@ function useCountdown(iso?: string | null) {
     if (!iso) return null;
     const target = new Date(iso).getTime();
     if (Number.isNaN(target)) return null;
-    const diff = Math.max(0, target - now);
+    const rawDiff = target - now;
+    const diff = Math.max(0, rawDiff);
     const days = Math.floor(diff / 86_400_000);
     const hours = Math.floor((diff % 86_400_000) / 3_600_000);
     const minutes = Math.floor((diff % 3_600_000) / 60_000);
     const seconds = Math.floor((diff % 60_000) / 1000);
-    return { days, hours, minutes, seconds };
+    return { days, hours, minutes, seconds, started: rawDiff <= 0 };
   }, [iso, now]);
 }
 
@@ -757,6 +775,7 @@ export function InvitationCanvas({
   const isRtl = RTL_LANGUAGES.has(language);
   const labels = NAV_LABELS[language];
   const countdownLabels = COUNTDOWN_LABELS[language];
+  const countdownStartedMessage = COUNTDOWN_STARTED_MESSAGE[language];
 
   const names = [value.firstName, value.invitationType === "couple" ? value.secondName : null]
     .filter(Boolean)
@@ -1299,23 +1318,31 @@ export function InvitationCanvas({
               className={cn(sectionCardClass(), "flex flex-col items-center gap-3 text-center")}
             >
               {eventDate && <p className={cn("text-xs", TONE.muted)}>{eventDate}</p>}
-              <p className={cn("text-[11px] font-semibold", TONE.heading)}>العد التنازلي</p>
-              <div className="grid w-full grid-cols-4 gap-2">
-                {[
-                  [countdown.days, countdownLabels.days],
-                  [countdown.hours, countdownLabels.hours],
-                  [countdown.minutes, countdownLabels.minutes],
-                  [countdown.seconds, countdownLabels.seconds],
-                ].map(([value, label]) => (
-                  <div
-                    key={label}
-                    className="rounded-xl border border-[var(--tpl-card-border)] bg-[var(--tpl-chip-bg)] p-3 text-center"
-                  >
-                    <p className={cn("text-base font-medium", TONE.strong)}>{value}</p>
-                    <p className={cn("mt-0.5 text-[10px]", TONE.muted)}>{label}</p>
+              {countdown.started ? (
+                <p className={cn("max-w-[220px] text-sm font-medium leading-relaxed", TONE.strong)}>
+                  {countdownStartedMessage}
+                </p>
+              ) : (
+                <>
+                  <p className={cn("text-[11px] font-semibold", TONE.heading)}>العد التنازلي</p>
+                  <div className="grid w-full grid-cols-4 gap-2">
+                    {[
+                      [countdown.days, countdownLabels.days],
+                      [countdown.hours, countdownLabels.hours],
+                      [countdown.minutes, countdownLabels.minutes],
+                      [countdown.seconds, countdownLabels.seconds],
+                    ].map(([value, label]) => (
+                      <div
+                        key={label}
+                        className="rounded-xl border border-[var(--tpl-card-border)] bg-[var(--tpl-chip-bg)] p-3 text-center"
+                      >
+                        <p className={cn("text-base font-medium", TONE.strong)}>{value}</p>
+                        <p className={cn("mt-0.5 text-[10px]", TONE.muted)}>{label}</p>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </>
+              )}
             </motion.div>
           )}
 
