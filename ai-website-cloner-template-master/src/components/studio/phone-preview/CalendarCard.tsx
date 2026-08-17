@@ -73,13 +73,15 @@ export function CalendarCard({
   function handleSaveDate() {
     if (!eventIso) return;
     const ics = buildIcsContent({ startIso: eventIso, title: eventTitle || "دعوة", location: venueName });
-    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "invitation.ics";
-    link.click();
-    URL.revokeObjectURL(url);
+    // iOS Safari — including in-app browsers like Messenger/Instagram's,
+    // which is where a guest actually opens this link from — doesn't honor
+    // <a download> for blob: URLs; it just navigates to the blob and
+    // renders the raw .ics text as a page instead of opening the native
+    // "Add Event" calendar sheet. A data: URI navigated to directly (not
+    // via a programmatically-clicked link) is the technique iOS actually
+    // recognizes and hands off to Calendar; it still triggers a normal file
+    // download on desktop browsers.
+    window.location.href = `data:text/calendar;charset=utf-8,${encodeURIComponent(ics)}`;
   }
 
   return (

@@ -157,7 +157,12 @@ export function CameraOverlay({
   return (
     <div
       className={cn(
-        "z-[60] flex flex-col bg-black animate-in fade-in duration-300",
+        // Higher than BottomBar's z-[999] (standalone) — otherwise the
+        // persistent nav bar paints on top of this overlay's own flip/
+        // capture controls at that same bottom-of-screen position, so a
+        // guest sees the live camera feed with no visible way to actually
+        // take or flip the shot.
+        "z-[1100] flex flex-col bg-black animate-in fade-in duration-300",
         standalone ? "fixed inset-0" : "absolute inset-0"
       )}
     >
