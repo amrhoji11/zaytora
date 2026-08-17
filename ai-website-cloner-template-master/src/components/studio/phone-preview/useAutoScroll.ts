@@ -57,12 +57,23 @@ export function useAutoScroll({
       return {
         top: window.scrollY,
         max: document.documentElement.scrollHeight - window.innerHeight,
-        // Explicit "instant" is required — the page has a global
-        // `scroll-behavior: smooth`, and without overriding it here, every
-        // one of this rAF loop's ~60 calls/sec starts a brand new smooth
-        // scroll animation that cancels the previous one before it makes
-        // any real progress, so the page never actually visibly moves.
-        set: (value) => window.scrollTo({ top: value, left: 0, behavior: "instant" }),
+        // Direct scrollTop assignment, not window.scrollTo() — the page has
+        // a global `scroll-behavior: smooth`, which scrollTo() respects
+        // whenever its own `behavior` isn't unambiguously "instant" (that
+        // value isn't part of the CSSOM View spec's ScrollBehavior enum, so
+        // support is inconsistent — Safari/iOS in particular was seen
+        // falling back to the CSS smooth behavior instead of honoring it).
+        // With scrollTo(), every one of this rAF loop's ~60 calls/sec then
+        // starts a *new* smooth-scroll animation that interrupts the
+        // previous one before it finishes, which reads as a visible
+        // shake/jitter rather than a steady scroll. Assigning scrollTop
+        // directly is unaffected by scroll-behavior in every engine,
+        // matching what the embedded (non-standalone) branch below already
+        // does via el.scrollTop.
+        set: (value) => {
+          document.documentElement.scrollTop = value;
+          document.body.scrollTop = value;
+        },
       };
     }
     const el = containerRef.current;
