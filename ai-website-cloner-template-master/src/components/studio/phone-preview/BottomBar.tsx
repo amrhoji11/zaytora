@@ -33,7 +33,15 @@ export function BottomBar({
   return (
     <div
       className={cn(
-        "z-30 grid items-center px-1 py-2",
+        // tpl-bottom-bar: lets globals.css drop this bar's blur specifically
+        // while an auto-scroll ride is underway (see [data-riding="true"]
+        // .tpl-bottom-bar) — unlike every card, which only pays the blur
+        // repaint cost while it's near the viewport, this bar is fixed on
+        // screen for the ride's entire duration, continuously re-blurring
+        // whatever scrolls behind it. That made it the one part of the page
+        // still able to stall the main thread at an arbitrary point mid-ride
+        // even after every other repaint-cost source was addressed.
+        "tpl-bottom-bar z-30 grid items-center px-1 py-2",
         standalone
           ? "fixed bottom-4 left-1/2 z-[999] h-16 w-[383px] max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-xl border-t-[0.8px] border-[rgba(244,244,244,0.28)] bg-[rgba(217,217,217,0.19)] shadow-[0_0_2px_rgba(0,0,0,0.25)] backdrop-blur-[14px]"
           : "absolute inset-x-3 bottom-3 rounded-2xl border border-black/10 bg-white/60 shadow-sm backdrop-blur-md"
