@@ -48,6 +48,15 @@ export function useAutoScroll({
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastTsRef = useRef<number | null>(null);
+  // Precise (sub-pixel) running position, tracked independently of whatever
+  // the browser reports back for scrollTop. At ~55px/sec and a 16ms tick,
+  // each step is under 1px — writing that fractional value straight to
+  // scrollTop is a known source of visible shimmer/jitter on iOS Safari (it
+  // has to re-anti-alias text at a non-integer offset every frame). Rounding
+  // only the written value, while still accumulating from this precise
+  // float underneath, keeps the pacing accurate without ever asking the
+  // browser to render at a fractional scroll position.
+  const positionRef = useRef<number | null>(null);
   // Mirrors isPaused for the interval loop's closure — state updates aren't
   // visible inside an already-scheduled callback, so the loop reads this
   // ref instead of re-subscribing to state on every pause/resume.
@@ -98,8 +107,10 @@ export function useAutoScroll({
     const deltaSeconds = (now - last) / 1000;
     lastTsRef.current = now;
 
-    const next = target.top + AUTO_SCROLL_PX_PER_SEC * deltaSeconds;
+    const current = positionRef.current ?? target.top;
+    const next = current + AUTO_SCROLL_PX_PER_SEC * deltaSeconds;
     if (next >= target.max - 1) {
+      positionRef.current = target.max;
       target.set(target.max);
       activeRef.current = false;
       setIsActive(false);
@@ -107,13 +118,17 @@ export function useAutoScroll({
       return;
     }
 
-    target.set(next);
+    positionRef.current = next;
+    target.set(Math.round(next));
   }, [getScrollTarget]);
 
   const start = useCallback(() => {
     pausedRef.current = false;
     activeRef.current = true;
     lastTsRef.current = Date.now();
+    // Re-baseline from wherever the scroll actually is right now, rather
+    // than carrying over a stale precise position from a previous ride.
+    positionRef.current = null;
     setIsPaused(false);
     setIsActive(true);
     if (standalone && typeof document !== "undefined") {

@@ -292,26 +292,17 @@
     background-repeat: repeat;
     mix-blend-mode: overlay;
   }
-  /* InvitationCanvas's unattended auto-scroll ride (useAutoScroll) writes
-     the scroll position every ~16ms with nothing pacing it against real
-     user input, so every backdrop-blur element on the page repaints on
-     every one of those ticks regardless of scroll speed — this was
-     originally scoped to just .tpl-card (measured at 20+ seconds of
-     continuous main-thread blocking for that alone), but every other
-     blurred element (CalendarCard, WishesCarousel, gallery tiles, and
-     especially BottomBar — fixed on screen for the ride's entire duration,
-     continuously re-blurring whatever scrolls behind it) was still paying
-     that same repaint cost the whole time, which is what the residual
-     stutter during the ride traced back to. Dropping the blur for *every*
-     descendant during that window (data-riding, set by InvitationCanvas)
-     removes all of it without touching how anything looks during any real,
-     human-paced scroll. Overriding --tw-backdrop-blur (not backdrop-filter
-     itself) because Tailwind's blur-* utilities compose the shorthand from
-     this custom property; !important because some of those utilities have
-     equal selector specificity to this override, which would otherwise ---
-     depending on load-order accidents -- occasionally win. */
-  [data-riding="true"] * {
-    --tw-backdrop-blur: initial !important;
+  /* InvitationCanvas's unattended auto-scroll ride (useAutoScroll) drives
+     window.scrollTo() every animation frame with nothing pacing it against
+     real user input, so every .tpl-card's backdrop-filter repaints on every
+     one of those frames regardless of scroll speed. Dropping the blur only
+     for that specific window (data-riding, set by InvitationCanvas) removes
+     the most expensive part of that repaint without touching how the cards
+     look during any real, human-paced scroll. Overriding --tw-backdrop-blur
+     (not backdrop-filter itself) because Tailwind's blur-* utilities compose
+     the shorthand from this custom property. */
+  [data-riding="true"] .tpl-card {
+    --tw-backdrop-blur: initial;
   }
 }
 
