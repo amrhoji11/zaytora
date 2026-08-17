@@ -56,3 +56,13 @@ public class UpdateOrderStatusRequest
     public string Status { get; set; } = string.Empty; // "paid" | "failed"
     public string? AdminNote { get; set; }
 }
+
+// GET /api/orders/promo-code/{code} — lets checkout's "تحقق" button confirm
+// a code (platform-wide or a specific partner's) is real before the order is
+// actually placed. DiscountType/Value are only populated when Valid.
+public class PromoCodeCheckDto
+{
+    public bool Valid { get; set; }
+    public string? DiscountType { get; set; }
+    public decimal? DiscountValue { get; set; }
+}

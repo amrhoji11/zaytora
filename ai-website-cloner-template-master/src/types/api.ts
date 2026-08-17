@@ -391,6 +391,14 @@ export interface UpdateOrderStatusRequest {
   adminNote?: string | null;
 }
 
+// GET /api/orders/promo-code/{code} — discountType/discountValue are only
+// meaningful when valid is true.
+export interface PromoCodeCheckDto {
+  valid: boolean;
+  discountType?: "percent" | "fixed" | null;
+  discountValue?: number | null;
+}
+
 export type PartnerCategory = "eventPlanner" | "photographer" | "designer" | "other";
 export type PartnerStatus = "pending" | "approved" | "rejected";
 

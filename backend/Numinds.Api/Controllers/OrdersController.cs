@@ -119,6 +119,50 @@ public class OrdersController(NumindsDbContext db) : ControllerBase
         });
     }
 
+    // GET /api/orders/promo-code/{code} — anonymous, checkout's "تحقق"
+    // button. Checks both the single platform-wide code and per-partner
+    // codes (an approved, active Partner's own PromoCode) — the same two
+    // sources Create resolves a promo against above — so the shopper gets a
+    // real yes/no answer here instead of Create being the only place either
+    // kind of code is actually validated. Read-only: never touches
+    // Partner.UsageCount, which still only increments once an order backed
+    // by this code is actually confirmed paid (see UpdateStatus).
+    [HttpGet("promo-code/{code}")]
+    public async Task<ActionResult<PromoCodeCheckDto>> CheckPromoCode(string code, CancellationToken cancellationToken)
+    {
+        var trimmed = code.Trim();
+        if (trimmed.Length == 0)
+        {
+            return Ok(new PromoCodeCheckDto { Valid = false });
+        }
+
+        var pricing = await db.PricingSettings.AsNoTracking().FirstOrDefaultAsync(cancellationToken);
+        if (pricing is not null && string.Equals(trimmed, pricing.PlatformDiscountCode, StringComparison.OrdinalIgnoreCase))
+        {
+            return Ok(new PromoCodeCheckDto
+            {
+                Valid = true,
+                DiscountType = pricing.PlatformDiscountType,
+                DiscountValue = pricing.PlatformDiscountValue,
+            });
+        }
+
+        var partner = await db.Partners.AsNoTracking().FirstOrDefaultAsync(
+            p => p.Status == "approved" && p.Active && p.PromoCode != null && p.PromoCode.ToLower() == trimmed.ToLower(),
+            cancellationToken);
+        if (partner is not null)
+        {
+            return Ok(new PromoCodeCheckDto
+            {
+                Valid = true,
+                DiscountType = partner.DiscountType ?? pricing?.DefaultPartnerDiscountType ?? "percent",
+                DiscountValue = partner.DiscountValue ?? pricing?.DefaultPartnerDiscountValue ?? 0m,
+            });
+        }
+
+        return Ok(new PromoCodeCheckDto { Valid = false });
+    }
+
     // GET /api/orders/{id} — anonymous: the id is an unguessable Guid, same
     // public-by-id precedent as InvitationsController.GetById, so a customer
     // can revisit their confirmation/status page after checkout.

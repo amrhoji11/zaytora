@@ -11,7 +11,7 @@ import {
   type PriceRates,
 } from "@/lib/priceRates";
 import { getPricingSettings } from "@/lib/services/pricingSettings.service";
-import { createOrder } from "@/lib/services/orders.service";
+import { createOrder, checkPromoCode } from "@/lib/services/orders.service";
 import { useLanguage } from "@/context/LanguageContext";
 import { useCurrency } from "@/context/CurrencyContext";
 import { useAuth } from "@/context/AuthContext";
@@ -58,7 +58,6 @@ const COPY = {
     check: "تحقق",
     invalidCode: "الكود غير صالح",
     discountBadge: "تم تطبيق خصم الشريك 🏷️",
-    partnerCodePendingCheckout: "لا يمكن معاينة كود الشريك هنا — سيتم التحقق منه وتطبيق الخصم تلقائياً عند إتمام الطلب.",
     nameLabel: "الاسم الكامل",
     emailLabel: "البريد الإلكتروني",
     currencyLabel: "العملة",
@@ -83,7 +82,6 @@ const COPY = {
     check: "Check",
     invalidCode: "Invalid code",
     discountBadge: "Partner Discount Applied 🏷️",
-    partnerCodePendingCheckout: "This code can't be previewed here — it'll be checked and applied automatically when you place the order.",
     nameLabel: "Full name",
     emailLabel: "Email",
     currencyLabel: "Currency",
@@ -138,13 +136,11 @@ export function PaymentPhase({
   const [partnerCode, setPartnerCode] = useState("");
   const [appliedDiscount, setAppliedDiscount] = useState<{ type: "percent" | "fixed"; value: number } | null>(null);
   const partnerDiscountApplied = appliedDiscount !== null;
-  // checkPartnerCode can only preview the single platform-wide code
-  // client-side — per-partner codes are looked up server-side only, at
-  // order creation. Without this, clicking "تحقق" on a real partner code
-  // visibly did *nothing* (no badge, no message), indistinguishable from a
-  // typo'd/invalid code, even though the discount does apply correctly once
-  // the order is placed.
-  const [checkedUnknownCode, setCheckedUnknownCode] = useState(false);
+  const [checkingCode, setCheckingCode] = useState(false);
+  // Set only after a checked code comes back invalid — cleared the instant
+  // the input changes, so it never lingers after the shopper starts typing
+  // a different code.
+  const [codeInvalid, setCodeInvalid] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -186,19 +182,28 @@ export function PaymentPhase({
     return type === "fixed" ? Math.max(0, amount - discountValue) : amount * (1 - discountValue / 100);
   }
 
-  function checkPartnerCode() {
+  async function checkPartnerCode() {
     const code = partnerCode.trim();
     if (!code) return;
-    // Only the platform code can be previewed client-side (per-partner
-    // codes now live server-side only); any code is still accepted here and
-    // re-validated for real by the server at order creation.
-    const isPlatformCode = pricing.platformDiscountCode
-      ? code.toUpperCase() === pricing.platformDiscountCode.toUpperCase()
-      : false;
-    setAppliedDiscount(
-      isPlatformCode ? { type: pricing.platformDiscountType, value: pricing.platformDiscountValue } : null
-    );
-    setCheckedUnknownCode(!isPlatformCode);
+    setCheckingCode(true);
+    setCodeInvalid(false);
+    try {
+      // Checks both the platform-wide code and per-partner codes
+      // server-side — Create re-validates independently at order time too,
+      // so a stale/tampered client-side result here can't under-charge.
+      const result = await checkPromoCode(code);
+      if (result.valid && result.discountType && result.discountValue != null) {
+        setAppliedDiscount({ type: result.discountType, value: result.discountValue });
+      } else {
+        setAppliedDiscount(null);
+        setCodeInvalid(true);
+      }
+    } catch {
+      setAppliedDiscount(null);
+      setCodeInvalid(true);
+    } finally {
+      setCheckingCode(false);
+    }
   }
 
   async function handlePlaceOrder() {
@@ -293,7 +298,7 @@ export function PaymentPhase({
               onChange={(event) => {
                 setPartnerCode(event.target.value);
                 setAppliedDiscount(null);
-                setCheckedUnknownCode(false);
+                setCodeInvalid(false);
               }}
               placeholder={t.partnerCodePlaceholder}
               className="flex-1 rounded-xl border border-border bg-background/5 px-3.5 py-2.5 text-sm text-foreground outline-none transition-colors focus:border-gold"
@@ -301,10 +306,10 @@ export function PaymentPhase({
             <button
               type="button"
               onClick={checkPartnerCode}
-              disabled={!partnerCode.trim()}
+              disabled={!partnerCode.trim() || checkingCode}
               className="rounded-xl border border-gold/40 px-4 text-sm font-medium text-gold transition-colors hover:bg-gold/5 disabled:opacity-40"
             >
-              {t.check}
+              {checkingCode ? t.checking : t.check}
             </button>
           </div>
           {partnerDiscountApplied && (
@@ -312,9 +317,9 @@ export function PaymentPhase({
               {t.discountBadge}
             </p>
           )}
-          {checkedUnknownCode && !partnerDiscountApplied && (
-            <p className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-sky-100 dark:bg-sky-950/50 px-2.5 py-1 text-xs font-medium text-sky-700 dark:text-sky-400">
-              {t.partnerCodePendingCheckout}
+          {codeInvalid && (
+            <p className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-rose-100 dark:bg-rose-950/50 px-2.5 py-1 text-xs font-medium text-rose-700 dark:text-rose-400">
+              {t.invalidCode}
             </p>
           )}
         </div>

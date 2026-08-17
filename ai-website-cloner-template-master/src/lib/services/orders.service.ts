@@ -5,6 +5,7 @@ import type {
   OrderDto,
   PagedResult,
   PaymentStatus,
+  PromoCodeCheckDto,
   UpdateOrderStatusRequest,
 } from "@/types/api";
 
@@ -31,6 +32,14 @@ export function listOrders(query: { status?: "all" | PaymentStatus; search?: str
   if (query.pageSize) params.set("pageSize", String(query.pageSize));
   const qs = params.toString();
   return apiClient.get<PagedResult<OrderDto>>(`/orders${qs ? `?${qs}` : ""}`);
+}
+
+// Anonymous, checkout's "تحقق" button — checks both the single
+// platform-wide code and per-partner codes server-side, so a shopper gets a
+// real yes/no answer for either kind instead of only the platform code being
+// previewable client-side.
+export function checkPromoCode(code: string) {
+  return apiClient.get<PromoCodeCheckDto>(`/orders/promo-code/${encodeURIComponent(code)}`);
 }
 
 // Admin manually confirms (or rejects) the out-of-band bank transfer.
