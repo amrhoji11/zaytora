@@ -64,22 +64,19 @@ export function useAutoScroll({
       return {
         top: window.scrollY,
         max: document.documentElement.scrollHeight - window.innerHeight,
-        // Three redundant writes, not one — the page has a global
-        // `scroll-behavior: smooth`, which scrollTo() respects unless its
-        // own `behavior` is unambiguously "instant" (a value that isn't
-        // actually part of the CSSOM View spec's ScrollBehavior enum, so
-        // support for it is inconsistent). Direct scrollTop assignment is
-        // supposed to always bypass scroll-behavior, but iOS Safari/in-app
-        // browsers (Messenger's included) have proven unreliable there too
-        // in real-device testing. None of these three is trusted alone;
-        // together, whichever one the current engine actually honors takes
-        // effect. The inline scrollBehavior override (set once in start(),
-        // restored in stop()) additionally neutralizes the CSS class for
-        // the scrollTo() fallback specifically.
+        // Direct scrollTop assignment only — no window.scrollTo() fallback.
+        // scrollTo() used to be included as a third redundant write (the
+        // page has a global `scroll-behavior: smooth`, and older browsers
+        // were inconsistent about honoring direct scrollTop), but on real
+        // iPhone testing calling scrollTo() on every ~16ms tick fought with
+        // iOS's own async scroll compositor thread and produced a faint,
+        // persistent jitter that direct scrollTop alone doesn't have. The
+        // inline scrollBehavior override below (set in start(), restored in
+        // stop()) already neutralizes the CSS smooth-scroll class, so the
+        // scrollTo() fallback isn't needed to bypass it anymore.
         set: (value) => {
           document.documentElement.scrollTop = value;
           document.body.scrollTop = value;
-          window.scrollTo(0, value);
         },
       };
     }
