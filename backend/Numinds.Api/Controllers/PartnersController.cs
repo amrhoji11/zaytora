@@ -6,6 +6,7 @@ using Numinds.Api.Data;
 using Numinds.Api.Models;
 using Numinds.Api.Models.Dtos;
 using Numinds.Api.Models.Entities;
+using Numinds.Api.Services;
 
 namespace Numinds.Api.Controllers;
 
@@ -13,8 +14,8 @@ namespace Numinds.Api.Controllers;
 [Route("api/partners")]
 public class PartnersController(
     NumindsDbContext db,
-    IWebHostEnvironment env,
-    UserManager<ApplicationUser> userManager) : ControllerBase
+    UserManager<ApplicationUser> userManager,
+    IFileStorageService storage) : ControllerBase
 {
     // POST /api/partners — requires an account (PartnerApplicationModal.tsx
     // gates the form on useAuth() before showing it) so an approved partner
@@ -118,8 +119,8 @@ public class PartnersController(
 
     // POST /api/partners/logo — called by PartnerApplicationModal (before
     // submitting) and the partner's own profile editor, so the returned URL
-    // can ride along in LogoUrl. Stored on disk under wwwroot so
-    // app.UseStaticFiles() (Program.cs) can serve it back directly.
+    // can ride along in LogoUrl. Uploaded to R2 (see IFileStorageService) —
+    // Render's own disk is ephemeral and wipes uploads on every deploy.
     private const long MaxLogoBytes = 5 * 1024 * 1024;
     private static readonly Dictionary<string, string> AllowedLogoContentTypes = new()
     {
@@ -144,21 +145,7 @@ public class PartnersController(
             return BadRequest(new { message = "Logo must be a JPG or PNG image." });
         }
 
-        // Must land under the same wwwroot app.UseStaticFiles() (Program.cs)
-        // serves from — WebRootPath, not AppContext.BaseDirectory (bin/), or
-        // the saved file would 404 when fetched back.
-        var webRoot = env.WebRootPath ?? Path.Combine(env.ContentRootPath, "wwwroot");
-        var uploadsDir = Path.Combine(webRoot, "uploads", "partners");
-        Directory.CreateDirectory(uploadsDir);
-
-        var fileName = $"{Guid.NewGuid()}{extension}";
-        var filePath = Path.Combine(uploadsDir, fileName);
-        await using (var stream = System.IO.File.Create(filePath))
-        {
-            await file.CopyToAsync(stream, cancellationToken);
-        }
-
-        var url = $"{Request.Scheme}://{Request.Host}/uploads/partners/{fileName}";
+        var url = await storage.UploadAsync(file, "partners", extension, $"{Request.Scheme}://{Request.Host}", cancellationToken);
         return Ok(new PartnerLogoUploadResponse { Url = url });
     }
 

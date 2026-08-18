@@ -5,12 +5,13 @@ using Numinds.Api.Data;
 using Numinds.Api.Models;
 using Numinds.Api.Models.Dtos;
 using Numinds.Api.Models.Entities;
+using Numinds.Api.Services;
 
 namespace Numinds.Api.Controllers;
 
 [ApiController]
 [Route("api/thank-you-suggestions")]
-public class ThankYouSuggestionsController(NumindsDbContext db, IWebHostEnvironment env) : ControllerBase
+public class ThankYouSuggestionsController(NumindsDbContext db, IFileStorageService storage) : ControllerBase
 {
     private const long MaxImageBytes = 5 * 1024 * 1024;
     private static readonly Dictionary<string, string> AllowedImageContentTypes = new()
@@ -45,7 +46,8 @@ public class ThankYouSuggestionsController(NumindsDbContext db, IWebHostEnvironm
 
     // POST /api/thank-you-suggestions/image — admin uploads a suggestion
     // card image, gets back a URL to submit with the create/update request.
-    // Same wwwroot/uploads/<feature> pattern as PartnersController.UploadLogo.
+    // Uploaded to R2 (see IFileStorageService) — same pattern as
+    // PartnersController.UploadLogo.
     [HttpPost("image")]
     [Authorize(Roles = Roles.Admin)]
     public async Task<ActionResult<ThankYouSuggestionImageUploadResponse>> UploadImage(
@@ -65,18 +67,7 @@ public class ThankYouSuggestionsController(NumindsDbContext db, IWebHostEnvironm
             return BadRequest(new { message = "Image must be a JPG, PNG, or WebP file." });
         }
 
-        var webRoot = env.WebRootPath ?? Path.Combine(env.ContentRootPath, "wwwroot");
-        var uploadsDir = Path.Combine(webRoot, "uploads", "thank-you-suggestions");
-        Directory.CreateDirectory(uploadsDir);
-
-        var fileName = $"{Guid.NewGuid()}{extension}";
-        var filePath = Path.Combine(uploadsDir, fileName);
-        await using (var stream = System.IO.File.Create(filePath))
-        {
-            await file.CopyToAsync(stream, cancellationToken);
-        }
-
-        var url = $"{Request.Scheme}://{Request.Host}/uploads/thank-you-suggestions/{fileName}";
+        var url = await storage.UploadAsync(file, "thank-you-suggestions", extension, $"{Request.Scheme}://{Request.Host}", cancellationToken);
         return Ok(new ThankYouSuggestionImageUploadResponse { Url = url });
     }
 

@@ -5,6 +5,7 @@ using Numinds.Api.Data;
 using Numinds.Api.Models;
 using Numinds.Api.Models.Dtos;
 using Numinds.Api.Models.Entities;
+using Numinds.Api.Services;
 
 namespace Numinds.Api.Controllers;
 
@@ -14,7 +15,7 @@ namespace Numinds.Api.Controllers;
 // re-uploading/re-positioning per template.
 [ApiController]
 [Route("api/envelopes")]
-public class EnvelopesController(NumindsDbContext db, IWebHostEnvironment env) : ControllerBase
+public class EnvelopesController(NumindsDbContext db, IFileStorageService storage) : ControllerBase
 {
     private const long MaxImageBytes = 8 * 1024 * 1024;
     private static readonly Dictionary<string, string> AllowedImageContentTypes = new()
@@ -66,8 +67,8 @@ public class EnvelopesController(NumindsDbContext db, IWebHostEnvironment env) :
     }
 
     // POST /api/envelopes/image — admin uploads the envelope photo, gets
-    // back a URL to submit with Create/Update. Same wwwroot/uploads/<feature>
-    // pattern as ThankYouSuggestionsController.UploadImage.
+    // back a URL to submit with Create/Update. Uploaded to R2 (see
+    // IFileStorageService) — same pattern as ThankYouSuggestionsController.UploadImage.
     [HttpPost("image")]
     [Authorize(Roles = Roles.Admin)]
     public async Task<ActionResult<EnvelopeImageUploadResponse>> UploadImage(
@@ -87,18 +88,7 @@ public class EnvelopesController(NumindsDbContext db, IWebHostEnvironment env) :
             return BadRequest(new { message = "Image must be a JPG, PNG, or WebP file." });
         }
 
-        var webRoot = env.WebRootPath ?? Path.Combine(env.ContentRootPath, "wwwroot");
-        var uploadsDir = Path.Combine(webRoot, "uploads", "envelopes");
-        Directory.CreateDirectory(uploadsDir);
-
-        var fileName = $"{Guid.NewGuid()}{extension}";
-        var filePath = Path.Combine(uploadsDir, fileName);
-        await using (var stream = System.IO.File.Create(filePath))
-        {
-            await file.CopyToAsync(stream, cancellationToken);
-        }
-
-        var url = $"{Request.Scheme}://{Request.Host}/uploads/envelopes/{fileName}";
+        var url = await storage.UploadAsync(file, "envelopes", extension, $"{Request.Scheme}://{Request.Host}", cancellationToken);
         return Ok(new EnvelopeImageUploadResponse { Url = url });
     }
 

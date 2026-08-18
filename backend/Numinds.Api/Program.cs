@@ -114,6 +114,14 @@ if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(goo
 
 builder.Services.AddHttpClient<IEmailSender, ResendEmailSender>();
 
+// R2 (Cloudflare's S3-compatible object storage) for admin-uploaded images
+// (partner logos, template covers, envelope photos, thank-you-suggestion
+// cards) -- Render's own filesystem is ephemeral and wipes anything written
+// to it on the next deploy/restart, which is what silently broke uploads
+// before this. See R2FileStorageService for the fallback behavior while
+// Storage:R2:* isn't configured yet.
+builder.Services.AddSingleton<IFileStorageService, R2FileStorageService>();
+
 builder.Services.ConfigureApplicationCookie(options =>
 {
     // Browsers scope SameSite by registrable domain, not host/port, so

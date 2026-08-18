@@ -80,6 +80,11 @@ export function PartnerCard({ partner }: { partner: ApprovedPartnerDto }) {
   const t = COPY[language];
   const categoryMeta = CATEGORY_COPY[partner.category];
   const [expanded, setExpanded] = useState(false);
+  // Falls back to the initials avatar if logoUrl 404s (e.g. an upload from
+  // before the R2 migration whose file no longer exists) instead of a
+  // broken-image icon — the same fallback already used when there's no
+  // logoUrl at all.
+  const [logoFailed, setLogoFailed] = useState(false);
   const socialLinks = buildSocialLinks(partner);
 
   return (
@@ -101,11 +106,12 @@ export function PartnerCard({ partner }: { partner: ApprovedPartnerDto }) {
         </span>
 
         <div className="flex items-center gap-3">
-          {partner.logoUrl ? (
+          {partner.logoUrl && !logoFailed ? (
             // eslint-disable-next-line @next/next/no-img-element -- cross-origin (API host), not worth next.config remotePatterns for a small avatar
             <img
               src={partner.logoUrl}
               alt=""
+              onError={() => setLogoFailed(true)}
               className="size-14 shrink-0 rounded-xl object-cover"
             />
           ) : (

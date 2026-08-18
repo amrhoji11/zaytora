@@ -5,12 +5,13 @@ using Numinds.Api.Data;
 using Numinds.Api.Models;
 using Numinds.Api.Models.Dtos;
 using Numinds.Api.Models.Entities;
+using Numinds.Api.Services;
 
 namespace Numinds.Api.Controllers;
 
 [ApiController]
 [Route("api/templates")]
-public class TemplatesController(NumindsDbContext db, IWebHostEnvironment env) : ControllerBase
+public class TemplatesController(NumindsDbContext db, IFileStorageService storage) : ControllerBase
 {
     private const long MaxImageBytes = 8 * 1024 * 1024;
     private static readonly Dictionary<string, string> AllowedImageContentTypes = new()
@@ -267,12 +268,11 @@ public class TemplatesController(NumindsDbContext db, IWebHostEnvironment env) :
 
     // POST /api/templates/image — admin uploads a cover/background photo from
     // their own device (TemplateEditModal), gets back a real hosted URL to
-    // submit as ImageUrl/BackgroundImageUrl with Create/Update. Same
-    // wwwroot/uploads/<feature> pattern as EnvelopesController.UploadImage —
-    // a real file on disk rather than embedding the image as a base64
-    // ImageUrl (what the "create template from AI" flow's file mode already
-    // does), so editing an existing template's photo doesn't bloat every
-    // GET /api/templates response with a multi-hundred-KB data: URL.
+    // submit as ImageUrl/BackgroundImageUrl with Create/Update. Uploaded to
+    // R2 (see IFileStorageService) rather than embedded as a base64 ImageUrl
+    // (what the "create template from AI" flow's file mode already does),
+    // so editing an existing template's photo doesn't bloat every GET
+    // /api/templates response with a multi-hundred-KB data: URL.
     [HttpPost("image")]
     [Authorize(Roles = Roles.Admin)]
     public async Task<ActionResult<TemplateImageUploadResponse>> UploadImage(
@@ -292,18 +292,7 @@ public class TemplatesController(NumindsDbContext db, IWebHostEnvironment env) :
             return BadRequest(new { message = "Image must be a JPG, PNG, or WebP file." });
         }
 
-        var webRoot = env.WebRootPath ?? Path.Combine(env.ContentRootPath, "wwwroot");
-        var uploadsDir = Path.Combine(webRoot, "uploads", "templates");
-        Directory.CreateDirectory(uploadsDir);
-
-        var fileName = $"{Guid.NewGuid()}{extension}";
-        var filePath = Path.Combine(uploadsDir, fileName);
-        await using (var stream = System.IO.File.Create(filePath))
-        {
-            await file.CopyToAsync(stream, cancellationToken);
-        }
-
-        var url = $"{Request.Scheme}://{Request.Host}/uploads/templates/{fileName}";
+        var url = await storage.UploadAsync(file, "templates", extension, $"{Request.Scheme}://{Request.Host}", cancellationToken);
         return Ok(new TemplateImageUploadResponse { Url = url });
     }
 
