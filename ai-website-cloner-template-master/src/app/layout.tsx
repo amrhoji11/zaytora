@@ -165,6 +165,16 @@ export default function RootLayout({
       lang="ar"
       dir="rtl"
       className={`${cinzel.variable} ${greatVibes.variable} ${CURATED_FONT_VARIABLES} h-full antialiased dark`}
+      // Next.js 16 stopped auto-overriding CSS scroll-behavior during
+      // route transitions (see the "Scroll Behavior Override" section of
+      // its v16 upgrade guide) — this site sets `scroll-behavior: smooth`
+      // globally, and without this attribute Next's own scroll-to-top on
+      // navigation just animates smoothly instead of jumping instantly,
+      // which was landing incomplete/interrupted and leaving the new page
+      // scrolled to wherever the previous page had been (e.g. clicking
+      // "View Pricing" partway down the home page landed on /Prices still
+      // scrolled to the bottom instead of resetting to the top).
+      data-scroll-behavior="smooth"
       suppressHydrationWarning
     >
       <head>

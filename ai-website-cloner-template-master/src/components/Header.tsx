@@ -260,10 +260,10 @@ export function Header() {
   return (
     <>
       <header className="glass-effect fixed inset-x-0 top-0 z-50 h-20 py-5">
-        <div className="mx-auto flex h-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex h-full max-w-7xl items-center justify-between px-3 sm:px-6 lg:px-8">
           <Link
             href="/"
-            className="flex shrink-0 items-center gap-1.5 font-cinzel text-lg font-semibold tracking-widest text-olive-vivid uppercase"
+            className="flex shrink-0 items-center gap-1 font-cinzel text-base font-semibold tracking-widest text-olive-vivid uppercase sm:gap-1.5 sm:text-lg"
           >
             <OliveMark className="h-5 w-6 shrink-0" />
             ZAYTORA
@@ -290,7 +290,13 @@ export function Header() {
             </Link>
           </nav>
 
-          <div className="flex shrink-0 items-center gap-4">
+          {/* gap-1.5 on mobile (sm:gap-4 restores the roomier desktop spacing)
+              — at gap-4 across every breakpoint, this cluster's total width
+              (auth links + language toggle + theme toggle) ran wider than a
+              narrow phone's viewport, pushing the language/theme buttons
+              off-screen entirely (negative getBoundingClientRect x) instead
+              of wrapping or scrolling into view. */}
+          <div className="flex shrink-0 items-center gap-1 sm:gap-4">
             {authLoading ? (
               <div className="h-8 w-24 animate-pulse rounded-full bg-gray-100" />
             ) : user ? (
@@ -372,16 +378,16 @@ export function Header() {
                 )}
               </div>
             ) : (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 sm:gap-2">
                 <Link
                   href="/login"
-                  className="rounded-full border border-gold/20 bg-white/60 px-3.5 py-1.5 text-sm text-gray-700 transition-colors hover:bg-white"
+                  className="rounded-full border border-gold/20 bg-white/60 px-2 py-1 text-xs text-gray-700 transition-colors hover:bg-white sm:px-3.5 sm:py-1.5 sm:text-sm"
                 >
                   {t.login}
                 </Link>
                 <Link
                   href="/signup"
-                  className="rounded-full bg-gold px-3.5 py-1.5 text-sm font-medium text-white transition-colors hover:bg-gold/90"
+                  className="rounded-full bg-gold px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-gold/90 sm:px-3.5 sm:py-1.5 sm:text-sm"
                 >
                   {t.signup}
                 </Link>
@@ -392,17 +398,20 @@ export function Header() {
               type="button"
               onClick={toggleLanguage}
               aria-label={t.toggleLanguageAria}
-              className="flex items-center gap-1.5 rounded-full border border-gold/20 bg-white/60 px-3 py-1.5 text-sm text-gray-700"
+              className="flex items-center gap-1.5 rounded-full border border-gold/20 bg-white/60 px-1.5 py-1.5 text-sm text-gray-700 sm:px-3"
             >
               <GlobeIcon className="size-4" />
-              {TOGGLE_LABEL[language]}
+              {/* Text label only past sm — on mobile this button stays
+                  icon-only (matching the theme toggle beside it) purely to
+                  save width; the aria-label still names it for a11y. */}
+              <span className="hidden sm:inline">{TOGGLE_LABEL[language]}</span>
             </button>
 
             <button
               type="button"
               onClick={toggleTheme}
               aria-label={t.toggleThemeAria}
-              className="flex items-center justify-center rounded-full border border-gold/20 bg-white/60 p-2 text-gray-700"
+              className="flex items-center justify-center rounded-full border border-gold/20 bg-white/60 p-1.5 text-gray-700 sm:p-2"
             >
               {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
             </button>
