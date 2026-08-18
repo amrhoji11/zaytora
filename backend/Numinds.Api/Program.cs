@@ -63,7 +63,16 @@ builder.Services.AddDbContextPool<NumindsDbContext>(options =>
     switch (databaseProvider)
     {
         case "Postgres":
-            options.UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure());
+            // Bounded (not the 6-retry/30s-delay default) — Neon's monitoring
+            // showed repeated bursts of ~900 concurrent connections over a
+            // single day, which is consistent with every concurrent request
+            // independently retrying a struggling/quota-limited database up
+            // to 6 times each, compounding into a connection storm right
+            // when the database is least able to absorb it. 3 retries over
+            // at most ~6s still absorbs genuine transient network blips
+            // without piling on this hard during a real outage.
+            options.UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure(
+                maxRetryCount: 3, maxRetryDelay: TimeSpan.FromSeconds(6), errorCodesToAdd: null));
             break;
         case "SqlServer":
             options.UseSqlServer(connectionString, sql => sql.EnableRetryOnFailure());
