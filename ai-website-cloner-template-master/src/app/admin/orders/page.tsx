@@ -137,9 +137,12 @@ export default function AdminOrdersPage() {
   // Keeps this page (and its revenue/order-count tiles) in sync with orders
   // placed or approved from a *different* session — an admin approving one
   // from their phone, or a customer checking out right now — without the
-  // person sitting on this page needing to hit refresh themselves.
+  // person sitting on this page needing to hit refresh themselves. 60s
+  // (not 15s) because an admin tab left open in the background for hours
+  // adds up in database data-transfer usage on a metered/free-tier plan —
+  // still fresh enough for this use case, just less chatty.
   useEffect(() => {
-    const id = window.setInterval(load, 15_000);
+    const id = window.setInterval(load, 60_000);
     return () => window.clearInterval(id);
   }, [load]);
 

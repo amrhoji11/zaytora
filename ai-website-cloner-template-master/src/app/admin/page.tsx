@@ -90,8 +90,11 @@ export default function AdminOverviewPage() {
     load(true);
     // Keeps the KPI tiles/charts current when a new order comes in or an
     // admin approves one from another tab/device, without requiring a
-    // manual reload of this page.
-    const intervalId = window.setInterval(() => load(false), 15_000);
+    // manual reload of this page. 60s (not 15s) because an admin tab left
+    // open in the background for hours adds up in database data-transfer
+    // usage on a metered/free-tier plan — still fresh enough here, just
+    // less chatty.
+    const intervalId = window.setInterval(() => load(false), 60_000);
     return () => {
       cancelled = true;
       window.clearInterval(intervalId);
