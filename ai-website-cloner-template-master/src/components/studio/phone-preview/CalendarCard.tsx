@@ -30,7 +30,7 @@ function buildIcsContent({
     "VERSION:2.0",
     "PRODID:-//ZAYTORA//Invitation//AR",
     "BEGIN:VEVENT",
-    `UID:${start.getTime()}@numinds.me`,
+    `UID:${start.getTime()}@zaytorainvites.com`,
     `DTSTAMP:${toIcsTimestamp(new Date())}`,
     `DTSTART:${toIcsTimestamp(start)}`,
     `DTEND:${toIcsTimestamp(end)}`,

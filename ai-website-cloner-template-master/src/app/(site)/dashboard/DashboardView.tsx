@@ -49,7 +49,7 @@ interface BookingRow {
 }
 
 const DEMO_USER = {
-  email: "guest@numinds.me",
+  email: "guest@zaytorainvites.com",
   phone: "+966 5X XXX XXXX",
   userId: "#U-VEWRGC",
 };
