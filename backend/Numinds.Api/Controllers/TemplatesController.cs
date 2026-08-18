@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Numinds.Api.Data;
 using Numinds.Api.Models;
 using Numinds.Api.Models.Dtos;
@@ -11,8 +12,16 @@ namespace Numinds.Api.Controllers;
 
 [ApiController]
 [Route("api/templates")]
-public class TemplatesController(NumindsDbContext db, IFileStorageService storage) : ControllerBase
+public class TemplatesController(NumindsDbContext db, IFileStorageService storage, IMemoryCache cache) : ControllerBase
 {
+    // The template catalog is admin-curated and rarely changes minute to
+    // minute, but GET /api/templates is hit by every visitor browsing
+    // templates or opening the studio (and was previously hitting Postgres,
+    // uncached, on every single one of those) — a real contributor to the
+    // database-transfer usage that exhausted Neon's free-tier quota. A short
+    // TTL keeps admin edits visible within a minute without needing explicit
+    // cache invalidation wired into every write path.
+    private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(2);
     private const long MaxImageBytes = 8 * 1024 * 1024;
     private static readonly Dictionary<string, string> AllowedImageContentTypes = new()
     {
@@ -45,6 +54,12 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
         [FromQuery] bool includeInactive,
         CancellationToken cancellationToken)
     {
+        var cacheKey = $"templates:{category}:{includeInactive}";
+        if (cache.TryGetValue(cacheKey, out List<TemplateDto>? cached))
+        {
+            return Ok(cached);
+        }
+
         var query = db.Templates.AsNoTracking().AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(category))
@@ -122,6 +137,7 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
             return r.Dto;
         }).ToList();
 
+        cache.Set(cacheKey, templates, CacheTtl);
         return Ok(templates);
     }
 
@@ -136,6 +152,12 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
     [HttpGet("homepage")]
     public async Task<ActionResult<IEnumerable<TemplateDto>>> GetHomepageTemplates(CancellationToken cancellationToken)
     {
+        const string cacheKey = "templates:homepage";
+        if (cache.TryGetValue(cacheKey, out List<TemplateDto>? cachedHomepage))
+        {
+            return Ok(cachedHomepage);
+        }
+
         const int slotCount = 4;
 
         var featuredIds = await db.Templates.AsNoTracking()
@@ -209,6 +231,7 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
             })
             .ToList();
 
+        cache.Set(cacheKey, ordered, CacheTtl);
         return Ok(ordered);
     }
 

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Numinds.Api.Data;
 using Numinds.Api.Models;
 using Numinds.Api.Models.Dtos;
@@ -15,8 +16,13 @@ namespace Numinds.Api.Controllers;
 public class PartnersController(
     NumindsDbContext db,
     UserManager<ApplicationUser> userManager,
-    IFileStorageService storage) : ControllerBase
+    IFileStorageService storage,
+    IMemoryCache cache) : ControllerBase
 {
+    // Same reasoning as TemplatesController's CacheTtl — GET /api/partners/approved
+    // is public, hit by every /OurPartners visitor, and rarely changes minute
+    // to minute.
+    private static readonly TimeSpan ApprovedCacheTtl = TimeSpan.FromMinutes(2);
     // POST /api/partners — requires an account (PartnerApplicationModal.tsx
     // gates the form on useAuth() before showing it) so an approved partner
     // has a login to reach their self-service profile at GET/PUT
@@ -153,6 +159,12 @@ public class PartnersController(
     [HttpGet("approved")]
     public async Task<ActionResult<List<ApprovedPartnerDto>>> GetApproved(CancellationToken cancellationToken)
     {
+        const string cacheKey = "partners:approved";
+        if (cache.TryGetValue(cacheKey, out List<ApprovedPartnerDto>? cached))
+        {
+            return Ok(cached);
+        }
+
         var partners = await db.Partners
             .AsNoTracking()
             .Where(p => p.Status == "approved" && p.Active)
@@ -160,7 +172,7 @@ public class PartnersController(
             .Take(200)
             .ToListAsync(cancellationToken);
 
-        return Ok(partners.Select(p => new ApprovedPartnerDto
+        var dtos = partners.Select(p => new ApprovedPartnerDto
         {
             Id = p.Id.ToString(),
             Name = p.BusinessName,
@@ -174,7 +186,10 @@ public class PartnersController(
             FacebookUrl = p.FacebookUrl,
             WebsiteUrl = p.WebsiteUrl,
             LogoUrl = p.LogoUrl,
-        }).ToList());
+        }).ToList();
+
+        cache.Set(cacheKey, dtos, ApprovedCacheTtl);
+        return Ok(dtos);
     }
 
     // GET /api/partners — admin, for /admin/partners. `status` narrows to

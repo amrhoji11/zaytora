@@ -215,6 +215,12 @@ builder.Services.AddResponseCompression(options =>
     options.Providers.Add<GzipCompressionProvider>();
 });
 
+// In-process cache for read-heavy, rarely-changing public data (templates,
+// approved partners) — see TemplatesController/PartnersController for use.
+// A single Render instance, so in-memory is sufficient; no distributed
+// cache (Redis) needed and that would be its own free-tier quota to manage.
+builder.Services.AddMemoryCache();
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
