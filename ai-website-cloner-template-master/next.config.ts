@@ -27,6 +27,11 @@ const nextConfig: NextConfig = {
       // The stock-photo backgroundImageUrl values SeedTemplates.cs seeds for
       // the full-bleed/boxed-hero demo templates (see backend/Numinds.Api/Data/SeedTemplates.cs).
       { protocol: "https", hostname: "images.unsplash.com", pathname: "/**" },
+      // Admin-uploaded images (envelope photos, template covers, partner
+      // logos, thank-you-suggestion cards) — see R2FileStorageService.cs.
+      // Without this, next/image 400s on every one of them since Next 16
+      // refuses to optimize a remote host that isn't explicitly whitelisted.
+      { protocol: "https", hostname: "uploads.zaytorainvites.com", pathname: "/**" },
     ],
     // Next 16 added a hard SSRF guard that refuses to optimize any remote
     // image whose host resolves to a private/loopback IP — which is exactly
