@@ -1,5 +1,10 @@
 using Amazon.S3;
 using Amazon.S3.Model;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.Formats.Webp;
+using SixLabors.ImageSharp.Processing;
 
 namespace Numinds.Api.Services;
 
@@ -20,6 +25,12 @@ public class R2FileStorageService(
     IWebHostEnvironment env,
     ILogger<R2FileStorageService> logger) : IFileStorageService
 {
+    // Longest side an uploaded image is ever allowed to keep. Every caller
+    // (template covers, envelope photos, partner logos, thank-you cards,
+    // captured photos) displays at well under this, so anything above it is
+    // pure wasted storage/transfer rather than real visual quality.
+    private const int MaxImageDimension = 2000;
+
     public async Task<string> UploadAsync(
         IFormFile file,
         string folder,
@@ -27,13 +38,24 @@ public class R2FileStorageService(
         string fallbackBaseUrl,
         CancellationToken cancellationToken)
     {
+        var fileName = $"{Guid.NewGuid()}{extension}";
+
+        byte[] originalBytes;
+        await using (var input = file.OpenReadStream())
+        {
+            using var buffer = new MemoryStream();
+            await input.CopyToAsync(buffer, cancellationToken);
+            originalBytes = buffer.ToArray();
+        }
+
+        var compressed = TryCompressImage(originalBytes, file.ContentType);
+        var uploadBytes = compressed ?? originalBytes;
+
         var accountId = configuration["Storage:R2:AccountId"];
         var accessKey = configuration["Storage:R2:AccessKeyId"];
         var secretKey = configuration["Storage:R2:SecretAccessKey"];
         var bucket = configuration["Storage:R2:BucketName"];
         var publicBaseUrl = configuration["Storage:R2:PublicBaseUrl"];
-
-        var fileName = $"{Guid.NewGuid()}{extension}";
 
         if (string.IsNullOrWhiteSpace(accountId) || string.IsNullOrWhiteSpace(accessKey) ||
             string.IsNullOrWhiteSpace(secretKey) || string.IsNullOrWhiteSpace(bucket) ||
@@ -43,7 +65,7 @@ public class R2FileStorageService(
                 "Storage:R2 is not fully configured - saving {Folder}/{FileName} to local disk instead. " +
                 "This file will NOT survive the next deploy/restart.",
                 folder, fileName);
-            return await SaveToLocalDiskAsync(file, folder, fileName, fallbackBaseUrl, cancellationToken);
+            return await SaveToLocalDiskAsync(uploadBytes, folder, fileName, fallbackBaseUrl, cancellationToken);
         }
 
         using var client = new AmazonS3Client(
@@ -64,7 +86,7 @@ public class R2FileStorageService(
                 ResponseChecksumValidation = Amazon.Runtime.ResponseChecksumValidation.WHEN_REQUIRED,
             });
 
-        await using var stream = file.OpenReadStream();
+        await using var stream = new MemoryStream(uploadBytes);
         await client.PutObjectAsync(
             new PutObjectRequest
             {
@@ -89,6 +111,54 @@ public class R2FileStorageService(
             cancellationToken);
 
         return $"{publicBaseUrl.TrimEnd('/')}/{folder}/{fileName}";
+    }
+
+    // Downscales oversized images and re-encodes them at a slightly lossy
+    // quality (same format in, same format out -- so a transparent PNG logo
+    // stays a PNG, never silently becomes an opaque JPEG). Returns null
+    // (upload the original bytes untouched) for any content type it doesn't
+    // recognize, or if compression didn't actually help, or if anything
+    // about the image is malformed enough to throw -- compression is a
+    // nice-to-have and must never be the reason an upload fails.
+    private byte[]? TryCompressImage(byte[] originalBytes, string contentType)
+    {
+        try
+        {
+            using var image = Image.Load(originalBytes);
+
+            if (image.Width > MaxImageDimension || image.Height > MaxImageDimension)
+            {
+                image.Mutate(x => x.Resize(new ResizeOptions
+                {
+                    Mode = ResizeMode.Max,
+                    Size = new Size(MaxImageDimension, MaxImageDimension),
+                }));
+            }
+
+            using var output = new MemoryStream();
+            switch (contentType)
+            {
+                case "image/jpeg":
+                    image.SaveAsJpeg(output, new JpegEncoder { Quality = 82 });
+                    break;
+                case "image/webp":
+                    image.SaveAsWebp(output, new WebpEncoder { Quality = 82 });
+                    break;
+                case "image/png":
+                    image.SaveAsPng(output, new PngEncoder { CompressionLevel = PngCompressionLevel.BestCompression });
+                    break;
+                default:
+                    return null;
+            }
+
+            var compressedBytes = output.ToArray();
+            return compressedBytes.Length < originalBytes.Length ? compressedBytes : null;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to compress an uploaded image -- uploading the original bytes instead.");
+            return null;
+        }
     }
 
     public async Task DeleteAsync(string? url, CancellationToken cancellationToken)
@@ -145,17 +215,14 @@ public class R2FileStorageService(
     }
 
     private async Task<string> SaveToLocalDiskAsync(
-        IFormFile file, string folder, string fileName, string fallbackBaseUrl, CancellationToken cancellationToken)
+        byte[] bytes, string folder, string fileName, string fallbackBaseUrl, CancellationToken cancellationToken)
     {
         var webRoot = env.WebRootPath ?? Path.Combine(env.ContentRootPath, "wwwroot");
         var uploadsDir = Path.Combine(webRoot, "uploads", folder);
         Directory.CreateDirectory(uploadsDir);
 
         var filePath = Path.Combine(uploadsDir, fileName);
-        await using (var stream = System.IO.File.Create(filePath))
-        {
-            await file.CopyToAsync(stream, cancellationToken);
-        }
+        await System.IO.File.WriteAllBytesAsync(filePath, bytes, cancellationToken);
 
         return $"{fallbackBaseUrl.TrimEnd('/')}/uploads/{folder}/{fileName}";
     }
