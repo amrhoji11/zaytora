@@ -9,6 +9,7 @@ import { TemplateEditModal } from "@/components/admin/TemplateEditModal";
 import { TemplateDeleteDialog } from "@/components/admin/TemplateDeleteDialog";
 import { CATEGORY_IDS, CATEGORY_LABELS, CATEGORY_META, type CategoryId } from "@/lib/categories";
 import { analyzeImageFile, themeFromCategoryColor } from "@/lib/colorAnalysis";
+import { uploadTemplateImage } from "@/lib/services/templates.service";
 import { useAdminTemplates } from "@/lib/adminTemplatesStore";
 import { ApiError } from "@/lib/api/client";
 import type { TemplateWriteRequest } from "@/types/api";
@@ -180,8 +181,12 @@ export default function AdminVideoTemplatesPage() {
       let imageUrl: string;
       let theme: ReturnType<typeof themeFromCategoryColor>;
       if (mode === "file" && file) {
-        const analyzed = await analyzeImageFile(file);
-        imageUrl = analyzed.dataUrl;
+        // analyzeImageFile's dataUrl is only for local color sampling — it's
+        // a full base64 data: URI, far past ImageUrl's 512-char column limit
+        // (Postgres rejects it with "value too long"). Upload the real file
+        // to R2 instead and persist the short hosted URL it returns.
+        const [analyzed, uploaded] = await Promise.all([analyzeImageFile(file), uploadTemplateImage(file)]);
+        imageUrl = uploaded.url;
         theme = analyzed.theme;
       } else {
         imageUrl = sourceUrl.trim();
