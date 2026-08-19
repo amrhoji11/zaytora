@@ -65,6 +65,29 @@ public class SupportMessagesController(NumindsDbContext db) : ControllerBase
         return Ok(ToDto(message));
     }
 
+    [HttpDelete("{id:guid}")]
+    [Authorize(Roles = Roles.Admin)]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+    {
+        var message = await db.SupportMessages.FirstOrDefaultAsync(m => m.Id == id, cancellationToken);
+        if (message is null)
+        {
+            return NotFound();
+        }
+
+        db.SupportMessages.Remove(message);
+        await db.SaveChangesAsync(cancellationToken);
+        return NoContent();
+    }
+
+    [HttpDelete]
+    [Authorize(Roles = Roles.Admin)]
+    public async Task<IActionResult> DeleteAll(CancellationToken cancellationToken)
+    {
+        await db.SupportMessages.ExecuteDeleteAsync(cancellationToken);
+        return NoContent();
+    }
+
     private static SupportMessageDto ToDto(SupportMessage m) => new()
     {
         Id = m.Id.ToString(),

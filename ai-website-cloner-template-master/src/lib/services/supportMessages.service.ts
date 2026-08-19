@@ -14,3 +14,11 @@ export function listSupportMessages() {
 export function markSupportMessageRead(id: string) {
   return apiClient.patch<SupportMessageDto>(`/support-messages/${id}/read`);
 }
+
+export function deleteSupportMessage(id: string) {
+  return apiClient.delete<void>(`/support-messages/${id}`);
+}
+
+export function deleteAllSupportMessages() {
+  return apiClient.delete<void>("/support-messages");
+}

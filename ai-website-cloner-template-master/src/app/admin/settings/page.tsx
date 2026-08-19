@@ -1,10 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { WifiIcon, InboxIcon, MailIcon, LoaderIcon } from "@/components/icons";
+import { WifiIcon, InboxIcon, MailIcon, LoaderIcon, TrashIcon } from "@/components/icons";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/context/LanguageContext";
-import { listSupportMessages, markSupportMessageRead } from "@/lib/services/supportMessages.service";
+import {
+  listSupportMessages,
+  markSupportMessageRead,
+  deleteSupportMessage,
+  deleteAllSupportMessages,
+} from "@/lib/services/supportMessages.service";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { ContactSettingsForm } from "@/components/admin/ContactSettingsForm";
 import { PaymentSettingsForm } from "@/components/admin/PaymentSettingsForm";
@@ -22,6 +27,9 @@ const COPY = {
     unread: "غير مقروءة",
     noMessages: "لا توجد رسائل.",
     loadError: "تعذّر تحميل رسائل الدعم.",
+    deleteMessage: "حذف الرسالة",
+    deleteAll: "حذف الكل",
+    confirmDeleteAll: "هل أنت متأكد من حذف جميع رسائل الدعم؟ لا يمكن التراجع عن هذا الإجراء.",
   },
   en: {
     subtitle: "Manual payment and contact settings, and the support message inbox.",
@@ -34,6 +42,9 @@ const COPY = {
     unread: "Unread",
     noMessages: "No messages.",
     loadError: "Couldn't load support messages.",
+    deleteMessage: "Delete message",
+    deleteAll: "Delete all",
+    confirmDeleteAll: "Delete all support messages? This can't be undone.",
   },
 };
 
@@ -51,6 +62,8 @@ export default function AdminSettingsPage() {
   const t = COPY[language];
   const [messages, setMessages] = useState<SupportMessageDto[] | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [deletingAll, setDeletingAll] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -74,6 +87,31 @@ export default function AdminSettingsPage() {
       await markSupportMessageRead(id);
     } catch (error) {
       console.error("[admin/settings] failed to mark message read:", error);
+    }
+  }
+
+  async function deleteMessage(id: string) {
+    setBusyId(id);
+    try {
+      await deleteSupportMessage(id);
+      setMessages((current) => current?.filter((message) => message.id !== id) ?? current);
+    } catch (error) {
+      console.error("[admin/settings] failed to delete message:", error);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function deleteAll() {
+    if (!window.confirm(t.confirmDeleteAll)) return;
+    setDeletingAll(true);
+    try {
+      await deleteAllSupportMessages();
+      setMessages([]);
+    } catch (error) {
+      console.error("[admin/settings] failed to delete all messages:", error);
+    } finally {
+      setDeletingAll(false);
     }
   }
 
@@ -109,7 +147,20 @@ export default function AdminSettingsPage() {
             <InboxIcon className="size-4 text-muted-foreground" />
             {t.inbox}
           </p>
-          {unreadCount > 0 && <StatusBadge tone="warning">{`${unreadCount} ${t.unread}`}</StatusBadge>}
+          <div className="flex items-center gap-2">
+            {unreadCount > 0 && <StatusBadge tone="warning">{`${unreadCount} ${t.unread}`}</StatusBadge>}
+            {messages !== null && messages.length > 0 && (
+              <button
+                type="button"
+                onClick={deleteAll}
+                disabled={deletingAll}
+                className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-rose-100 hover:text-rose-700 disabled:opacity-50 dark:hover:bg-rose-950/50 dark:hover:text-rose-400"
+              >
+                {deletingAll ? <LoaderIcon className="size-3.5 animate-spin" /> : <TrashIcon className="size-3.5" />}
+                {t.deleteAll}
+              </button>
+            )}
+          </div>
         </div>
 
         {loadError ? (
@@ -146,6 +197,20 @@ export default function AdminSettingsPage() {
                     </button>
                   )}
                 </div>
+                <button
+                  type="button"
+                  onClick={() => deleteMessage(message.id)}
+                  disabled={busyId === message.id}
+                  aria-label={t.deleteMessage}
+                  title={t.deleteMessage}
+                  className="flex size-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-rose-100 hover:text-rose-700 disabled:opacity-50 dark:hover:bg-rose-950/50 dark:hover:text-rose-400"
+                >
+                  {busyId === message.id ? (
+                    <LoaderIcon className="size-3.5 animate-spin" />
+                  ) : (
+                    <TrashIcon className="size-3.5" />
+                  )}
+                </button>
               </li>
             ))}
           </ul>
