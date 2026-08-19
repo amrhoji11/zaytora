@@ -29,7 +29,6 @@ const COPY = {
     loadError: "تعذّر تحميل رسائل الدعم.",
     deleteMessage: "حذف الرسالة",
     deleteAll: "حذف الكل",
-    confirmDeleteAll: "هل أنت متأكد من حذف جميع رسائل الدعم؟ لا يمكن التراجع عن هذا الإجراء.",
   },
   en: {
     subtitle: "Manual payment and contact settings, and the support message inbox.",
@@ -44,7 +43,6 @@ const COPY = {
     loadError: "Couldn't load support messages.",
     deleteMessage: "Delete message",
     deleteAll: "Delete all",
-    confirmDeleteAll: "Delete all support messages? This can't be undone.",
   },
 };
 
@@ -103,7 +101,6 @@ export default function AdminSettingsPage() {
   }
 
   async function deleteAll() {
-    if (!window.confirm(t.confirmDeleteAll)) return;
     setDeletingAll(true);
     try {
       await deleteAllSupportMessages();
