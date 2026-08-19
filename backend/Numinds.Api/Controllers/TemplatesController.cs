@@ -18,10 +18,16 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
     // minute, but GET /api/templates is hit by every visitor browsing
     // templates or opening the studio (and was previously hitting Postgres,
     // uncached, on every single one of those) — a real contributor to the
-    // database-transfer usage that exhausted Neon's free-tier quota. A short
-    // TTL keeps admin edits visible within a minute without needing explicit
-    // cache invalidation wired into every write path.
+    // database-transfer usage that exhausted Neon's free-tier quota.
+    //
+    // _cacheVersion is folded into every cache key below and bumped by
+    // BustCache() after every write. Without it, the admin's own "save" ->
+    // re-fetch-the-list round trip (adminTemplatesStore.update) could read
+    // back the pre-edit cached list for up to CacheTtl, making a real,
+    // already-persisted save look like it silently didn't take.
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(2);
+    private static int _cacheVersion;
+    private static void BustCache() => Interlocked.Increment(ref _cacheVersion);
     private const long MaxImageBytes = 8 * 1024 * 1024;
     private static readonly Dictionary<string, string> AllowedImageContentTypes = new()
     {
@@ -54,7 +60,7 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
         [FromQuery] bool includeInactive,
         CancellationToken cancellationToken)
     {
-        var cacheKey = $"templates:{category}:{includeInactive}";
+        var cacheKey = $"templates:v{_cacheVersion}:{category}:{includeInactive}";
         if (cache.TryGetValue(cacheKey, out List<TemplateDto>? cached))
         {
             return Ok(cached);
@@ -152,7 +158,7 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
     [HttpGet("homepage")]
     public async Task<ActionResult<IEnumerable<TemplateDto>>> GetHomepageTemplates(CancellationToken cancellationToken)
     {
-        const string cacheKey = "templates:homepage";
+        var cacheKey = $"templates:v{_cacheVersion}:homepage";
         if (cache.TryGetValue(cacheKey, out List<TemplateDto>? cachedHomepage))
         {
             return Ok(cachedHomepage);
@@ -369,6 +375,7 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
 
         db.Templates.Add(template);
         await db.SaveChangesAsync(cancellationToken);
+        BustCache();
 
         // Brand new row — zero invitations by construction, no query needed.
         var dto = ToDto(template, usageCount: 0, envelope);
@@ -427,6 +434,7 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
         template.IsActive = request.IsActive;
 
         await db.SaveChangesAsync(cancellationToken);
+        BustCache();
 
         var usageCount = await db.Invitations.CountAsync(i => i.TemplateId == id, cancellationToken);
         return Ok(ToDto(template, usageCount, envelope));
@@ -450,6 +458,7 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
 
         template.IsActive = request.IsActive;
         await db.SaveChangesAsync(cancellationToken);
+        BustCache();
         return NoContent();
     }
 
@@ -482,6 +491,7 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
 
         template.IsHomepageFeatured = request.IsHomepageFeatured;
         await db.SaveChangesAsync(cancellationToken);
+        BustCache();
         return NoContent();
     }
 
@@ -506,6 +516,7 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
 
         db.Templates.Remove(template);
         await db.SaveChangesAsync(cancellationToken);
+        BustCache();
         return NoContent();
     }
 

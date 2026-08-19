@@ -21,8 +21,13 @@ public class PartnersController(
 {
     // Same reasoning as TemplatesController's CacheTtl — GET /api/partners/approved
     // is public, hit by every /OurPartners visitor, and rarely changes minute
-    // to minute.
+    // to minute. _cacheVersion + BustCache() mirror TemplatesController's fix
+    // for the same staleness bug: without it, an admin action that changes
+    // approved-partner data (approve/reject/activate/discount/delete) could
+    // stay invisible on the public page for up to ApprovedCacheTtl.
     private static readonly TimeSpan ApprovedCacheTtl = TimeSpan.FromMinutes(2);
+    private static int _cacheVersion;
+    private static void BustCache() => Interlocked.Increment(ref _cacheVersion);
     // POST /api/partners — requires an account (PartnerApplicationModal.tsx
     // gates the form on useAuth() before showing it) so an approved partner
     // has a login to reach their self-service profile at GET/PUT
@@ -159,7 +164,7 @@ public class PartnersController(
     [HttpGet("approved")]
     public async Task<ActionResult<List<ApprovedPartnerDto>>> GetApproved(CancellationToken cancellationToken)
     {
-        const string cacheKey = "partners:approved";
+        var cacheKey = $"partners:v{_cacheVersion}:approved";
         if (cache.TryGetValue(cacheKey, out List<ApprovedPartnerDto>? cached))
         {
             return Ok(cached);
@@ -264,6 +269,7 @@ public class PartnersController(
         partner.DiscountValue ??= pricing?.DefaultPartnerDiscountValue ?? 0m;
 
         await db.SaveChangesAsync(cancellationToken);
+        BustCache();
         return Ok(ToDto(partner));
     }
 
@@ -281,6 +287,7 @@ public class PartnersController(
         partner.Status = "rejected";
         partner.Active = false;
         await db.SaveChangesAsync(cancellationToken);
+        BustCache();
         return Ok(ToDto(partner));
     }
 
@@ -298,6 +305,7 @@ public class PartnersController(
 
         partner.Active = request.Active;
         await db.SaveChangesAsync(cancellationToken);
+        BustCache();
         return Ok(ToDto(partner));
     }
 
@@ -329,6 +337,7 @@ public class PartnersController(
         partner.DiscountType = request.DiscountType;
         partner.DiscountValue = request.DiscountValue;
         await db.SaveChangesAsync(cancellationToken);
+        BustCache();
         return Ok(ToDto(partner));
     }
 
@@ -344,6 +353,7 @@ public class PartnersController(
 
         db.Partners.Remove(partner);
         await db.SaveChangesAsync(cancellationToken);
+        BustCache();
         return NoContent();
     }
 
