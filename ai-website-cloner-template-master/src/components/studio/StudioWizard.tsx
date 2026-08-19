@@ -52,6 +52,7 @@ const COPY = {
       missingVenueName: "الرجاء إدخال اسم كل قاعة أضفتها، أو احذف القاعات الفارغة.",
       missingWishlistItemName: "الرجاء إدخال اسم كل عنصر بقائمة الأمنيات، أو احذف العناصر الفارغة.",
       invalidQrScanRange: "وقت نهاية المسح يجب أن يكون بعد وقت البداية.",
+      programItemBeforeEvent: "هناك بند في برنامج الحفل وقته أبكر من موعد الحفل المعلن. عدّل الوقت قبل المتابعة.",
     } satisfies Record<StepErrorCode, string>,
   },
   en: {
@@ -77,6 +78,7 @@ const COPY = {
       missingVenueName: "Please name every venue you've added, or remove the empty ones.",
       missingWishlistItemName: "Please name every wishlist item, or remove the empty ones.",
       invalidQrScanRange: "Scan end time must be after the start time.",
+      programItemBeforeEvent: "One of your program items is scheduled earlier than the announced event time. Fix it before continuing.",
     } satisfies Record<StepErrorCode, string>,
   },
 };

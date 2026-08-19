@@ -30,7 +30,8 @@ export type StepErrorCode =
   | "pastEventDate"
   | "missingVenueName"
   | "missingWishlistItemName"
-  | "invalidQrScanRange";
+  | "invalidQrScanRange"
+  | "programItemBeforeEvent";
 
 import dynamic from "next/dynamic";
 
@@ -96,7 +97,20 @@ const STEP_META = [
     validate: (form: InvitationDetail): StepErrorCode | null =>
       form.venues.some((venue) => !venue.name.trim()) ? "missingVenueName" : null,
   },
-  { id: "program", icon: CalendarIcon, Component: Step07Program },
+  {
+    id: "program",
+    icon: CalendarIcon,
+    Component: Step07Program,
+    validate: (form: InvitationDetail): StepErrorCode | null => {
+      if (!form.showEventProgram || !form.eventDateTime) return null;
+      // eventDateTime is a "YYYY-MM-DDTHH:mm" datetime-local string (see
+      // Step04BasicInfo); program items only store a bare "HH:mm" time, so
+      // compare time-of-day strings directly rather than parsing full dates.
+      const eventTime = form.eventDateTime.slice(11, 16);
+      const hasItemBeforeEvent = form.programItems.some((item) => item.time && item.time < eventTime);
+      return hasItemBeforeEvent ? "programItemBeforeEvent" : null;
+    },
+  },
   { id: "rules", icon: ClipboardListIcon, Component: Step08Rules },
   { id: "accommodation", icon: BedDoubleIcon, Component: Step09Accommodation },
   { id: "gallery", icon: ImageIcon, Component: Step10Gallery },
