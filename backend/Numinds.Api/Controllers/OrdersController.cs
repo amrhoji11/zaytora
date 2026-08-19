@@ -228,7 +228,7 @@ public class OrdersController(NumindsDbContext db) : ControllerBase
             .Take(pageSize)
             .ToListAsync(cancellationToken);
 
-        var invitationIds = orders.Select(o => o.InvitationId).Distinct().ToList();
+        var invitationIds = orders.Where(o => o.InvitationId.HasValue).Select(o => o.InvitationId!.Value).Distinct().ToList();
         var invitations = await db.Invitations
             .AsNoTracking()
             .Where(i => invitationIds.Contains(i.Id))
@@ -237,7 +237,7 @@ public class OrdersController(NumindsDbContext db) : ControllerBase
 
         return Ok(new PagedResult<OrderDto>
         {
-            Items = orders.Select(o => ToDto(o, invitations.GetValueOrDefault(o.InvitationId))).ToList(),
+            Items = orders.Select(o => ToDto(o, o.InvitationId is { } id ? invitations.GetValueOrDefault(id) : null)).ToList(),
             TotalCount = totalCount,
             Page = page,
             PageSize = pageSize,
@@ -372,7 +372,7 @@ public class OrdersController(NumindsDbContext db) : ControllerBase
     private static OrderDto ToDto(Order order, Invitation? invitation) => new()
     {
         Id = order.Id.ToString(),
-        InvitationId = order.InvitationId.ToString(),
+        InvitationId = order.InvitationId?.ToString() ?? string.Empty,
         CustomerName = order.CustomerName,
         CustomerEmail = order.CustomerEmail,
         QrEnabled = order.QrEnabled,

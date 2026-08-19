@@ -250,10 +250,14 @@ public class NumindsDbContext(DbContextOptions<NumindsDbContext> options)
 
             // No navigation collection on Invitation — a one-way reference is
             // enough here, nothing currently needs "this invitation's orders".
+            // SetNull (not Cascade): a customer can delete their own
+            // invitation at any status, including "paid" -- an order's
+            // revenue/payment history must survive that, not vanish along
+            // with the invitation content it was for.
             entity.HasOne(o => o.Invitation)
                 .WithMany()
                 .HasForeignKey(o => o.InvitationId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         builder.Entity<Partner>(entity =>

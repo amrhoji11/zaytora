@@ -9,7 +9,12 @@ namespace Numinds.Api.Models.Entities;
 public class Order
 {
     public Guid Id { get; set; }
-    public Guid InvitationId { get; set; }
+    // Nullable so a customer deleting their own invitation (allowed at any
+    // status, including "paid" -- see InvitationsController.Delete) doesn't
+    // cascade-delete this order and silently erase real revenue/payment
+    // history from the admin's records. See NumindsDbContext's
+    // DeleteBehavior.SetNull on this relationship.
+    public Guid? InvitationId { get; set; }
     public Invitation? Invitation { get; set; }
 
     public string CustomerName { get; set; } = string.Empty;
