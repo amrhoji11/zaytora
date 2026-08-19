@@ -19,6 +19,7 @@ public class NumindsDbContext(DbContextOptions<NumindsDbContext> options)
     public DbSet<Envelope> Envelopes => Set<Envelope>();
     public DbSet<Invitation> Invitations => Set<Invitation>();
     public DbSet<RsvpResponse> RsvpResponses => Set<RsvpResponse>();
+    public DbSet<CapturedPhoto> CapturedPhotos => Set<CapturedPhoto>();
     public DbSet<ContactSettings> ContactSettings => Set<ContactSettings>();
     public DbSet<ContactWhatsAppNumber> ContactWhatsAppNumbers => Set<ContactWhatsAppNumber>();
     public DbSet<PaymentSettings> PaymentSettings => Set<PaymentSettings>();
@@ -121,6 +122,16 @@ public class NumindsDbContext(DbContextOptions<NumindsDbContext> options)
             entity.HasOne(r => r.Invitation)
                 .WithMany(i => i.Responses)
                 .HasForeignKey(r => r.InvitationId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<CapturedPhoto>(entity =>
+        {
+            entity.Property(p => p.PhotoUrl).HasMaxLength(512).IsRequired();
+
+            entity.HasOne(p => p.Invitation)
+                .WithMany(i => i.CapturedPhotos)
+                .HasForeignKey(p => p.InvitationId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

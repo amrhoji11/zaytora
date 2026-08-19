@@ -31,3 +31,19 @@ public class RsvpResponseDto
     public string? Message { get; set; }
     public DateTime CreatedAt { get; set; }
 }
+
+// GET /api/invitations/{id}/captured-photos — one row per guest photo taken
+// with the invitation's built-in camera (CameraOverlay.tsx), for the owner's
+// dashboard "Captured" tab (GalleryModal.tsx).
+public class CapturedPhotoDto
+{
+    public string Id { get; set; } = string.Empty;
+    public string PhotoUrl { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+}
+
+public class CapturedPhotosPageDto
+{
+    public List<CapturedPhotoDto> Items { get; set; } = [];
+    public int TotalCount { get; set; }
+}

@@ -3,8 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { DownloadIcon, RefreshIcon, XIcon, ZapIcon, ZapOffIcon } from "@/components/icons";
+import { uploadCapturedPhoto } from "@/lib/services/invitations.service";
 
 const CAMERA_SUPPORTED = typeof navigator !== "undefined" && Boolean(navigator.mediaDevices?.getUserMedia);
+
+// Caps the captured photo's longest side before it's ever encoded -- keeps
+// both the guest's own saved copy and the dashboard upload well under the
+// backend's 8MB limit without a visible quality hit (a phone's raw camera
+// resolution is far more than any screen needs to display this photo at).
+const MAX_CAPTURE_DIMENSION = 1600;
 
 const COPY = {
   ar: {
@@ -62,6 +69,8 @@ export function CameraOverlay({
   standalone = false,
   names = "",
   eventDate = null,
+  invitationId = null,
+  readOnly = false,
 }: {
   isRtl: boolean;
   onClose: () => void;
@@ -73,6 +82,15 @@ export function CameraOverlay({
   // invitation, not a generic camera.
   names?: string;
   eventDate?: string | null;
+  // The real invitation id, so a capture can also upload to the owner's
+  // dashboard "Captured" tab (see uploadCapturedPhoto below). Null for the
+  // template/demo previews (buildMockInvitation has no real backend id).
+  invitationId?: string | null;
+  // The studio's own "designer previewing their draft" surfaces (same flag
+  // InvitationCanvas passes to InteractiveRSVPModal) — a capture here is the
+  // designer testing the camera, not a real guest, so it shouldn't count
+  // against the invitation's captured-photo storage.
+  readOnly?: boolean;
 }) {
   const t = isRtl ? COPY.ar : COPY.en;
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -123,9 +141,10 @@ export function CameraOverlay({
   function capture() {
     const video = videoRef.current;
     if (!video || !video.videoWidth) return;
+    const scale = Math.min(1, MAX_CAPTURE_DIMENSION / Math.max(video.videoWidth, video.videoHeight));
     const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    canvas.width = Math.round(video.videoWidth * scale);
+    canvas.height = Math.round(video.videoHeight * scale);
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     // Mirror the front camera the same way the live <video> preview is
@@ -136,12 +155,31 @@ export function CameraOverlay({
       ctx.translate(canvas.width, 0);
       ctx.scale(-1, 1);
     }
-    ctx.drawImage(video, 0, 0);
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     if (facingMode === "user") {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
     }
     paintBrand(ctx, canvas.width, canvas.height, names, eventDate);
-    setPhoto(canvas.toDataURL("image/jpeg", 0.92));
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+    setPhoto(dataUrl);
+
+    // Uploads to the owner's dashboard "Captured" tab, independent of
+    // whatever the guest does with their own local copy below (handleSave).
+    // Best-effort and silent: a failed upload shouldn't block or alarm the
+    // guest over a bonus feature they didn't ask to use.
+    if (invitationId && !readOnly) {
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) return;
+          const file = new File([blob], "captured-photo.jpg", { type: "image/jpeg" });
+          uploadCapturedPhoto(invitationId, file).catch((error) => {
+            console.error("[camera] failed to upload captured photo:", error);
+          });
+        },
+        "image/jpeg",
+        0.85
+      );
+    }
   }
 
   async function handleSave() {

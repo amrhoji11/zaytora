@@ -1615,6 +1615,8 @@ export function InvitationCanvas({
           standalone={standalone}
           names={names}
           eventDate={eventDate}
+          invitationId={value.id}
+          readOnly={readOnly}
         />
       )}
 

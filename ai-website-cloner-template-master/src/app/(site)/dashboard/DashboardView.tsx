@@ -579,6 +579,7 @@ export function DashboardView() {
 
       <GalleryModal
         open={Boolean(galleryRow)}
+        invitationId={galleryRow?.id ?? null}
         images={galleryImages}
         language={language}
         onClose={() => setGalleryRow(null)}

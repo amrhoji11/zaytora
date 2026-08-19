@@ -21,6 +21,7 @@ public class Invitation
     public DateTime UpdatedAt { get; set; }
 
     public List<RsvpResponse> Responses { get; set; } = [];
+    public List<CapturedPhoto> CapturedPhotos { get; set; } = [];
 
     // Step 1 — Invitation Language
     public string? Language { get; set; }

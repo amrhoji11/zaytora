@@ -317,6 +317,17 @@ export interface RsvpResponseDto {
   createdAt: string;
 }
 
+export interface CapturedPhotoDto {
+  id: string;
+  photoUrl: string;
+  createdAt: string;
+}
+
+export interface CapturedPhotosPageDto {
+  items: CapturedPhotoDto[];
+  totalCount: number;
+}
+
 // GET/PUT /api/payment-settings (admin only) — the admin's own receiving
 // account for manual bank-transfer checkout. Never carries a CVV/expiry.
 export interface PaymentSettingsDto {

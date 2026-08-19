@@ -1,5 +1,8 @@
-import { apiClient } from "@/lib/api/client";
+import { apiClient, ApiError } from "@/lib/api/client";
+import { API_BASE_URL } from "@/lib/api/config";
 import type {
+  CapturedPhotoDto,
+  CapturedPhotosPageDto,
   CreateInvitationRequest,
   InvitationDto,
   InvitationSummaryDto,
@@ -45,4 +48,40 @@ export function listRsvpResponses(id: string) {
 
 export function deleteRsvpResponse(id: string, responseId: string) {
   return apiClient.delete<void>(`/invitations/${id}/rsvp/${responseId}`);
+}
+
+// Anonymous — a guest's shot from the invitation's built-in camera
+// (CameraOverlay.tsx), uploaded so the owner's dashboard "Captured" tab
+// gets a copy too. Bypasses apiClient (always JSON-encodes) for a raw
+// multipart fetch, same pattern as templates.service.ts's uploadTemplateImage.
+export async function uploadCapturedPhoto(id: string, file: File): Promise<CapturedPhotoDto> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/invitations/${id}/captured-photos`, {
+      method: "POST",
+      credentials: "include",
+      body: formData,
+    });
+  } catch (error) {
+    throw new ApiError(error instanceof Error ? error.message : "Network error uploading photo", 0);
+  }
+
+  const payload = await response.json().catch(() => undefined);
+  if (!response.ok) {
+    throw new ApiError(payload?.message ?? response.statusText, response.status, payload);
+  }
+  return payload as CapturedPhotoDto;
+}
+
+// The caller's own invitation only (session or GuestId cookie, same as
+// listRsvpResponses). Powers the dashboard's GalleryModal "Captured" tab.
+export function listCapturedPhotos(id: string, page: number, pageSize: number) {
+  return apiClient.get<CapturedPhotosPageDto>(`/invitations/${id}/captured-photos?page=${page}&pageSize=${pageSize}`);
+}
+
+export function deleteCapturedPhoto(id: string, photoId: string) {
+  return apiClient.delete<void>(`/invitations/${id}/captured-photos/${photoId}`);
 }

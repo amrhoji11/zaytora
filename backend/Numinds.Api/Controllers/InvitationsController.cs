@@ -7,6 +7,7 @@ using Numinds.Api.Data;
 using Numinds.Api.Models;
 using Numinds.Api.Models.Dtos;
 using Numinds.Api.Models.Entities;
+using Numinds.Api.Services;
 
 namespace Numinds.Api.Controllers;
 
@@ -14,7 +15,8 @@ namespace Numinds.Api.Controllers;
 [Route("api/invitations")]
 public class InvitationsController(
     NumindsDbContext db,
-    UserManager<ApplicationUser> userManager) : ControllerBase
+    UserManager<ApplicationUser> userManager,
+    IFileStorageService storage) : ControllerBase
 {
     // Matches numinds.me's "5 invitation cards" cap. Applies to authenticated
     // users (by UserId) and anonymous guests alike (by the GuestId tracking
@@ -489,6 +491,140 @@ public class InvitationsController(
         }
 
         db.RsvpResponses.Remove(response);
+        await db.SaveChangesAsync(cancellationToken);
+
+        return NoContent();
+    }
+
+    private const long MaxCapturedPhotoBytes = 8 * 1024 * 1024;
+    private static readonly Dictionary<string, string> AllowedCapturedPhotoContentTypes = new()
+    {
+        ["image/jpeg"] = ".jpg",
+        ["image/png"] = ".png",
+        ["image/webp"] = ".webp",
+    };
+    // Bounds worst-case R2 storage per invitation. Unlike every other upload
+    // in this app (templates, envelopes, gallery photos), guest camera
+    // captures have no admin curation and no fixed count picked by the
+    // invitation's own owner — without a cap, one popular event could rack
+    // up unbounded storage cost.
+    private const int MaxCapturedPhotosPerInvitation = 300;
+
+    // POST /api/invitations/{id}/captured-photos
+    // Anonymous: a guest using the invitation's built-in camera
+    // (CameraOverlay.tsx) uploads their shot here so the owner's dashboard
+    // also gets a copy, independent of whatever the guest does with their
+    // own local save (share sheet / long-press "Add to Photos"). Gated to
+    // actually-live invitations (paid/shared) -- unlike SubmitRsvp above, a
+    // draft/unpaid invitation shouldn't be able to accumulate real storage
+    // cost from an endpoint nobody but its own designer could realistically
+    // reach yet.
+    [HttpPost("{id:guid}/captured-photos")]
+    public async Task<ActionResult<CapturedPhotoDto>> UploadCapturedPhoto(
+        Guid id,
+        IFormFile file,
+        CancellationToken cancellationToken)
+    {
+        var invitation = await db.Invitations.FirstOrDefaultAsync(i => i.Id == id, cancellationToken);
+        if (invitation is null || !IsPubliclyVisible(invitation) || invitation.HideCameraButton)
+        {
+            return NotFound();
+        }
+
+        if (file is null || file.Length == 0)
+        {
+            return BadRequest(new { message = "No file uploaded." });
+        }
+        if (file.Length > MaxCapturedPhotoBytes)
+        {
+            return BadRequest(new { message = "Image must be 8MB or smaller." });
+        }
+        if (!AllowedCapturedPhotoContentTypes.TryGetValue(file.ContentType, out var extension))
+        {
+            return BadRequest(new { message = "Image must be a JPG, PNG, or WebP file." });
+        }
+
+        var existingCount = await db.CapturedPhotos.CountAsync(p => p.InvitationId == id, cancellationToken);
+        if (existingCount >= MaxCapturedPhotosPerInvitation)
+        {
+            return Conflict(new { title = $"This event has reached its limit of {MaxCapturedPhotosPerInvitation} captured photos." });
+        }
+
+        var url = await storage.UploadAsync(file, "captured-photos", extension, $"{Request.Scheme}://{Request.Host}", cancellationToken);
+
+        var photo = new CapturedPhoto
+        {
+            Id = Guid.NewGuid(),
+            InvitationId = id,
+            PhotoUrl = url,
+            CreatedAt = DateTime.UtcNow,
+        };
+        db.CapturedPhotos.Add(photo);
+        await db.SaveChangesAsync(cancellationToken);
+
+        return Ok(new CapturedPhotoDto { Id = photo.Id.ToString(), PhotoUrl = photo.PhotoUrl, CreatedAt = photo.CreatedAt });
+    }
+
+    // GET /api/invitations/{id}/captured-photos?page=1&pageSize=24
+    // The owner's dashboard "Captured" tab -- paginated so an event with
+    // hundreds of guest photos doesn't force-load them all into the modal
+    // at once. Scoped to the caller's own invitation, same as ListRsvpResponses.
+    [HttpGet("{id:guid}/captured-photos")]
+    public async Task<ActionResult<CapturedPhotosPageDto>> ListCapturedPhotos(
+        Guid id,
+        [FromQuery] int page,
+        [FromQuery] int pageSize,
+        CancellationToken cancellationToken)
+    {
+        var userId = await GetCurrentUserIdAsync();
+        var invitation = await db.Invitations.AsNoTracking().FirstOrDefaultAsync(i => i.Id == id, cancellationToken);
+        if (invitation is null)
+        {
+            return NotFound();
+        }
+        if (!OwnsInvitation(invitation, userId))
+        {
+            return Forbid();
+        }
+
+        pageSize = pageSize <= 0 ? 24 : Math.Min(pageSize, 100);
+        page = Math.Max(page, 1);
+
+        var query = db.CapturedPhotos.AsNoTracking().Where(p => p.InvitationId == id);
+        var totalCount = await query.CountAsync(cancellationToken);
+        var items = await query
+            .OrderByDescending(p => p.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(p => new CapturedPhotoDto { Id = p.Id.ToString(), PhotoUrl = p.PhotoUrl, CreatedAt = p.CreatedAt })
+            .ToListAsync(cancellationToken);
+
+        return Ok(new CapturedPhotosPageDto { Items = items, TotalCount = totalCount });
+    }
+
+    // DELETE /api/invitations/{id}/captured-photos/{photoId}
+    // Lets the owner remove an unwanted candid shot from the dashboard.
+    [HttpDelete("{id:guid}/captured-photos/{photoId:guid}")]
+    public async Task<IActionResult> DeleteCapturedPhoto(Guid id, Guid photoId, CancellationToken cancellationToken)
+    {
+        var userId = await GetCurrentUserIdAsync();
+        var invitation = await db.Invitations.FirstOrDefaultAsync(i => i.Id == id, cancellationToken);
+        if (invitation is null)
+        {
+            return NotFound();
+        }
+        if (!OwnsInvitation(invitation, userId))
+        {
+            return Forbid();
+        }
+
+        var photo = await db.CapturedPhotos.FirstOrDefaultAsync(p => p.Id == photoId && p.InvitationId == id, cancellationToken);
+        if (photo is null)
+        {
+            return NotFound();
+        }
+
+        db.CapturedPhotos.Remove(photo);
         await db.SaveChangesAsync(cancellationToken);
 
         return NoContent();
