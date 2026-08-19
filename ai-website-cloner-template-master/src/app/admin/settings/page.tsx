@@ -13,6 +13,7 @@ import {
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { ContactSettingsForm } from "@/components/admin/ContactSettingsForm";
 import { PaymentSettingsForm } from "@/components/admin/PaymentSettingsForm";
+import { SupportMessagesDeleteAllDialog } from "@/components/admin/SupportMessagesDeleteAllDialog";
 import type { SupportMessageDto } from "@/types/api";
 
 const COPY = {
@@ -62,6 +63,7 @@ export default function AdminSettingsPage() {
   const [loadError, setLoadError] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [deletingAll, setDeletingAll] = useState(false);
+  const [confirmingDeleteAll, setConfirmingDeleteAll] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -100,11 +102,12 @@ export default function AdminSettingsPage() {
     }
   }
 
-  async function deleteAll() {
+  async function confirmDeleteAll() {
     setDeletingAll(true);
     try {
       await deleteAllSupportMessages();
       setMessages([]);
+      setConfirmingDeleteAll(false);
     } catch (error) {
       console.error("[admin/settings] failed to delete all messages:", error);
     } finally {
@@ -149,11 +152,10 @@ export default function AdminSettingsPage() {
             {messages !== null && messages.length > 0 && (
               <button
                 type="button"
-                onClick={deleteAll}
-                disabled={deletingAll}
-                className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-rose-100 hover:text-rose-700 disabled:opacity-50 dark:hover:bg-rose-950/50 dark:hover:text-rose-400"
+                onClick={() => setConfirmingDeleteAll(true)}
+                className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-rose-100 hover:text-rose-700 dark:hover:bg-rose-950/50 dark:hover:text-rose-400"
               >
-                {deletingAll ? <LoaderIcon className="size-3.5 animate-spin" /> : <TrashIcon className="size-3.5" />}
+                <TrashIcon className="size-3.5" />
                 {t.deleteAll}
               </button>
             )}
@@ -213,6 +215,14 @@ export default function AdminSettingsPage() {
           </ul>
         )}
       </div>
+
+      <SupportMessagesDeleteAllDialog
+        open={confirmingDeleteAll}
+        language={language}
+        deleting={deletingAll}
+        onConfirm={confirmDeleteAll}
+        onCancel={() => setConfirmingDeleteAll(false)}
+      />
     </div>
   );
 }
