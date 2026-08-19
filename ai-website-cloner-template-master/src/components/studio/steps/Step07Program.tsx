@@ -57,12 +57,23 @@ export function Step07Program({
           emptyLabel={t.emptyItems}
           renderItem={(item, update) => (
             <div className="flex gap-2">
-              <input
-                type="time"
-                value={item.time ?? ""}
-                onChange={(event) => update({ time: event.target.value })}
-                className="w-32 rounded-lg border border-border bg-background/5 px-2 py-2 text-sm text-foreground outline-none [color-scheme:dark] focus:border-gold"
-              />
+              {/* iOS Safari renders an empty type="time" input as a blank
+                  box -- no "--:--" placeholder like desktop browsers show --
+                  so without this overlay there's no visible sign it's a time
+                  field at all until you tap it and the wheel picker opens. */}
+              <div className="relative w-32">
+                <input
+                  type="time"
+                  value={item.time ?? ""}
+                  onChange={(event) => update({ time: event.target.value })}
+                  className="w-full rounded-lg border border-border bg-background/5 px-2 py-2 text-sm text-foreground outline-none [color-scheme:dark] focus:border-gold"
+                />
+                {!item.time && (
+                  <span className="pointer-events-none absolute inset-y-0 start-2 flex items-center text-sm text-muted-foreground">
+                    --:--
+                  </span>
+                )}
+              </div>
               <input
                 type="text"
                 value={item.title}

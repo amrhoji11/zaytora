@@ -10,7 +10,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { useCurrency, CURRENCY_CODES } from "@/context/CurrencyContext";
 import type { PublicCurrencyCode } from "@/lib/priceRates";
 import { ApiError } from "@/lib/api/client";
-import { ChevronLeftIcon, ChevronRightIcon, LoaderIcon } from "@/components/icons";
+import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, LoaderIcon } from "@/components/icons";
 import { createInvitation, getInvitation, updateInvitation } from "@/lib/services/invitations.service";
 import type { InvitationDetail, UpdateInvitationPatch } from "@/types/studio";
 import { WizardStepper } from "./WizardStepper";
@@ -463,7 +463,9 @@ export function StudioWizard() {
                     header above — this label+dots row is a second, more
                     discoverable trigger for it (the reference design's own
                     footer stepper is clickable the same way), not just a
-                    passive progress readout. */}
+                    passive progress readout. Hidden below `sm` since the full
+                    label + 18-dot row doesn't fit next to the Back/Next
+                    buttons on a phone-width screen. */}
                 <button
                   type="button"
                   onClick={() => setStepNavOpen(true)}
@@ -483,6 +485,22 @@ export function StudioWizard() {
                       />
                     ))}
                   </div>
+                </button>
+                {/* Mobile-only equivalent of the trigger above -- a compact
+                    "N/18 ⌄" pill instead of the label+dots row, which is too
+                    wide to fit between Back/Next on a phone screen. Without
+                    this, phones had no visible, obviously-tappable way to
+                    jump between steps (the only other trigger is the small
+                    unlabeled pill in the panel header up top). */}
+                <button
+                  type="button"
+                  onClick={() => setStepNavOpen(true)}
+                  aria-haspopup="dialog"
+                  aria-expanded={stepNavOpen}
+                  className="flex items-center gap-1 rounded-full border border-gold/20 bg-gold/5 px-3 py-2 text-xs font-medium text-gold transition-colors hover:bg-gold/10 sm:hidden"
+                >
+                  {stepIndex + 1}/{wizardSteps.length}
+                  <ChevronDownIcon className="size-3.5" />
                 </button>
                 <button
                   type="button"
