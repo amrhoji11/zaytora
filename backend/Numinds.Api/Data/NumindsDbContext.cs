@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -5,9 +6,15 @@ using Numinds.Api.Models.Entities;
 
 namespace Numinds.Api.Data;
 
+// IDataProtectionKeyContext: persists auth-cookie encryption keys in this
+// same database instead of the container's local disk — without it, every
+// host redeploy (a new, empty container filesystem) mints a fresh key and
+// silently invalidates every logged-in user's session cookie.
 public class NumindsDbContext(DbContextOptions<NumindsDbContext> options)
-    : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>(options)
+    : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>(options), IDataProtectionKeyContext
 {
+    public DbSet<Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.DataProtectionKey> DataProtectionKeys => Set<Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.DataProtectionKey>();
+
     public DbSet<Template> Templates => Set<Template>();
     public DbSet<Envelope> Envelopes => Set<Envelope>();
     public DbSet<Invitation> Invitations => Set<Invitation>();

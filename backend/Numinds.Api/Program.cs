@@ -1,4 +1,5 @@
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
@@ -105,6 +106,15 @@ builder.Services
     })
     .AddEntityFrameworkStores<NumindsDbContext>()
     .AddDefaultTokenProviders();
+
+// Persists the keys that encrypt/sign auth cookies in the database instead
+// of the default (a directory on the host's local disk). Free hosts like
+// Render replace the container filesystem on every deploy, so without this
+// every redeploy minted a fresh key and silently logged every user out —
+// this is what makes a session survive across deploys.
+builder.Services.AddDataProtection()
+    .PersistKeysToDbContext<NumindsDbContext>()
+    .SetApplicationName("Numinds");
 
 // Google sign-in is only registered once real credentials are configured
 // (via `dotnet user-secrets`) — until then "Continue with Google" 404s
