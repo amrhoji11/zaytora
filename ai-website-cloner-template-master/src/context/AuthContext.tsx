@@ -8,7 +8,7 @@ import {
   register as registerRequest,
   updateProfile as updateProfileRequest,
 } from "@/lib/services/account.service";
-import { setUnauthorizedListener } from "@/lib/api/client";
+import { ApiError, setUnauthorizedListener } from "@/lib/api/client";
 import { forgetLastInvitation } from "@/components/studio/DraftBanner";
 import type { LoginRequest, RegisterRequest, UpdateProfileRequest, UserDto } from "@/types/api";
 
@@ -32,12 +32,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    try {
-      setUser(await getCurrentUser());
-    } catch {
-      setUser(null);
-    } finally {
-      setLoading(false);
+    // Render's free instance spins down after inactivity and can take up to
+    // ~50s to wake back up, and a device just reconnecting to the internet
+    // (e.g. waking from sleep) can briefly fail requests too. Neither means
+    // the session actually ended, so retry with a longer timeout before
+    // giving up -- only a real 401 from the API means "log out."
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        setUser(await getCurrentUser({ timeoutMs: 30_000 }));
+        setLoading(false);
+        return;
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 401) {
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+        if (attempt === 2) {
+          // Exhausted retries on a connectivity/cold-start problem, not a
+          // real "unauthenticated" response -- leave `user` as-is instead
+          // of forcing a false logout.
+          setLoading(false);
+          return;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 1500 * (attempt + 1)));
+      }
     }
   }, []);
 

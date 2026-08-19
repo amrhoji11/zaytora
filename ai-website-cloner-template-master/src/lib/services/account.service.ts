@@ -2,8 +2,8 @@ import { apiClient } from "@/lib/api/client";
 import { API_BASE_URL } from "@/lib/api/config";
 import type { LoginRequest, RegisterRequest, UpdateProfileRequest, UserDto } from "@/types/api";
 
-export function getCurrentUser() {
-  return apiClient.get<UserDto>("/account/me");
+export function getCurrentUser(options?: { timeoutMs?: number }) {
+  return apiClient.get<UserDto>("/account/me", options);
 }
 
 export function updateProfile(payload: UpdateProfileRequest) {
