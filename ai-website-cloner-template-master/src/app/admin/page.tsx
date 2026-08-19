@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { WalletIcon, OrdersIcon, HandshakeIcon, ClockIcon, LoaderIcon } from "@/components/icons";
+import { WalletIcon, OrdersIcon, HandshakeIcon, ClockIcon, CardIcon, LoaderIcon } from "@/components/icons";
 import { useLanguage } from "@/context/LanguageContext";
 import { listOrders } from "@/lib/services/orders.service";
 import { listPartners } from "@/lib/services/partners.service";
@@ -16,7 +16,8 @@ const COPY = {
     revenue: "الإيرادات",
     activeInvites: "الدعوات النشطة",
     approvedPartners: "الشركاء المعتمدون",
-    pendingRequests: "الطلبات المعلقة",
+    pendingPartnerRequests: "طلبات الشركاء المعلقة",
+    pendingOrders: "الطلبات المعلقة",
     revenueChart: "نمو الإيرادات",
     partnerChart: "نمو الشركاء المعتمدين",
     recentOrders: "أحدث الطلبات",
@@ -31,7 +32,8 @@ const COPY = {
     revenue: "Revenue",
     activeInvites: "Active Invites",
     approvedPartners: "Approved Partners",
-    pendingRequests: "Pending Requests",
+    pendingPartnerRequests: "Pending Partner Requests",
+    pendingOrders: "Pending Orders",
     revenueChart: "Revenue growth",
     partnerChart: "Approved partner growth",
     recentOrders: "Recent orders",
@@ -102,7 +104,8 @@ export default function AdminOverviewPage() {
   }, []);
 
   const approvedCount = partners.filter((p) => p.status === "approved").length;
-  const pendingCount = partners.filter((p) => p.status === "pending").length;
+  const pendingPartnersCount = partners.filter((p) => p.status === "pending").length;
+  const pendingOrdersCount = orders.filter((o) => o.paymentStatus === "pending").length;
 
   // Active invites = only paid orders — pending/failed never produced a live
   // invitation, so they must not inflate this count.
@@ -167,7 +170,7 @@ export default function AdminOverviewPage() {
     <div className="space-y-6">
       <p className="text-sm text-muted-foreground">{t.subtitle}</p>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <KpiCard
           icon={WalletIcon}
           tone="emerald"
@@ -177,7 +180,8 @@ export default function AdminOverviewPage() {
         />
         <KpiCard icon={OrdersIcon} tone="blue" label={t.activeInvites} value={String(activeInvites)} />
         <KpiCard icon={HandshakeIcon} tone="violet" label={t.approvedPartners} value={String(approvedCount)} />
-        <KpiCard icon={ClockIcon} tone="amber" label={t.pendingRequests} value={String(pendingCount)} />
+        <KpiCard icon={CardIcon} tone="rose" label={t.pendingOrders} value={String(pendingOrdersCount)} />
+        <KpiCard icon={ClockIcon} tone="amber" label={t.pendingPartnerRequests} value={String(pendingPartnersCount)} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

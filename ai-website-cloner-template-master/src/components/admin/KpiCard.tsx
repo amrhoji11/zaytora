@@ -1,12 +1,13 @@
 import { cn } from "@/lib/utils";
 
-export type KpiTone = "emerald" | "blue" | "violet" | "amber";
+export type KpiTone = "emerald" | "blue" | "violet" | "amber" | "rose";
 
 const TONE_CLASSES: Record<KpiTone, string> = {
   emerald: "bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400",
   blue: "bg-blue-100 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400",
   violet: "bg-violet-100 dark:bg-violet-950/50 text-violet-700 dark:text-violet-400",
   amber: "bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400",
+  rose: "bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-400",
 };
 
 interface KpiCardProps {
