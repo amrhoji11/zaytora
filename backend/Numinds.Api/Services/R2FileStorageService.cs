@@ -53,6 +53,15 @@ public class R2FileStorageService(
             {
                 ServiceURL = $"https://{accountId}.r2.cloudflarestorage.com",
                 ForcePathStyle = true,
+                // AWSSDK.S3 v4 defaults PutObject to a chunked, trailer-checksum
+                // upload encoding ("STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER")
+                // that R2's S3-compatible API doesn't implement, failing every
+                // upload with AmazonS3Exception("...PAYLOAD-TRAILER not
+                // implemented"). Opting both back to computing/checking a
+                // checksum only when the API actually requires one restores the
+                // plain signing R2 supports.
+                RequestChecksumCalculation = Amazon.Runtime.RequestChecksumCalculation.WHEN_REQUIRED,
+                ResponseChecksumValidation = Amazon.Runtime.ResponseChecksumValidation.WHEN_REQUIRED,
             });
 
         await using var stream = file.OpenReadStream();
