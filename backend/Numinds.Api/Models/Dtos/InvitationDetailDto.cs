@@ -75,6 +75,10 @@ public class InvitationDetailDto
     public bool HideCapturedGallery { get; set; }
 
     public bool EnableQrEntry { get; set; }
+    public int? QrGuestCount { get; set; }
+    public int? QrScannerCount { get; set; }
+    public DateTime? QrScanStart { get; set; }
+    public DateTime? QrScanEnd { get; set; }
 
     public bool EnableRsvp { get; set; }
     public bool RsvpShowAttendance { get; set; }

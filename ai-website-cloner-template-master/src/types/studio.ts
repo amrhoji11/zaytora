@@ -45,9 +45,8 @@ export interface InvitationDetail {
   secondName?: string | null;
   namesFont?: string | null;
   useNameImage: boolean;
-  // Not yet backed by a backend column (see the gift/QR-entry notes below
-  // for the same caveat) — persists for the editing session but won't
-  // survive a reload until the API grows a matching field.
+  // Not yet backed by a backend column — persists for the editing session
+  // but won't survive a reload until the API grows a matching field.
   nameImageUrl?: string | null;
   eventDateTime?: string | null;
   timezone?: string | null;
@@ -101,9 +100,6 @@ export interface InvitationDetail {
   hideCapturedGallery: boolean;
 
   enableQrEntry: boolean;
-  // Not yet backed by a backend column (same as the gift-step additions
-  // above) — persists for the editing session but won't survive a reload
-  // until the API grows matching fields.
   qrGuestCount?: number | null;
   qrScannerCount?: number | null;
   qrScanStart?: string | null;

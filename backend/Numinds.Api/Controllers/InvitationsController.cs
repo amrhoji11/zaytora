@@ -336,6 +336,17 @@ public class InvitationsController(
         if (request.HideCapturedGallery is not null) invitation.HideCapturedGallery = request.HideCapturedGallery.Value;
 
         if (request.EnableQrEntry is not null) invitation.EnableQrEntry = request.EnableQrEntry.Value;
+        if (request.QrGuestCount is not null) invitation.QrGuestCount = request.QrGuestCount;
+        if (request.QrScannerCount is not null) invitation.QrScannerCount = request.QrScannerCount;
+        // Same wall-clock-not-real-UTC handling as EventDateTime above.
+        if (request.QrScanStart is not null)
+        {
+            invitation.QrScanStart = DateTime.SpecifyKind(request.QrScanStart.Value, DateTimeKind.Utc);
+        }
+        if (request.QrScanEnd is not null)
+        {
+            invitation.QrScanEnd = DateTime.SpecifyKind(request.QrScanEnd.Value, DateTimeKind.Utc);
+        }
 
         if (request.EnableRsvp is not null) invitation.EnableRsvp = request.EnableRsvp.Value;
         if (request.RsvpShowAttendance is not null) invitation.RsvpShowAttendance = request.RsvpShowAttendance.Value;
@@ -778,6 +789,10 @@ public class InvitationsController(
         HideCapturedGallery = invitation.HideCapturedGallery,
 
         EnableQrEntry = invitation.EnableQrEntry,
+        QrGuestCount = invitation.QrGuestCount,
+        QrScannerCount = invitation.QrScannerCount,
+        QrScanStart = invitation.QrScanStart,
+        QrScanEnd = invitation.QrScanEnd,
 
         EnableRsvp = invitation.EnableRsvp,
         RsvpShowAttendance = invitation.RsvpShowAttendance,

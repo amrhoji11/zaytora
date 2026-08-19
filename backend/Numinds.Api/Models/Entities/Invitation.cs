@@ -111,6 +111,14 @@ public class Invitation
 
     // Step 16 — QR guest entry
     public bool EnableQrEntry { get; set; }
+    public int? QrGuestCount { get; set; }
+    public int? QrScannerCount { get; set; }
+    // Same "wall-clock reading, no real timezone" convention as
+    // EventDateTime above (see InvitationsController.Update) — tagged
+    // DateTimeKind.Utc only to satisfy Npgsql's timestamptz column type,
+    // not because it represents a real UTC instant.
+    public DateTime? QrScanStart { get; set; }
+    public DateTime? QrScanEnd { get; set; }
 
     // Step 17 — RSVP settings
     public bool EnableRsvp { get; set; } = true;

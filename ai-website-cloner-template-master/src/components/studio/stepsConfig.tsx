@@ -32,6 +32,7 @@ export type StepErrorCode =
   | "missingVenueName"
   | "missingWishlistItemName"
   | "invalidQrScanRange"
+  | "qrScanStartAfterEvent"
   | "programItemBeforeEvent";
 
 import dynamic from "next/dynamic";
@@ -138,10 +139,27 @@ const STEP_META = [
     id: "qr-entry",
     icon: QrCodeIcon,
     Component: Step16QrEntry,
-    validate: (form: InvitationDetail): StepErrorCode | null =>
-      form.enableQrEntry && form.qrScanStart && form.qrScanEnd && form.qrScanEnd <= form.qrScanStart
-        ? "invalidQrScanRange"
-        : null,
+    validate: (form: InvitationDetail): StepErrorCode | null => {
+      if (!form.enableQrEntry) return null;
+      if (
+        form.qrScanStart &&
+        form.qrScanEnd &&
+        parseWallClockDate(form.qrScanEnd) <= parseWallClockDate(form.qrScanStart)
+      ) {
+        return "invalidQrScanRange";
+      }
+      // Scanning guests in can't start after the party the invitation
+      // announced has already begun — they'd be locked out right when the
+      // event starts.
+      if (
+        form.qrScanStart &&
+        form.eventDateTime &&
+        parseWallClockDate(form.qrScanStart) > parseWallClockDate(form.eventDateTime)
+      ) {
+        return "qrScanStartAfterEvent";
+      }
+      return null;
+    },
   },
   { id: "rsvp", icon: HeartIcon, Component: Step17Rsvp },
   { id: "additional", icon: SettingsIcon, Component: Step18Additional },

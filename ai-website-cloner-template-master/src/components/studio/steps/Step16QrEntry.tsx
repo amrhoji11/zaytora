@@ -47,6 +47,16 @@ function money(value: number) {
   return value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+// Same treatment as Step04BasicInfo's toDateTimeLocal for eventDateTime:
+// a saved value comes back from the API with a trailing "Z" (see
+// InvitationsController.Update's DateTimeKind.Utc comment) which
+// <input type="datetime-local"> doesn't accept as a valid value -- the
+// field would silently render blank after a reload without this.
+function toDateTimeLocal(value?: string | null) {
+  if (!value) return "";
+  return value.slice(0, 16);
+}
+
 export function Step16QrEntry({
   value,
   onChange,
@@ -144,7 +154,7 @@ export function Step16QrEntry({
                 <CalendarIcon className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <input
                   type="datetime-local"
-                  value={value.qrScanStart ?? ""}
+                  value={toDateTimeLocal(value.qrScanStart)}
                   onChange={(event) => onChange({ qrScanStart: event.target.value })}
                   className="w-full rounded-xl border border-border bg-background/5 py-2.5 ps-9 pe-3 text-sm text-foreground outline-none transition-colors [color-scheme:dark] focus:border-gold"
                 />
@@ -156,7 +166,7 @@ export function Step16QrEntry({
                 <ClockIcon className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <input
                   type="datetime-local"
-                  value={value.qrScanEnd ?? ""}
+                  value={toDateTimeLocal(value.qrScanEnd)}
                   onChange={(event) => onChange({ qrScanEnd: event.target.value })}
                   className="w-full rounded-xl border border-border bg-background/5 py-2.5 ps-9 pe-3 text-sm text-foreground outline-none transition-colors [color-scheme:dark] focus:border-gold"
                 />

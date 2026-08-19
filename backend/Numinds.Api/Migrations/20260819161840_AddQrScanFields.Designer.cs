@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Numinds.Api.Data;
@@ -11,9 +12,11 @@ using Numinds.Api.Data;
 namespace Numinds.Api.Migrations
 {
     [DbContext(typeof(NumindsDbContext))]
-    partial class NumindsDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260819161840_AddQrScanFields")]
+    partial class AddQrScanFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -675,7 +678,7 @@ namespace Numinds.Api.Migrations
                     b.Property<bool>("GiftFeeCoverage")
                         .HasColumnType("boolean");
 
-                    b.Property<Guid?>("InvitationId")
+                    b.Property<Guid>("InvitationId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime?>("PaidAt")
@@ -1683,7 +1686,8 @@ namespace Numinds.Api.Migrations
                     b.HasOne("Numinds.Api.Models.Entities.Invitation", "Invitation")
                         .WithMany()
                         .HasForeignKey("InvitationId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Invitation");
                 });
