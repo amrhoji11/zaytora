@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { parseWallClockDate } from "@/lib/format";
 
 const BOX_WIDTH = 140;
 const BOX_HEIGHT = 104;
@@ -140,7 +141,7 @@ export function ScratchDateCard({
   isRtl: boolean;
   accent: string;
 }) {
-  const date = eventDateTime ? new Date(eventDateTime) : null;
+  const date = eventDateTime ? parseWallClockDate(eventDateTime) : null;
   const valid = Boolean(date && !Number.isNaN(date.getTime()));
   const day = valid && date ? String(date.getDate()).padStart(2, "0") : "--";
   const month = valid && date ? new Intl.DateTimeFormat(locale, { month: "short" }).format(date).toUpperCase() : "---";

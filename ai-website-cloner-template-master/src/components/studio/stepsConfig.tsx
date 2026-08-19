@@ -18,6 +18,7 @@ import {
 } from "@/components/icons";
 import type { Language } from "@/context/LanguageContext";
 import type { InvitationDetail } from "@/types/studio";
+import { parseWallClockDate } from "@/lib/format";
 
 // Returned by a step's `validate` to block "Next" — StudioWizard maps each
 // code to a localized message (see its COPY.stepErrors). null/undefined
@@ -85,7 +86,13 @@ const STEP_META = [
       if (!form.firstName?.trim()) return "missingFirstName";
       if (form.invitationType === "couple" && !form.secondName?.trim()) return "missingSecondName";
       if (!form.eventDateTime) return "missingEventDate";
-      if (new Date(form.eventDateTime).getTime() < Date.now()) return "pastEventDate";
+      // eventDateTime is a bare wall-clock reading (see parseWallClockDate's
+      // own comment) -- after a save+reload it comes back with a trailing
+      // "Z" the backend adds only to satisfy Postgres's timestamptz column,
+      // not real UTC, so parsing it with a plain `new Date(...)` here would
+      // silently convert it into the viewer's own timezone and could wrongly
+      // flag (or fail to flag) an event date as "in the past".
+      if (parseWallClockDate(form.eventDateTime).getTime() < Date.now()) return "pastEventDate";
       return null;
     },
   },

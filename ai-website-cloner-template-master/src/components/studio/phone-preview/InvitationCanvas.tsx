@@ -5,6 +5,7 @@ import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
 import { canUseNextImage, cn, isVideoSource } from "@/lib/utils";
+import { parseWallClockDate } from "@/lib/format";
 import {
   BabyIcon,
   BedDoubleIcon,
@@ -189,7 +190,7 @@ function hijriDateParts(date: Date, locale: string) {
 
 function formatEventDate(iso: string | null | undefined, locale: string, useHijri: boolean) {
   if (!iso) return null;
-  const date = new Date(iso);
+  const date = parseWallClockDate(iso);
   if (Number.isNaN(date.getTime())) return null;
   return new Intl.DateTimeFormat(resolveDateLocale(locale, useHijri), {
     weekday: "long",
@@ -205,7 +206,7 @@ function formatEventDate(iso: string | null | undefined, locale: string, useHijr
 // localized formatEventDate() used in the hero.
 function formatShortDate(iso: string | null | undefined) {
   if (!iso) return null;
-  const date = new Date(iso);
+  const date = parseWallClockDate(iso);
   if (Number.isNaN(date.getTime())) return null;
   const day = String(date.getDate()).padStart(2, "0");
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -222,7 +223,7 @@ function formatShortDate(iso: string | null | undefined) {
 // actively wrong, not just unlocalized.
 function calendarParts(iso: string | null | undefined, locale: string, useHijri: boolean) {
   if (!iso) return null;
-  const date = new Date(iso);
+  const date = parseWallClockDate(iso);
   if (Number.isNaN(date.getTime())) return null;
   const time = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", hour12: true }).format(date);
   if (useHijri) {
@@ -249,7 +250,7 @@ function calendarParts(iso: string | null | undefined, locale: string, useHijri:
 // calendar does.
 function formatInvitationDateLine(iso: string | null | undefined, locale: string, useHijri: boolean) {
   if (!iso) return null;
-  const date = new Date(iso);
+  const date = parseWallClockDate(iso);
   if (Number.isNaN(date.getTime())) return null;
   if (useHijri) {
     const hijri = hijriDateParts(date, locale);
@@ -272,7 +273,7 @@ function useCountdown(iso?: string | null) {
 
   return useMemo(() => {
     if (!iso) return null;
-    const target = new Date(iso).getTime();
+    const target = parseWallClockDate(iso).getTime();
     if (Number.isNaN(target)) return null;
     const rawDiff = target - now;
     const diff = Math.max(0, rawDiff);
@@ -1246,7 +1247,11 @@ export function InvitationCanvas({
                 </p>
               )}
               <p className={cn("text-xs leading-relaxed", TONE.muted)}>
-                🏷️ بانتظار تشريفكم لنا لنحتفل معاً بهذه المناسبة السعيدة ... 💐👰🏻‍♀️🤵🏻
+                {/* Bride/groom emoji only make sense for the couple occasions
+                    (wedding/engagement/marriage contract/henna) — this line
+                    used to render them unconditionally for every occasion,
+                    including single-person ones like graduation/birthday. */}
+                🏷️ بانتظار تشريفكم لنا لنحتفل معاً بهذه المناسبة السعيدة ... {value.isCoupleEvent ? "💐👰🏻‍♀️🤵🏻" : "💐🎉"}
               </p>
               {names && (
                 <p className={cn("mt-1 text-lg", namesFont, TONE.strong)}>
