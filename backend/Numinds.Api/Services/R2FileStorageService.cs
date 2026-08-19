@@ -72,6 +72,12 @@ public class R2FileStorageService(
                 Key = $"{folder}/{fileName}",
                 InputStream = stream,
                 ContentType = file.ContentType,
+                // Beyond the checksum trailer above, the SDK still defaults to
+                // a *chunked* signed-payload upload ("STREAMING-AWS4-HMAC-
+                // SHA256-PAYLOAD") that R2 doesn't implement in any form --
+                // only a single upfront signature over the whole body. This
+                // forces that plain mode.
+                DisablePayloadSigning = true,
             },
             cancellationToken);
 
