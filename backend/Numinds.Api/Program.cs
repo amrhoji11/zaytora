@@ -10,6 +10,15 @@ using Numinds.Api.Data;
 using Numinds.Api.Models.Entities;
 using Numinds.Api.Services;
 
+// Render's container filesystem doesn't support the file-watching mechanism
+// .NET's default host configuration uses to auto-reload appsettings.json on
+// change -- creating that FileSystemWatcher crashes the whole process with a
+// native SIGSEGV inside WebApplication.CreateBuilder itself, before a single
+// line below runs. appsettings.json is baked into the image and never
+// changes at runtime here anyway, so reload-on-change buys nothing; this has
+// to be set before CreateBuilder reads it, since that's where the crash is.
+Environment.SetEnvironmentVariable("DOTNET_hostBuilder__reloadConfigOnChange", "false");
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Free hosts (Render, Railway, Fly...) inject the port to listen on via PORT
