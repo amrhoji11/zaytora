@@ -116,12 +116,20 @@ public class ThankYouSuggestionsController(NumindsDbContext db, IFileStorageServ
             return NotFound();
         }
 
+        var oldImageUrl = suggestion.ImageUrl;
+
         suggestion.Label = request.Label.Trim();
         suggestion.ImageUrl = request.ImageUrl;
         suggestion.IsActive = request.IsActive;
         suggestion.SortOrder = request.SortOrder;
 
         await db.SaveChangesAsync(cancellationToken);
+
+        if (!string.IsNullOrWhiteSpace(oldImageUrl) && oldImageUrl != suggestion.ImageUrl)
+        {
+            await storage.DeleteAsync(oldImageUrl, cancellationToken);
+        }
+
         return Ok(ToDto(suggestion));
     }
 
@@ -155,6 +163,9 @@ public class ThankYouSuggestionsController(NumindsDbContext db, IFileStorageServ
 
         db.ThankYouSuggestions.Remove(suggestion);
         await db.SaveChangesAsync(cancellationToken);
+
+        await storage.DeleteAsync(suggestion.ImageUrl, cancellationToken);
+
         return NoContent();
     }
 

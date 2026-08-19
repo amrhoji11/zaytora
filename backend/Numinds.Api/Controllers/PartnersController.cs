@@ -115,6 +115,8 @@ public class PartnersController(
             return Forbid();
         }
 
+        var oldLogoUrl = partner.LogoUrl;
+
         partner.BusinessName = request.BusinessName;
         partner.Whatsapp = request.Whatsapp;
         partner.Tagline = string.IsNullOrWhiteSpace(request.Tagline) ? null : request.Tagline;
@@ -125,6 +127,12 @@ public class PartnersController(
         partner.LogoUrl = string.IsNullOrWhiteSpace(request.LogoUrl) ? null : request.LogoUrl;
 
         await db.SaveChangesAsync(cancellationToken);
+
+        if (!string.IsNullOrWhiteSpace(oldLogoUrl) && oldLogoUrl != partner.LogoUrl)
+        {
+            await storage.DeleteAsync(oldLogoUrl, cancellationToken);
+        }
+
         return Ok(ToDto(partner));
     }
 
@@ -354,6 +362,9 @@ public class PartnersController(
         db.Partners.Remove(partner);
         await db.SaveChangesAsync(cancellationToken);
         BustCache();
+
+        await storage.DeleteAsync(partner.LogoUrl, cancellationToken);
+
         return NoContent();
     }
 

@@ -410,6 +410,11 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
             return NotFound();
         }
 
+        var oldImageUrl = template.ImageUrl;
+        var oldBackgroundImageUrl = template.BackgroundImageUrl;
+        var oldHeroIllustrationUrl = template.HeroIllustrationUrl;
+        var oldDecorationImageUrl = template.DecorationImageUrl;
+
         // Code is intentionally left untouched even if Category changes here —
         // re-minting it would break any already-shared invitation link's
         // ?template= query param pointing at the old code.
@@ -436,8 +441,25 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
         await db.SaveChangesAsync(cancellationToken);
         BustCache();
 
+        // Best-effort: clean up whichever of this template's own image slots
+        // just got replaced with a different URL, now that the new one is
+        // safely saved. Skipped for slots that didn't change so a re-save
+        // with the same photo doesn't delete-then-orphan its own URL.
+        await DeleteIfReplacedAsync(oldImageUrl, template.ImageUrl, cancellationToken);
+        await DeleteIfReplacedAsync(oldBackgroundImageUrl, template.BackgroundImageUrl, cancellationToken);
+        await DeleteIfReplacedAsync(oldHeroIllustrationUrl, template.HeroIllustrationUrl, cancellationToken);
+        await DeleteIfReplacedAsync(oldDecorationImageUrl, template.DecorationImageUrl, cancellationToken);
+
         var usageCount = await db.Invitations.CountAsync(i => i.TemplateId == id, cancellationToken);
         return Ok(ToDto(template, usageCount, envelope));
+    }
+
+    private async Task DeleteIfReplacedAsync(string? oldUrl, string? newUrl, CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(oldUrl) && oldUrl != newUrl)
+        {
+            await storage.DeleteAsync(oldUrl, cancellationToken);
+        }
     }
 
     // PATCH /api/templates/{id}/active — the table's lightweight on/off toggle,
@@ -517,6 +539,12 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
         db.Templates.Remove(template);
         await db.SaveChangesAsync(cancellationToken);
         BustCache();
+
+        await storage.DeleteAsync(template.ImageUrl, cancellationToken);
+        await storage.DeleteAsync(template.BackgroundImageUrl, cancellationToken);
+        await storage.DeleteAsync(template.HeroIllustrationUrl, cancellationToken);
+        await storage.DeleteAsync(template.DecorationImageUrl, cancellationToken);
+
         return NoContent();
     }
 

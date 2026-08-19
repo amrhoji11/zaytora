@@ -72,6 +72,13 @@ public class R2FileStorageService(
                 Key = $"{folder}/{fileName}",
                 InputStream = stream,
                 ContentType = file.ContentType,
+                // Every upload gets a fresh GUID-based key and is never
+                // overwritten in place (a "replace" is really a new upload +
+                // the old key being deleted separately, see DeleteAsync) --
+                // so it's safe to cache these as immutable for a full year
+                // instead of the CDN/browser re-fetching the same bytes from
+                // R2 on every single view.
+                Headers = { CacheControl = "public, max-age=31536000, immutable" },
                 // Beyond the checksum trailer above, the SDK still defaults to
                 // a *chunked* signed-payload upload ("STREAMING-AWS4-HMAC-
                 // SHA256-PAYLOAD") that R2 doesn't implement in any form --
@@ -82,6 +89,59 @@ public class R2FileStorageService(
             cancellationToken);
 
         return $"{publicBaseUrl.TrimEnd('/')}/{folder}/{fileName}";
+    }
+
+    public async Task DeleteAsync(string? url, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return;
+        }
+
+        var accountId = configuration["Storage:R2:AccountId"];
+        var accessKey = configuration["Storage:R2:AccessKeyId"];
+        var secretKey = configuration["Storage:R2:SecretAccessKey"];
+        var bucket = configuration["Storage:R2:BucketName"];
+        var publicBaseUrl = configuration["Storage:R2:PublicBaseUrl"];
+
+        if (string.IsNullOrWhiteSpace(accountId) || string.IsNullOrWhiteSpace(accessKey) ||
+            string.IsNullOrWhiteSpace(secretKey) || string.IsNullOrWhiteSpace(bucket) ||
+            string.IsNullOrWhiteSpace(publicBaseUrl))
+        {
+            return;
+        }
+
+        var prefix = publicBaseUrl.TrimEnd('/') + "/";
+        if (!url.StartsWith(prefix, StringComparison.Ordinal))
+        {
+            // Not an R2-hosted file (base64 data: URL, local-disk fallback
+            // URL, or some other external URL) -- nothing to delete.
+            return;
+        }
+
+        var key = url[prefix.Length..];
+
+        try
+        {
+            using var client = new AmazonS3Client(
+                accessKey,
+                secretKey,
+                new AmazonS3Config
+                {
+                    ServiceURL = $"https://{accountId}.r2.cloudflarestorage.com",
+                    ForcePathStyle = true,
+                });
+
+            await client.DeleteObjectAsync(bucket, key, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            // Best-effort cleanup -- a failed delete must never fail the
+            // caller's actual operation (a template save, an invitation
+            // delete, etc). Worst case a file lingers in R2 for later
+            // manual cleanup instead of the whole request 500ing.
+            logger.LogWarning(ex, "Failed to delete {Key} from R2.", key);
+        }
     }
 
     private async Task<string> SaveToLocalDiskAsync(

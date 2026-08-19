@@ -12,4 +12,11 @@ public interface IFileStorageService
         string extension,
         string fallbackBaseUrl,
         CancellationToken cancellationToken);
+
+    // Best-effort cleanup for a URL previously returned by UploadAsync.
+    // No-ops (never throws) for anything that isn't an R2-hosted file --
+    // a base64 data: URL, a local-disk fallback URL, some other external
+    // URL, or null/empty -- so every call site can pass whatever URL it
+    // has on hand without checking first.
+    Task DeleteAsync(string? url, CancellationToken cancellationToken);
 }

@@ -140,6 +140,8 @@ public class EnvelopesController(NumindsDbContext db, IFileStorageService storag
             return NotFound();
         }
 
+        var oldPhotoUrl = envelope.PhotoUrl;
+
         envelope.Name = request.Name.Trim();
         envelope.PhotoUrl = request.PhotoUrl;
         envelope.SealXPercent = request.SealXPercent;
@@ -149,6 +151,13 @@ public class EnvelopesController(NumindsDbContext db, IFileStorageService storag
         envelope.IsActive = request.IsActive;
 
         await db.SaveChangesAsync(cancellationToken);
+
+        // Best-effort: clean up the old photo now that the new one is saved,
+        // skipped if it wasn't actually replaced.
+        if (!string.IsNullOrWhiteSpace(oldPhotoUrl) && oldPhotoUrl != envelope.PhotoUrl)
+        {
+            await storage.DeleteAsync(oldPhotoUrl, cancellationToken);
+        }
 
         var templateCount = await db.Templates.CountAsync(t => t.EnvelopeId == id, cancellationToken);
         return Ok(ToDto(envelope, templateCount));
@@ -175,6 +184,9 @@ public class EnvelopesController(NumindsDbContext db, IFileStorageService storag
 
         db.Envelopes.Remove(envelope);
         await db.SaveChangesAsync(cancellationToken);
+
+        await storage.DeleteAsync(envelope.PhotoUrl, cancellationToken);
+
         return NoContent();
     }
 

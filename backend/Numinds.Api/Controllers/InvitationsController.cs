@@ -247,6 +247,10 @@ public class InvitationsController(
             invitation.UserId = userId;
         }
 
+        var oldGalleryImagesJson = invitation.GalleryImagesJson;
+        var oldThankYouImageUrl = invitation.ThankYouImageUrl;
+        var oldGiftQrImageUrl = invitation.GiftQrImageUrl;
+
         if (request.TemplateId is not null)
         {
             var templateId = await ResolveTemplateIdAsync(request.TemplateId, cancellationToken);
@@ -363,6 +367,28 @@ public class InvitationsController(
 
         await db.SaveChangesAsync(cancellationToken);
 
+        // Best-effort: an owner replacing/removing a photo here (gallery,
+        // thank-you card, gift QR) leaves the old R2 object orphaned unless
+        // cleaned up explicitly -- this runs constantly during editing
+        // (unlike the admin-curated assets above), so it's the main source
+        // of accumulated storage cost in practice.
+        if (request.GalleryImages is not null)
+        {
+            var removedGalleryUrls = Deserialize<string>(oldGalleryImagesJson).Except(request.GalleryImages);
+            foreach (var url in removedGalleryUrls)
+            {
+                await storage.DeleteAsync(url, cancellationToken);
+            }
+        }
+        if (!string.IsNullOrWhiteSpace(oldThankYouImageUrl) && oldThankYouImageUrl != invitation.ThankYouImageUrl)
+        {
+            await storage.DeleteAsync(oldThankYouImageUrl, cancellationToken);
+        }
+        if (!string.IsNullOrWhiteSpace(oldGiftQrImageUrl) && oldGiftQrImageUrl != invitation.GiftQrImageUrl)
+        {
+            await storage.DeleteAsync(oldGiftQrImageUrl, cancellationToken);
+        }
+
         return Ok(ToDetailDto(invitation));
     }
 
@@ -386,8 +412,28 @@ public class InvitationsController(
             return Forbid();
         }
 
+        // Grabbed before the delete: CapturedPhotos rows cascade-delete in
+        // the DB (see NumindsDbContext), but that doesn't touch R2 -- their
+        // URLs have to be collected here or they're unreachable afterward.
+        var capturedPhotoUrls = await db.CapturedPhotos.AsNoTracking()
+            .Where(p => p.InvitationId == id)
+            .Select(p => p.PhotoUrl)
+            .ToListAsync(cancellationToken);
+
         db.Invitations.Remove(invitation);
         await db.SaveChangesAsync(cancellationToken);
+
+        // Best-effort, run concurrently: a popular event can have up to 300
+        // captured photos (see MaxCapturedPhotosPerInvitation) plus a full
+        // gallery, and deleting them one at a time here could make this
+        // request take unreasonably long.
+        var urlsToDelete = new List<string?>(Deserialize<string>(invitation.GalleryImagesJson));
+        urlsToDelete.AddRange(capturedPhotoUrls);
+        urlsToDelete.Add(invitation.ThankYouImageUrl);
+        urlsToDelete.Add(invitation.GiftQrImageUrl);
+        await Task.WhenAll(urlsToDelete
+            .Where(url => !string.IsNullOrWhiteSpace(url))
+            .Select(url => storage.DeleteAsync(url, cancellationToken)));
 
         return NoContent();
     }
@@ -637,6 +683,8 @@ public class InvitationsController(
 
         db.CapturedPhotos.Remove(photo);
         await db.SaveChangesAsync(cancellationToken);
+
+        await storage.DeleteAsync(photo.PhotoUrl, cancellationToken);
 
         return NoContent();
     }
