@@ -413,7 +413,16 @@ function resolveCanvasTheme(
   // guest who finds a template's automatic color hard to read against
   // their chosen photo/background can just fix it themselves instead of
   // being stuck with whatever that template's author picked.
-  textColorOverride?: string | null
+  textColorOverride?: string | null,
+  // True when this template also renders an AmbientVideoBackground (see
+  // InvitationCanvas's `transparentCards`) -- sectionCardClass drops its
+  // glass-card fill/blur entirely in that case, which was the layer this
+  // function's textShadow formula relied on to dim/soften whatever busy
+  // background sat behind the text before the shadow did its part. Without
+  // it, the same two-layer shadow reads as too weak against a sharp, moving
+  // video, so this adds a third tight all-around glow layer for a proper
+  // subtitle-style outline instead.
+  hasAmbientVideo: boolean = false
 ) {
   const cardBase = normalizeHex(template?.cardBg);
   const isDark = cardBase ? isDarkColor(cardBase) : isFullBleed;
@@ -460,8 +469,12 @@ function resolveCanvasTheme(
   // to let real photo detail through) plus the original soft wide glow for
   // depth — a single soft blur alone got lost against busy photo texture.
   const textShadow = textIsLight
-    ? "0 1px 2px rgba(0,0,0,0.85), 0 2px 10px rgba(0,0,0,0.5)"
-    : "0 1px 2px rgba(255,255,255,0.85), 0 2px 8px rgba(255,255,255,0.55)";
+    ? hasAmbientVideo
+      ? "0 1px 3px rgba(0,0,0,0.95), 0 0 6px rgba(0,0,0,0.9), 0 2px 14px rgba(0,0,0,0.75)"
+      : "0 1px 2px rgba(0,0,0,0.85), 0 2px 10px rgba(0,0,0,0.5)"
+    : hasAmbientVideo
+      ? "0 1px 3px rgba(255,255,255,0.95), 0 0 6px rgba(255,255,255,0.9), 0 2px 14px rgba(255,255,255,0.75)"
+      : "0 1px 2px rgba(255,255,255,0.85), 0 2px 8px rgba(255,255,255,0.55)";
 
   // Same reasoning as cardBg above — chips (wishes pills, countdown boxes,
   // program-item badges) are smaller than a full card section, so an even
@@ -783,7 +796,7 @@ export function InvitationCanvas({
   // (forced-white hero text over an unpredictable full-bleed photo, a
   // drop-shadow that only matters over a photo) that can't be expressed as
   // a plain CSS variable.
-  const theme = resolveCanvasTheme(template, isFullBleed, value.textColor);
+  const theme = resolveCanvasTheme(template, isFullBleed, value.textColor, transparentCards);
   const ambientVariant = resolveAmbientVariant(template, theme.isDark);
   // The guest's own Step04BasicInfo font pick always wins; otherwise the
   // template supplies its own default (see Template.DefaultNamesFont) so a
