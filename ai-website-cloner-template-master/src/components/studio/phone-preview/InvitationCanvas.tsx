@@ -1712,8 +1712,6 @@ export function InvitationCanvas({
         <VideoOpeningCover
           videoSrc={template.openingVideoUrl}
           posterSrc={template.heroIllustrationUrl ?? template.backgroundImageUrl}
-          firstName={value.firstName ?? ""}
-          secondName={value.invitationType === "couple" ? value.secondName : null}
           namesFont={value.envelopeNameFont}
           language={language === "ar" ? "ar" : "en"}
           onOpen={handleEnvelopeOpen}
