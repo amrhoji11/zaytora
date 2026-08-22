@@ -175,32 +175,6 @@ export interface EnvelopeFoldPoint {
   y: number;
 }
 
-export interface EnvelopeDto {
-  id: string;
-  name: string;
-  photoUrl: string;
-  sealXPercent: number;
-  sealYPercent: number;
-  openingStyle: EnvelopeOpeningStyle;
-  foldPoints: EnvelopeFoldPoint[];
-  isActive: boolean;
-  templateCount: number;
-}
-
-export interface EnvelopeWriteRequest {
-  name: string;
-  photoUrl: string;
-  sealXPercent: number;
-  sealYPercent: number;
-  openingStyle: EnvelopeOpeningStyle;
-  foldPoints: EnvelopeFoldPoint[];
-  isActive: boolean;
-}
-
-// POST /api/envelopes/image response.
-export interface EnvelopeImageUploadResponse {
-  url: string;
-}
 
 // POST /api/templates/image response.
 export interface TemplateImageUploadResponse {
