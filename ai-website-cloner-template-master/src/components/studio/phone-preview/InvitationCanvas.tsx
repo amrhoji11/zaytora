@@ -1704,7 +1704,7 @@ export function InvitationCanvas({
           standalone={standalone}
         />
       )}
-      {showEnvelope && templatesLoaded && !template?.envelopePhotoUrl && template?.openingVideoUrl && (
+      {showEnvelope && templatesLoaded && template?.openingVideoUrl && (
         <EnvelopeMediaCover
           mediaSrc={template.openingVideoUrl}
           namesFont={value.envelopeNameFont}
@@ -1717,20 +1717,25 @@ export function InvitationCanvas({
           initialsYPercent={template.envelopeInitialsYPercent}
         />
       )}
-      {/* An admin-assigned library envelope (see /admin/envelopes and
-          TemplateEditModal's "envelope from library" picker) wins over
-          every named envelopeStyle below when set — an explicitly chosen
-          real photo beats a generic hand-drawn style. Which of these four
-          mounts depends on the envelope's own shape (Envelope.openingStyle,
-          picked when the admin added it): a flat diamond-flap envelope
-          peels open from the seal (PhotoWaxSealEnvelopeCover); a rolled,
-          string-tied scroll unrolls instead (ScrollUnrollEnvelopeCover); a
-          photo split into two equal panels either slides apart straight
-          (DoorSlideEnvelopeCover) or hinges open in 3D like a real door
-          (DoorFoldEnvelopeCover) — both independent of the seal position,
-          genuinely different physical motions from each other and from the
-          other two styles. */}
-      {showEnvelope && templatesLoaded && template?.envelopePhotoUrl && template?.envelopeOpeningStyle === "scroll" && (
+      {/* An admin-assigned library envelope (see /admin/envelopes) is legacy
+          data — TemplateEditModal dropped its picker once openingVideoUrl
+          became the one unified "envelope" field, so these four only mount
+          for an old template whose envelopeId was never cleared, and only
+          when openingVideoUrl is unset (that field always wins now — see
+          the branch above). Which of these four mounts depends on the
+          envelope's own shape (Envelope.openingStyle, picked when the admin
+          added it): a flat diamond-flap envelope peels open from the seal
+          (PhotoWaxSealEnvelopeCover); a rolled, string-tied scroll unrolls
+          instead (ScrollUnrollEnvelopeCover); a photo split into two equal
+          panels either slides apart straight (DoorSlideEnvelopeCover) or
+          hinges open in 3D like a real door (DoorFoldEnvelopeCover) — both
+          independent of the seal position, genuinely different physical
+          motions from each other and from the other two styles. */}
+      {showEnvelope &&
+        templatesLoaded &&
+        template?.envelopePhotoUrl &&
+        !template?.openingVideoUrl &&
+        template?.envelopeOpeningStyle === "scroll" && (
         <ScrollUnrollEnvelopeCover
           imageSrc={template.envelopePhotoUrl}
           imageAlt=""
@@ -1740,7 +1745,11 @@ export function InvitationCanvas({
           standalone={standalone}
         />
       )}
-      {showEnvelope && templatesLoaded && template?.envelopePhotoUrl && template?.envelopeOpeningStyle === "doorSlide" && (
+      {showEnvelope &&
+        templatesLoaded &&
+        template?.envelopePhotoUrl &&
+        !template?.openingVideoUrl &&
+        template?.envelopeOpeningStyle === "doorSlide" && (
         <DoorSlideEnvelopeCover
           imageSrc={template.envelopePhotoUrl}
           imageAlt=""
@@ -1748,7 +1757,11 @@ export function InvitationCanvas({
           standalone={standalone}
         />
       )}
-      {showEnvelope && templatesLoaded && template?.envelopePhotoUrl && template?.envelopeOpeningStyle === "doorFold" && (
+      {showEnvelope &&
+        templatesLoaded &&
+        template?.envelopePhotoUrl &&
+        !template?.openingVideoUrl &&
+        template?.envelopeOpeningStyle === "doorFold" && (
         <DoorFoldEnvelopeCover
           imageSrc={template.envelopePhotoUrl}
           imageAlt=""
@@ -1759,6 +1772,7 @@ export function InvitationCanvas({
       {showEnvelope &&
         templatesLoaded &&
         template?.envelopePhotoUrl &&
+        !template?.openingVideoUrl &&
         template?.envelopeOpeningStyle !== "scroll" &&
         template?.envelopeOpeningStyle !== "doorSlide" &&
         template?.envelopeOpeningStyle !== "doorFold" && (
