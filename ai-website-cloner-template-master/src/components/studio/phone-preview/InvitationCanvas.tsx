@@ -317,11 +317,20 @@ const RULES_DELIMITER = " · ";
 // blocking (measured directly during the ride, not estimated). Skipping
 // layout/paint for off-screen cards cuts that cost down to roughly the
 // number of cards actually visible at once instead of all of them.
-function sectionCardClass(padding: string = "p-8") {
+// `transparent` drops the glass-card box (background/border/blur/shadow)
+// entirely, leaving just spacing + the content-visibility perf hint --
+// used when the template has an AmbientVideoBackground behind it (see
+// InvitationCanvas's `transparentCards`), so the couple's names/date/program
+// text reads as sitting directly on the moving scene instead of floating in
+// a disconnected glass box on top of it. TONE's TEXT_SHADOW already carries
+// the legibility every section's text needs either way.
+function sectionCardClass(padding: string = "p-8", transparent: boolean = false) {
   return cn(
-    "tpl-card mx-3 rounded-[24px] border backdrop-blur-lg [content-visibility:auto] [contain-intrinsic-size:1px_400px]",
+    "tpl-card mx-3 [content-visibility:auto] [contain-intrinsic-size:1px_400px]",
     padding,
-    "border-[var(--tpl-card-border)] bg-[var(--tpl-card-bg)] shadow-[0_8px_32px_var(--tpl-card-shadow),inset_0_1px_0_var(--tpl-card-highlight)]"
+    transparent
+      ? ""
+      : "rounded-[24px] border backdrop-blur-lg border-[var(--tpl-card-border)] bg-[var(--tpl-card-bg)] shadow-[0_8px_32px_var(--tpl-card-shadow),inset_0_1px_0_var(--tpl-card-highlight)]"
   );
 }
 
@@ -729,6 +738,13 @@ export function InvitationCanvas({
   }, []);
 
   const template = templates.find((item) => item.id === value.templateId) ?? null;
+  // A moving video background reads busier than any static photo/gradient
+  // this canvas already renders behind section cards — dropping the glass
+  // box (see sectionCardClass's `transparent` param) lets the text sit
+  // directly on the scene instead of floating in a disconnected box on top
+  // of it, matching how the source design (no card wrapper, text-shadow
+  // only) actually looked.
+  const transparentCards = Boolean(template?.ambientVideoUrl);
   // backgroundImageUrl (not imageUrl!) is the compositable asset — imageUrl
   // is purely the picker-grid thumbnail and may have baked-in demo text.
   // previewImageUrl (no backend template resolved) always renders
@@ -1237,7 +1253,7 @@ export function InvitationCanvas({
             />
           )}
           {value.invitationText && template?.invitationCardStyle !== "archIslamic" && (
-            <motion.div {...sectionReveal} className={cn(sectionCardClass(), "flex flex-col items-center gap-4 text-center")}>
+            <motion.div {...sectionReveal} className={cn(sectionCardClass(undefined, transparentCards), "flex flex-col items-center gap-4 text-center")}>
               <p className={cn("flex items-center gap-2 font-cinzel text-2xl tracking-wide", TONE.heading)}>
                 <OccasionIcon aria-hidden className="size-5 text-[var(--tpl-accent-70)]" />
                 {occasion.title}
@@ -1272,7 +1288,7 @@ export function InvitationCanvas({
               which adds the embedded map/"Open Google Maps" action on top
               of this same info. */}
           {primaryVenue && (
-            <motion.div {...sectionReveal} className={cn(sectionCardClass(), "text-center")}>
+            <motion.div {...sectionReveal} className={cn(sectionCardClass(undefined, transparentCards), "text-center")}>
               <p className={cn("mb-2 flex items-center justify-center gap-1.5 text-[11px] font-semibold", TONE.heading)}>
                 <MapPinIcon className="size-3.5 text-[var(--tpl-accent)]" />
                 الموقع
@@ -1289,7 +1305,7 @@ export function InvitationCanvas({
               pure fidelity-cloning, so it stays, placed next to the venue
               info it's thematically closest to rather than dropped. */}
           {value.showAccommodation && value.accommodations.length > 0 && (
-            <motion.div {...sectionReveal} className={sectionCardClass()}>
+            <motion.div {...sectionReveal} className={sectionCardClass(undefined, transparentCards)}>
               <p className={cn("mb-2 flex items-center gap-1.5 text-[11px] font-semibold", TONE.heading)}>
                 <BedDoubleIcon className="size-3.5 text-[var(--tpl-accent)]" />
                 أين تقيمون
@@ -1326,7 +1342,7 @@ export function InvitationCanvas({
           {countdown && (
             <motion.div
               {...sectionReveal}
-              className={cn(sectionCardClass(), "flex flex-col items-center gap-3 text-center")}
+              className={cn(sectionCardClass(undefined, transparentCards), "flex flex-col items-center gap-3 text-center")}
             >
               {eventDate && <p className={cn("text-xs", TONE.muted)}>{eventDate}</p>}
               {countdown.started ? (
@@ -1365,7 +1381,7 @@ export function InvitationCanvas({
               a time as the guest scrolls, instead of the whole list
               appearing together the moment the card comes into view. */}
           {value.showEventProgram && value.programItems.length > 0 && (
-            <motion.div {...sectionReveal} className={sectionCardClass("p-4")}>
+            <motion.div {...sectionReveal} className={sectionCardClass("p-4", transparentCards)}>
               <p className={cn("mb-8 flex items-center gap-1.5 text-[11px] font-semibold", TONE.heading)}>
                 <ClipboardListIcon className="size-3.5 text-[var(--tpl-accent)]" />
                 برنامج الحفل
@@ -1445,7 +1461,7 @@ export function InvitationCanvas({
 
           {/* Rules */}
           {value.showEventRules && rules.length > 0 && (
-            <motion.div {...sectionReveal} className={sectionCardClass()}>
+            <motion.div {...sectionReveal} className={sectionCardClass(undefined, transparentCards)}>
               <p className={cn("mb-6 flex items-center gap-1.5 text-[11px] font-semibold", TONE.heading)}>
                 <ClipboardListIcon className="size-3.5 text-[var(--tpl-accent)]" />
                 تفاصيل الحدث
@@ -1468,7 +1484,7 @@ export function InvitationCanvas({
 
           {/* Personal message */}
           {value.showPersonalMessage && value.personalMessageText && (
-            <motion.div {...sectionReveal} className={cn(sectionCardClass(), "text-center")}>
+            <motion.div {...sectionReveal} className={cn(sectionCardClass(undefined, transparentCards), "text-center")}>
               {value.personalMessageTitle && (
                 <p className={cn("text-[11px] font-semibold", TONE.heading)}>{value.personalMessageTitle}</p>
               )}
