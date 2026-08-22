@@ -21,9 +21,19 @@ import { STANDALONE_FULLSCREEN_CLASS } from "./standaloneCoverPosition";
 export function AmbientVideoBackground({
   videoSrc,
   standalone,
+  textIsLight,
 }: {
   videoSrc: string;
   standalone: boolean;
+  // Whether the template's own text is light-on-dark or dark-on-light (see
+  // InvitationCanvas's `theme.isDark`) -- a raw video's brightness swings
+  // frame to frame far more than a photo or flat color ever did, so text
+  // legibility now leans partly on a scrim tuned to *darken* the video for
+  // light text or *wash it toward white* for dark text, on top of (not
+  // instead of) resolveCanvasTheme's own textShadow work. Keeps the
+  // "text directly over video, no card" look intact -- this evens out the
+  // video's own contrast rather than boxing the text.
+  textIsLight: boolean;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -40,16 +50,23 @@ export function AmbientVideoBackground({
   }, [videoSrc]);
 
   return (
-    <video
-      ref={videoRef}
-      src={videoSrc}
-      autoPlay
-      muted
-      loop
-      playsInline
-      preload="auto"
-      className={cn("pointer-events-none z-0 h-full w-full object-cover", standalone ? STANDALONE_FULLSCREEN_CLASS : "absolute inset-0")}
-      aria-hidden
-    />
+    <>
+      <video
+        ref={videoRef}
+        src={videoSrc}
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="auto"
+        className={cn("pointer-events-none z-0 h-full w-full object-cover", standalone ? STANDALONE_FULLSCREEN_CLASS : "absolute inset-0")}
+        aria-hidden
+      />
+      <div
+        className={cn("pointer-events-none z-[1]", standalone ? STANDALONE_FULLSCREEN_CLASS : "absolute inset-0")}
+        style={{ background: textIsLight ? "rgba(0,0,0,0.28)" : "rgba(255,255,255,0.35)" }}
+        aria-hidden
+      />
+    </>
   );
 }

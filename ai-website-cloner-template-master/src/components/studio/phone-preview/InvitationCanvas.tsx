@@ -1065,7 +1065,7 @@ export function InvitationCanvas({
         <div className="paper-texture pointer-events-none absolute inset-0 z-[5] opacity-[0.07]" aria-hidden />
 
         {template?.ambientVideoUrl && (
-          <AmbientVideoBackground videoSrc={template.ambientVideoUrl} standalone={standalone} />
+          <AmbientVideoBackground videoSrc={template.ambientVideoUrl} standalone={standalone} textIsLight={theme.isDark} />
         )}
 
         <AmbientParticles standalone={standalone} variant={ambientVariant} />
