@@ -16,6 +16,8 @@ public class TemplateDto
     public string? DefaultNamesFont { get; set; }
     public string? HeroIllustrationUrl { get; set; }
     public string? DecorationImageUrl { get; set; }
+    public string? OpeningVideoUrl { get; set; }
+    public string? AmbientVideoUrl { get; set; }
     public string? AmbientEffect { get; set; }
     public string? EnvelopeStyle { get; set; }
     public string? HeroFrameStyle { get; set; }
@@ -58,6 +60,8 @@ public class TemplateWriteRequest
     public string? DefaultNamesFont { get; set; }
     public string? HeroIllustrationUrl { get; set; }
     public string? DecorationImageUrl { get; set; }
+    public string? OpeningVideoUrl { get; set; }
+    public string? AmbientVideoUrl { get; set; }
     public string? AmbientEffect { get; set; }
     public string? EnvelopeStyle { get; set; }
     public string? HeroFrameStyle { get; set; }
@@ -80,6 +84,11 @@ public class SetTemplateHomepageFeaturedRequest
 }
 
 public class TemplateImageUploadResponse
+{
+    public string Url { get; set; } = string.Empty;
+}
+
+public class TemplateVideoUploadResponse
 {
     public string Url { get; set; } = string.Empty;
 }

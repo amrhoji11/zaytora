@@ -1,6 +1,11 @@
 import { apiClient, ApiError } from "@/lib/api/client";
 import { API_BASE_URL } from "@/lib/api/config";
-import type { TemplateDto, TemplateImageUploadResponse, TemplateWriteRequest } from "@/types/api";
+import type {
+  TemplateDto,
+  TemplateImageUploadResponse,
+  TemplateVideoUploadResponse,
+  TemplateWriteRequest,
+} from "@/types/api";
 
 export function getTemplates(category?: string) {
   const query = category ? `?category=${encodeURIComponent(category)}` : "";
@@ -54,6 +59,32 @@ export async function uploadTemplateImage(file: File): Promise<TemplateImageUplo
     throw new ApiError(payload?.message ?? response.statusText, response.status, payload);
   }
   return payload as TemplateImageUploadResponse;
+}
+
+// Uploads the opening/ambient video (TemplateEditModal) ahead of
+// createTemplate()/updateTemplate() so the returned URL can ride along as
+// openingVideoUrl/ambientVideoUrl — same raw-multipart pattern as
+// uploadTemplateImage above.
+export async function uploadTemplateVideo(file: File): Promise<TemplateVideoUploadResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/templates/video`, {
+      method: "POST",
+      credentials: "include",
+      body: formData,
+    });
+  } catch (error) {
+    throw new ApiError(error instanceof Error ? error.message : "Network error uploading video", 0);
+  }
+
+  const payload = await response.json().catch(() => undefined);
+  if (!response.ok) {
+    throw new ApiError(payload?.message ?? response.statusText, response.status, payload);
+  }
+  return payload as TemplateVideoUploadResponse;
 }
 
 export function createTemplate(payload: TemplateWriteRequest) {

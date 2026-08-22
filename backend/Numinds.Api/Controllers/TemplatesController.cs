@@ -106,6 +106,8 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
                     DefaultNamesFont = t.DefaultNamesFont,
                     HeroIllustrationUrl = t.HeroIllustrationUrl,
                     DecorationImageUrl = t.DecorationImageUrl,
+                    OpeningVideoUrl = t.OpeningVideoUrl,
+                    AmbientVideoUrl = t.AmbientVideoUrl,
                     AmbientEffect = t.AmbientEffect,
                     EnvelopeStyle = t.EnvelopeStyle,
                     HeroFrameStyle = t.HeroFrameStyle,
@@ -206,6 +208,8 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
                     DefaultNamesFont = t.DefaultNamesFont,
                     HeroIllustrationUrl = t.HeroIllustrationUrl,
                     DecorationImageUrl = t.DecorationImageUrl,
+                    OpeningVideoUrl = t.OpeningVideoUrl,
+                    AmbientVideoUrl = t.AmbientVideoUrl,
                     AmbientEffect = t.AmbientEffect,
                     EnvelopeStyle = t.EnvelopeStyle,
                     HeroFrameStyle = t.HeroFrameStyle,
@@ -264,6 +268,8 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
                     DefaultNamesFont = t.DefaultNamesFont,
                     HeroIllustrationUrl = t.HeroIllustrationUrl,
                     DecorationImageUrl = t.DecorationImageUrl,
+                    OpeningVideoUrl = t.OpeningVideoUrl,
+                    AmbientVideoUrl = t.AmbientVideoUrl,
                     AmbientEffect = t.AmbientEffect,
                     EnvelopeStyle = t.EnvelopeStyle,
                     HeroFrameStyle = t.HeroFrameStyle,
@@ -325,6 +331,42 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
         return Ok(new TemplateImageUploadResponse { Url = url });
     }
 
+    // POST /api/templates/video — admin uploads OpeningVideoUrl/AmbientVideoUrl
+    // (TemplateEditModal), same pattern as UploadImage above. No server-side
+    // compression exists for video (SixLabors.ImageSharp can't touch it --
+    // R2FileStorageService.TryCompressImage just uploads it unmodified), so
+    // the size cap here is the only real guard against an admin uploading an
+    // unreasonably large clip.
+    private const long MaxVideoBytes = 25 * 1024 * 1024;
+    private static readonly Dictionary<string, string> AllowedVideoContentTypes = new()
+    {
+        ["video/mp4"] = ".mp4",
+        ["video/webm"] = ".webm",
+    };
+
+    [HttpPost("video")]
+    [Authorize(Roles = Roles.Admin)]
+    public async Task<ActionResult<TemplateVideoUploadResponse>> UploadVideo(
+        IFormFile file,
+        CancellationToken cancellationToken)
+    {
+        if (file is null || file.Length == 0)
+        {
+            return BadRequest(new { message = "No file uploaded." });
+        }
+        if (file.Length > MaxVideoBytes)
+        {
+            return BadRequest(new { message = "Video must be 25MB or smaller." });
+        }
+        if (!AllowedVideoContentTypes.TryGetValue(file.ContentType, out var extension))
+        {
+            return BadRequest(new { message = "Video must be an MP4 or WebM file." });
+        }
+
+        var url = await storage.UploadAsync(file, "templates-video", extension, $"{Request.Scheme}://{Request.Host}", cancellationToken);
+        return Ok(new TemplateVideoUploadResponse { Url = url });
+    }
+
     // POST /api/templates — admin "create template" flow (src/app/admin/video-templates).
     [HttpPost]
     [Authorize(Roles = Roles.Admin)]
@@ -363,6 +405,8 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
             DefaultNamesFont = request.DefaultNamesFont,
             HeroIllustrationUrl = request.HeroIllustrationUrl,
             DecorationImageUrl = request.DecorationImageUrl,
+            OpeningVideoUrl = request.OpeningVideoUrl,
+            AmbientVideoUrl = request.AmbientVideoUrl,
             AmbientEffect = request.AmbientEffect,
             EnvelopeStyle = request.EnvelopeStyle,
             HeroFrameStyle = request.HeroFrameStyle,
@@ -414,6 +458,8 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
         var oldBackgroundImageUrl = template.BackgroundImageUrl;
         var oldHeroIllustrationUrl = template.HeroIllustrationUrl;
         var oldDecorationImageUrl = template.DecorationImageUrl;
+        var oldOpeningVideoUrl = template.OpeningVideoUrl;
+        var oldAmbientVideoUrl = template.AmbientVideoUrl;
 
         // Code is intentionally left untouched even if Category changes here —
         // re-minting it would break any already-shared invitation link's
@@ -429,6 +475,8 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
         template.DefaultNamesFont = request.DefaultNamesFont;
         template.HeroIllustrationUrl = request.HeroIllustrationUrl;
         template.DecorationImageUrl = request.DecorationImageUrl;
+        template.OpeningVideoUrl = request.OpeningVideoUrl;
+        template.AmbientVideoUrl = request.AmbientVideoUrl;
         template.AmbientEffect = request.AmbientEffect;
         template.EnvelopeStyle = request.EnvelopeStyle;
         template.HeroFrameStyle = request.HeroFrameStyle;
@@ -449,6 +497,8 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
         await DeleteIfReplacedAsync(oldBackgroundImageUrl, template.BackgroundImageUrl, cancellationToken);
         await DeleteIfReplacedAsync(oldHeroIllustrationUrl, template.HeroIllustrationUrl, cancellationToken);
         await DeleteIfReplacedAsync(oldDecorationImageUrl, template.DecorationImageUrl, cancellationToken);
+        await DeleteIfReplacedAsync(oldOpeningVideoUrl, template.OpeningVideoUrl, cancellationToken);
+        await DeleteIfReplacedAsync(oldAmbientVideoUrl, template.AmbientVideoUrl, cancellationToken);
 
         var usageCount = await db.Invitations.CountAsync(i => i.TemplateId == id, cancellationToken);
         return Ok(ToDto(template, usageCount, envelope));
@@ -544,6 +594,8 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
         await storage.DeleteAsync(template.BackgroundImageUrl, cancellationToken);
         await storage.DeleteAsync(template.HeroIllustrationUrl, cancellationToken);
         await storage.DeleteAsync(template.DecorationImageUrl, cancellationToken);
+        await storage.DeleteAsync(template.OpeningVideoUrl, cancellationToken);
+        await storage.DeleteAsync(template.AmbientVideoUrl, cancellationToken);
 
         return NoContent();
     }
@@ -606,6 +658,8 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
         DefaultNamesFont = t.DefaultNamesFont,
         HeroIllustrationUrl = t.HeroIllustrationUrl,
         DecorationImageUrl = t.DecorationImageUrl,
+        OpeningVideoUrl = t.OpeningVideoUrl,
+        AmbientVideoUrl = t.AmbientVideoUrl,
         AmbientEffect = t.AmbientEffect,
         EnvelopeStyle = t.EnvelopeStyle,
         HeroFrameStyle = t.HeroFrameStyle,

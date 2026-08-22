@@ -48,6 +48,13 @@ export interface TemplateDto {
   // with the same background.
   heroIllustrationUrl?: string | null;
   decorationImageUrl?: string | null;
+  // The one-time cinematic clip VideoOpeningCover.tsx plays when the guest
+  // taps to open — only used when envelopeStyle is "video" (see below).
+  openingVideoUrl?: string | null;
+  // A looping video AmbientVideoBackground.tsx renders behind the revealed
+  // invitation content, independent of envelopeStyle/openingVideoUrl and of
+  // ambientEffect's particle layer (both can be set at once).
+  ambientVideoUrl?: string | null;
   // Which ambient particle animation AmbientParticles.tsx renders across the
   // whole canvas: "smoke" | "petals" | "sparkle" | "snow" | "none". Null
   // defers to the resolved theme's isDark ("smoke" when dark, "sparkle"
@@ -59,7 +66,8 @@ export interface TemplateDto {
   // only when set; unset/unrecognized values keep every template's original
   // rendering exactly as before these existed.
   // envelopeStyle: "waxseal" swaps the tap-to-open cover for an embossed
-  // wax-seal envelope with a shimmer + light-beam crossfade open.
+  // wax-seal envelope with a shimmer + light-beam crossfade open. "video"
+  // plays openingVideoUrl once instead (see VideoOpeningCover.tsx).
   envelopeStyle?: string | null;
   // heroFrameStyle: "archIslamic" swaps the hero's plain arch-window photo
   // frame for a wider scalloped Mughal-arch frame with pillar/lantern
@@ -109,6 +117,8 @@ export interface TemplateWriteRequest {
   defaultNamesFont?: string | null;
   heroIllustrationUrl?: string | null;
   decorationImageUrl?: string | null;
+  openingVideoUrl?: string | null;
+  ambientVideoUrl?: string | null;
   ambientEffect?: string | null;
   envelopeStyle?: string | null;
   heroFrameStyle?: string | null;
@@ -180,6 +190,10 @@ export interface EnvelopeImageUploadResponse {
 
 // POST /api/templates/image response.
 export interface TemplateImageUploadResponse {
+  url: string;
+}
+
+export interface TemplateVideoUploadResponse {
   url: string;
 }
 

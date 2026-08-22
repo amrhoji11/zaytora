@@ -61,6 +61,8 @@ public class NumindsDbContext(DbContextOptions<NumindsDbContext> options)
             // stock-art URLs carry long query strings.
             entity.Property(t => t.HeroIllustrationUrl).HasMaxLength(1024);
             entity.Property(t => t.DecorationImageUrl).HasMaxLength(1024);
+            entity.Property(t => t.OpeningVideoUrl).HasMaxLength(1024);
+            entity.Property(t => t.AmbientVideoUrl).HasMaxLength(1024);
             entity.Property(t => t.AmbientEffect).HasMaxLength(16);
             // The four scene-style switches — short fixed keywords
             // ("waxseal", "archIslamic", "scratch", "default"), same length

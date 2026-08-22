@@ -45,6 +45,8 @@ import { DoorSlideEnvelopeCover } from "./DoorSlideEnvelopeCover";
 import { DoorFoldEnvelopeCover } from "./DoorFoldEnvelopeCover";
 import { EnvelopeCover } from "./EnvelopeCover";
 import { WaxSealEnvelopeCover } from "./WaxSealEnvelopeCover";
+import { VideoOpeningCover } from "./VideoOpeningCover";
+import { AmbientVideoBackground } from "./AmbientVideoBackground";
 import { ArchIslamicHeroFrame } from "./ArchIslamicHeroFrame";
 import { ScratchDateCard } from "./ScratchDateCard";
 import { ArchIslamicInvitationCard } from "./ArchIslamicInvitationCard";
@@ -1032,6 +1034,10 @@ export function InvitationCanvas({
             reading as a digital wash. */}
         <div className="paper-texture pointer-events-none absolute inset-0 z-[5] opacity-[0.07]" aria-hidden />
 
+        {template?.ambientVideoUrl && (
+          <AmbientVideoBackground videoSrc={template.ambientVideoUrl} standalone={standalone} />
+        )}
+
         <AmbientParticles standalone={standalone} variant={ambientVariant} />
 
         <div className="relative z-10 space-y-16 pb-32">
@@ -1668,6 +1674,22 @@ export function InvitationCanvas({
           standalone={standalone}
         />
       )}
+      {showEnvelope &&
+        templatesLoaded &&
+        !template?.envelopePhotoUrl &&
+        template?.envelopeStyle === "video" &&
+        template?.openingVideoUrl && (
+        <VideoOpeningCover
+          videoSrc={template.openingVideoUrl}
+          posterSrc={template.heroIllustrationUrl ?? template.backgroundImageUrl}
+          firstName={value.firstName ?? ""}
+          secondName={value.invitationType === "couple" ? value.secondName : null}
+          namesFont={value.envelopeNameFont}
+          language={language === "ar" ? "ar" : "en"}
+          onOpen={handleEnvelopeOpen}
+          standalone={standalone}
+        />
+      )}
       {/* An admin-assigned library envelope (see /admin/envelopes and
           TemplateEditModal's "envelope from library" picker) wins over
           every named envelopeStyle below when set — an explicitly chosen
@@ -1729,7 +1751,8 @@ export function InvitationCanvas({
         template?.envelopeStyle !== "waxseal" &&
         template?.envelopeStyle !== "crimsonSeal" &&
         template?.envelopeStyle !== "oliveSeal" &&
-        template?.envelopeStyle !== "navyGoldSeal" && (
+        template?.envelopeStyle !== "navyGoldSeal" &&
+        !(template?.envelopeStyle === "video" && template?.openingVideoUrl) && (
         <EnvelopeCover
           firstName={value.firstName ?? ""}
           secondName={value.invitationType === "couple" ? value.secondName : null}

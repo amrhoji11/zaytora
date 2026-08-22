@@ -127,8 +127,24 @@ public class Template
     // swaps EnvelopeCover's blurred-photo-badge for an embossed cream paper
     // envelope with a circular wax-seal initials badge, an idle shimmer
     // sweep across its floral engraving, and a golden light-beam crossfade
-    // into the hero on open. Null/anything else keeps the original cover.
+    // into the hero on open. "video" plays OpeningVideoUrl once instead of
+    // any hand-drawn cover (see VideoOpeningCover.tsx) — pairs with
+    // OpeningVideoUrl the same way "customPhoto" pairs with EnvelopeId
+    // below. Null/anything else keeps the original cover.
     public string? EnvelopeStyle { get; set; }
+
+    // The one-time cinematic clip VideoOpeningCover.tsx plays when the guest
+    // taps to open (only used when EnvelopeStyle == "video"). Ignored
+    // otherwise, same "unused unless explicitly opted into" convention as
+    // the four scene-style switches above.
+    public string? OpeningVideoUrl { get; set; }
+
+    // A looping video AmbientVideoBackground.tsx renders behind the revealed
+    // invitation content, independent of EnvelopeStyle/OpeningVideoUrl and
+    // of AmbientEffect's particle layer (both can be set at once -- video
+    // behind, particles in front). Null renders no video layer, exactly
+    // like every template before this field existed.
+    public string? AmbientVideoUrl { get; set; }
 
     // HeroFrameStyle — the hero's bounded photo frame. "archIslamic" replaces
     // the plain rounded-top arch window with a wider, multi-lobed scalloped
