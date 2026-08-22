@@ -35,12 +35,25 @@ export function EnvelopeMediaCover({
   language,
   onOpen,
   standalone,
+  firstName,
+  secondName,
+  initialsXPercent,
+  initialsYPercent,
 }: {
   mediaSrc: string;
   namesFont?: string | null;
   language: "ar" | "en";
   onOpen: () => void;
   standalone: boolean;
+  // See Template.EnvelopeInitialsXPercent/YPercent -- when both are set, a
+  // frosted patch bearing the couple's real initials is drawn on top of the
+  // media at that position, for a video/photo whose seal area is blank (or
+  // has placeholder letters this patch is meant to cover) rather than one
+  // baked with a specific couple's names. Either missing renders no patch.
+  firstName?: string | null;
+  secondName?: string | null;
+  initialsXPercent?: number | null;
+  initialsYPercent?: number | null;
 }) {
   const mediaIsVideo = isVideoSource(mediaSrc);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -48,6 +61,8 @@ export function EnvelopeMediaCover({
   const [quoteVisible, setQuoteVisible] = useState(false);
   const [closing, setClosing] = useState(false);
   const [hidden, setHidden] = useState(false);
+  const initials = [firstName?.[0], secondName?.[0]].filter(Boolean).join(" & ");
+  const showInitialsPatch = Boolean(initials) && initialsXPercent != null && initialsYPercent != null;
 
   function handleFinish() {
     if (closing) return;
@@ -95,6 +110,27 @@ export function EnvelopeMediaCover({
       ) : (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={mediaSrc} alt="" className="absolute inset-0 h-full w-full object-cover" />
+      )}
+
+      {showInitialsPatch && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute z-20 flex items-center justify-center rounded-full bg-[#f9f1e2]/75 shadow-[0_2px_10px_rgba(0,0,0,0.15)] backdrop-blur-md"
+          style={{
+            top: `${initialsYPercent}%`,
+            left: `${initialsXPercent}%`,
+            width: "34%",
+            aspectRatio: "1 / 1",
+            transform: "translate(-50%, -50%)",
+          }}
+        >
+          <span
+            className={cn("text-[#8a6a2f]", namesFont || "font-cinzel")}
+            style={{ fontSize: "clamp(16px, 6vw, 26px)" }}
+          >
+            {initials}
+          </span>
+        </div>
       )}
 
       {!started && (

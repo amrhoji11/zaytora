@@ -148,6 +148,17 @@ public class Template
     // like every template before this field existed.
     public string? AmbientVideoUrl { get; set; }
 
+    // Position (0-100, percent of the envelope media's width/height) of an
+    // optional live-initials overlay EnvelopeMediaCover draws on top of
+    // OpeningVideoUrl -- a small frosted patch bearing the couple's real
+    // initials, for a video/photo whose own artwork has a blank seal area
+    // (or baked-in placeholder letters this patch is meant to cover) rather
+    // than one that already has a specific couple's names burned into its
+    // pixels. Both null (the default -- most templates) renders no overlay
+    // at all, exactly like before these fields existed; only set together.
+    public double? EnvelopeInitialsXPercent { get; set; }
+    public double? EnvelopeInitialsYPercent { get; set; }
+
     // HeroFrameStyle — the hero's bounded photo frame. "archIslamic" replaces
     // the plain rounded-top arch window with a wider, multi-lobed scalloped
     // Mughal/mihrab arch, carved pillar sides, hanging lantern silhouettes,

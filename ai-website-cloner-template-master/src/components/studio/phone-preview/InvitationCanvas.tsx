@@ -1711,6 +1711,10 @@ export function InvitationCanvas({
           language={language === "ar" ? "ar" : "en"}
           onOpen={handleEnvelopeOpen}
           standalone={standalone}
+          firstName={value.firstName}
+          secondName={value.invitationType === "couple" ? value.secondName : null}
+          initialsXPercent={template.envelopeInitialsXPercent}
+          initialsYPercent={template.envelopeInitialsYPercent}
         />
       )}
       {/* An admin-assigned library envelope (see /admin/envelopes and

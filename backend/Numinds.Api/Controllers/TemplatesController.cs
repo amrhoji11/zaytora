@@ -108,6 +108,8 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
                     DecorationImageUrl = t.DecorationImageUrl,
                     OpeningVideoUrl = t.OpeningVideoUrl,
                     AmbientVideoUrl = t.AmbientVideoUrl,
+                    EnvelopeInitialsXPercent = t.EnvelopeInitialsXPercent,
+                    EnvelopeInitialsYPercent = t.EnvelopeInitialsYPercent,
                     AmbientEffect = t.AmbientEffect,
                     EnvelopeStyle = t.EnvelopeStyle,
                     HeroFrameStyle = t.HeroFrameStyle,
@@ -210,6 +212,8 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
                     DecorationImageUrl = t.DecorationImageUrl,
                     OpeningVideoUrl = t.OpeningVideoUrl,
                     AmbientVideoUrl = t.AmbientVideoUrl,
+                    EnvelopeInitialsXPercent = t.EnvelopeInitialsXPercent,
+                    EnvelopeInitialsYPercent = t.EnvelopeInitialsYPercent,
                     AmbientEffect = t.AmbientEffect,
                     EnvelopeStyle = t.EnvelopeStyle,
                     HeroFrameStyle = t.HeroFrameStyle,
@@ -270,6 +274,8 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
                     DecorationImageUrl = t.DecorationImageUrl,
                     OpeningVideoUrl = t.OpeningVideoUrl,
                     AmbientVideoUrl = t.AmbientVideoUrl,
+                    EnvelopeInitialsXPercent = t.EnvelopeInitialsXPercent,
+                    EnvelopeInitialsYPercent = t.EnvelopeInitialsYPercent,
                     AmbientEffect = t.AmbientEffect,
                     EnvelopeStyle = t.EnvelopeStyle,
                     HeroFrameStyle = t.HeroFrameStyle,
@@ -417,6 +423,8 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
             DecorationImageUrl = request.DecorationImageUrl,
             OpeningVideoUrl = request.OpeningVideoUrl,
             AmbientVideoUrl = request.AmbientVideoUrl,
+            EnvelopeInitialsXPercent = request.EnvelopeInitialsXPercent,
+            EnvelopeInitialsYPercent = request.EnvelopeInitialsYPercent,
             AmbientEffect = request.AmbientEffect,
             EnvelopeStyle = request.EnvelopeStyle,
             HeroFrameStyle = request.HeroFrameStyle,
@@ -487,6 +495,8 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
         template.DecorationImageUrl = request.DecorationImageUrl;
         template.OpeningVideoUrl = request.OpeningVideoUrl;
         template.AmbientVideoUrl = request.AmbientVideoUrl;
+        template.EnvelopeInitialsXPercent = request.EnvelopeInitialsXPercent;
+        template.EnvelopeInitialsYPercent = request.EnvelopeInitialsYPercent;
         template.AmbientEffect = request.AmbientEffect;
         template.EnvelopeStyle = request.EnvelopeStyle;
         template.HeroFrameStyle = request.HeroFrameStyle;
@@ -670,6 +680,8 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
         DecorationImageUrl = t.DecorationImageUrl,
         OpeningVideoUrl = t.OpeningVideoUrl,
         AmbientVideoUrl = t.AmbientVideoUrl,
+        EnvelopeInitialsXPercent = t.EnvelopeInitialsXPercent,
+        EnvelopeInitialsYPercent = t.EnvelopeInitialsYPercent,
         AmbientEffect = t.AmbientEffect,
         EnvelopeStyle = t.EnvelopeStyle,
         HeroFrameStyle = t.HeroFrameStyle,

@@ -59,6 +59,14 @@ export interface TemplateDto {
   // invitation content, independent of envelopeStyle/openingVideoUrl and of
   // ambientEffect's particle layer (both can be set at once).
   ambientVideoUrl?: string | null;
+  // Position (0-100, percent of the media's own width/height) of a live
+  // couple-initials overlay EnvelopeMediaCover draws on top of
+  // openingVideoUrl — a small frosted patch showing the real initials, for
+  // a video/photo whose seal area is blank (or has placeholder letters this
+  // patch is meant to cover) rather than one with a specific couple's names
+  // burned into its pixels. Both null (most templates) renders no overlay.
+  envelopeInitialsXPercent?: number | null;
+  envelopeInitialsYPercent?: number | null;
   // Which ambient particle animation AmbientParticles.tsx renders across the
   // whole canvas: "smoke" | "petals" | "sparkle" | "snow" | "none". Null
   // defers to the resolved theme's isDark ("smoke" when dark, "sparkle"
@@ -123,6 +131,8 @@ export interface TemplateWriteRequest {
   decorationImageUrl?: string | null;
   openingVideoUrl?: string | null;
   ambientVideoUrl?: string | null;
+  envelopeInitialsXPercent?: number | null;
+  envelopeInitialsYPercent?: number | null;
   ambientEffect?: string | null;
   envelopeStyle?: string | null;
   heroFrameStyle?: string | null;

@@ -29,6 +29,10 @@ const COPY = {
     uploadEnvelopeError: "تعذّر الرفع. تأكد إنه JPG أو PNG أو WebP أو MP4 أو WebM بحجم أقل من 25 ميغابايت.",
     uploadVideoError: "تعذّر رفع الفيديو. تأكد إنه MP4 أو WebM بحجم أقل من 25 ميغابايت.",
     openingVideoUrl: "الظرف (صورة أو فيديو، اختياري) — يفتح عند الضغط عليه",
+    envelopeInitials: "موضع حروف العروسين فوق الظرف (اختياري)",
+    envelopeInitialsHint: "لتغطية أي حروف ثابتة برسمة الظرف بحروف العروسين الحقيقية — اتركه فارغاً لعدم إظهار أي طبقة",
+    envelopeInitialsX: "الموضع أفقياً %",
+    envelopeInitialsY: "الموضع عمودياً %",
     ambientVideoUrl: "فيديو خلفية متحرك (اختياري)",
     layout: "طريقة عرض الصورة",
     layoutHint: {
@@ -71,6 +75,10 @@ const COPY = {
     uploadEnvelopeError: "Couldn't upload. Make sure it's a JPG, PNG, WebP, MP4, or WebM under 25MB.",
     uploadVideoError: "Couldn't upload the video. Make sure it's an MP4 or WebM under 25MB.",
     openingVideoUrl: "Envelope (photo or video, optional) — opens on tap",
+    envelopeInitials: "Couple-initials position over the envelope (optional)",
+    envelopeInitialsHint: "Covers any baked-in letters on the envelope artwork with the real couple's initials — leave blank to show no overlay",
+    envelopeInitialsX: "Horizontal position %",
+    envelopeInitialsY: "Vertical position %",
     ambientVideoUrl: "Ambient background video (optional)",
     layout: "Photo layout",
     layoutHint: {
@@ -162,6 +170,8 @@ function TemplateEditModalContent({
     heroIllustrationUrl: record.heroIllustrationUrl ?? "",
     decorationImageUrl: record.decorationImageUrl ?? "",
     openingVideoUrl: record.openingVideoUrl ?? "",
+    envelopeInitialsXPercent: record.envelopeInitialsXPercent ?? null,
+    envelopeInitialsYPercent: record.envelopeInitialsYPercent ?? null,
     ambientVideoUrl: record.ambientVideoUrl ?? "",
     ambientEffect: record.ambientEffect ?? "",
     heroFrameStyle: record.heroFrameStyle ?? "",
@@ -399,6 +409,42 @@ function TemplateEditModalContent({
                 className="hidden"
               />
             </label>
+          </div>
+
+          <div className="sm:col-span-2">
+            <Field label={t.envelopeInitials}>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <span className="mb-1 block text-xs text-muted-foreground">{t.envelopeInitialsX}</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={form.envelopeInitialsXPercent ?? ""}
+                    onChange={(event) => {
+                      const raw = event.target.value;
+                      patch({ envelopeInitialsXPercent: raw === "" ? null : Number(raw) });
+                    }}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <span className="mb-1 block text-xs text-muted-foreground">{t.envelopeInitialsY}</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={form.envelopeInitialsYPercent ?? ""}
+                    onChange={(event) => {
+                      const raw = event.target.value;
+                      patch({ envelopeInitialsYPercent: raw === "" ? null : Number(raw) });
+                    }}
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+            </Field>
+            <p className="mt-1.5 text-xs text-muted-foreground">{t.envelopeInitialsHint}</p>
           </div>
 
           <div className="sm:col-span-2">

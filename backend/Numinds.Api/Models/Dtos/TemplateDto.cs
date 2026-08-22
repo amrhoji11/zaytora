@@ -18,6 +18,10 @@ public class TemplateDto
     public string? DecorationImageUrl { get; set; }
     public string? OpeningVideoUrl { get; set; }
     public string? AmbientVideoUrl { get; set; }
+    // Position (0-100) of the live-initials overlay EnvelopeMediaCover draws
+    // on top of OpeningVideoUrl -- see Models/Entities/Template.cs.
+    public double? EnvelopeInitialsXPercent { get; set; }
+    public double? EnvelopeInitialsYPercent { get; set; }
     public string? AmbientEffect { get; set; }
     public string? EnvelopeStyle { get; set; }
     public string? HeroFrameStyle { get; set; }
@@ -62,6 +66,8 @@ public class TemplateWriteRequest
     public string? DecorationImageUrl { get; set; }
     public string? OpeningVideoUrl { get; set; }
     public string? AmbientVideoUrl { get; set; }
+    public double? EnvelopeInitialsXPercent { get; set; }
+    public double? EnvelopeInitialsYPercent { get; set; }
     public string? AmbientEffect { get; set; }
     public string? EnvelopeStyle { get; set; }
     public string? HeroFrameStyle { get; set; }
