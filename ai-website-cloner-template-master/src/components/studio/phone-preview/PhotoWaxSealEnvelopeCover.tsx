@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { STANDALONE_FULLSCREEN_CLASS } from "./standaloneCoverPosition";
 import {
   buildFlaps,
   flapClipPath,
@@ -105,7 +106,7 @@ export function PhotoWaxSealEnvelopeCover({
       className={cn(
         "z-[1000] flex appearance-none items-center justify-center overflow-hidden border-0 bg-transparent p-0 transition-opacity ease-in-out",
         closing ? "pointer-events-none opacity-0" : "opacity-100",
-        standalone ? "fixed inset-0" : "absolute inset-0"
+        standalone ? STANDALONE_FULLSCREEN_CLASS : "absolute inset-0"
       )}
       // No backdrop color: the flaps already tile the whole rect while
       // closed, so a transparent wrapper means any gap that opens up as they

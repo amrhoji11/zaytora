@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { STANDALONE_FULLSCREEN_CLASS } from "./standaloneCoverPosition";
 
 // A literal pair of double doors: the photo is split straight down the
 // middle into two equal panels — not tied to the seal position at all,
@@ -57,7 +58,7 @@ export function DoorSlideEnvelopeCover({
       className={cn(
         "z-[1000] flex appearance-none items-center justify-center overflow-hidden border-0 bg-transparent p-0 transition-opacity ease-in-out",
         closing ? "pointer-events-none opacity-0" : "opacity-100",
-        standalone ? "fixed inset-0" : "absolute inset-0"
+        standalone ? STANDALONE_FULLSCREEN_CLASS : "absolute inset-0"
       )}
       style={{ transitionDuration: `${FADE_DURATION_MS}ms` }}
     >

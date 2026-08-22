@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { FloralSprig } from "./decorative";
+import { STANDALONE_FULLSCREEN_CLASS } from "./standaloneCoverPosition";
 
 // Pacing tuned to the reference video's own felt timing: the crease splits
 // apart with real depth (~900ms), the gap holds at full brightness for a
@@ -210,7 +211,7 @@ export function WaxSealEnvelopeCover({
       className={cn(
         "z-[1000] flex items-center justify-center overflow-hidden transition-opacity ease-in-out",
         closing ? "pointer-events-none opacity-0" : "opacity-100",
-        standalone ? "fixed inset-0" : "absolute inset-0"
+        standalone ? STANDALONE_FULLSCREEN_CLASS : "absolute inset-0"
       )}
       style={{ transitionDuration: `${FADE_DURATION_MS}ms`, background: "#e7dcc0" }}
     >

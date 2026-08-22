@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { STANDALONE_FULLSCREEN_CLASS } from "./standaloneCoverPosition";
 
 // Which ambient motion layer drifts across the whole canvas — mirrors
 // Template.AmbientEffect (see the backend entity's doc comment) and
@@ -62,7 +63,7 @@ export function AmbientParticles({
 
   return (
     <div
-      className={cn("pointer-events-none z-10 overflow-hidden", standalone ? "fixed inset-0" : "absolute inset-0")}
+      className={cn("pointer-events-none z-10 overflow-hidden", standalone ? STANDALONE_FULLSCREEN_CLASS : "absolute inset-0")}
       aria-hidden
     >
       {particles.map((particle, index) => (

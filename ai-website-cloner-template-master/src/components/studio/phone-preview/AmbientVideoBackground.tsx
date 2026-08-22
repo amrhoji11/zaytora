@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
+import { STANDALONE_FULLSCREEN_CLASS } from "./standaloneCoverPosition";
 
 // A looping video rendered behind the revealed invitation content (see
 // Template.AmbientVideoUrl) — same responsive/positioning convention as
@@ -47,7 +48,7 @@ export function AmbientVideoBackground({
       loop
       playsInline
       preload="auto"
-      className={cn("pointer-events-none z-0 h-full w-full object-cover", standalone ? "fixed inset-0" : "absolute inset-0")}
+      className={cn("pointer-events-none z-0 h-full w-full object-cover", standalone ? STANDALONE_FULLSCREEN_CLASS : "absolute inset-0")}
       aria-hidden
     />
   );

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { STANDALONE_FULLSCREEN_CLASS } from "./standaloneCoverPosition";
 
 const FADE_DURATION_MS = 500;
 
@@ -64,7 +65,7 @@ export function VideoOpeningCover({
       className={cn(
         "z-[1000] overflow-hidden transition-opacity ease-in-out",
         closing ? "pointer-events-none opacity-0" : "opacity-100",
-        standalone ? "fixed inset-0" : "absolute inset-0"
+        standalone ? STANDALONE_FULLSCREEN_CLASS : "absolute inset-0"
       )}
       style={{ transitionDuration: `${FADE_DURATION_MS}ms` }}
     >

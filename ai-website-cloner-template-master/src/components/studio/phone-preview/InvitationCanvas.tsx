@@ -47,6 +47,7 @@ import { EnvelopeCover } from "./EnvelopeCover";
 import { WaxSealEnvelopeCover } from "./WaxSealEnvelopeCover";
 import { VideoOpeningCover } from "./VideoOpeningCover";
 import { AmbientVideoBackground } from "./AmbientVideoBackground";
+import { STANDALONE_FULLSCREEN_CLASS } from "./standaloneCoverPosition";
 import { ArchIslamicHeroFrame } from "./ArchIslamicHeroFrame";
 import { ScratchDateCard } from "./ScratchDateCard";
 import { ArchIslamicInvitationCard } from "./ArchIslamicInvitationCard";
@@ -1605,7 +1606,7 @@ export function InvitationCanvas({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className={cn("z-40 bg-black/30", standalone ? "fixed inset-0" : "absolute inset-0")}
+              className={cn("z-40 bg-black/30", standalone ? STANDALONE_FULLSCREEN_CLASS : "absolute inset-0")}
             />
             <motion.div
               key="modal-sheet"
@@ -1657,7 +1658,7 @@ export function InvitationCanvas({
         <div
           className={cn(
             "z-[1000] flex items-center justify-center bg-black",
-            standalone ? "fixed inset-0" : "absolute inset-0"
+            standalone ? STANDALONE_FULLSCREEN_CLASS : "absolute inset-0"
           )}
         >
           <LoaderIcon className="size-6 animate-spin text-white/70" />

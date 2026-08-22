@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { STANDALONE_FULLSCREEN_CLASS } from "./standaloneCoverPosition";
 
 // Pacing: the flap lifts open with real depth (~700ms), the gap holds at
 // full brightness for a beat (~300ms), then the whole cover dissolves into
@@ -446,7 +447,7 @@ function WaxSealEnvelopeCoverBase({
       className={cn(
         "z-[1000] flex items-center justify-center overflow-hidden transition-opacity ease-in-out",
         closing ? "pointer-events-none opacity-0" : "opacity-100",
-        standalone ? "fixed inset-0" : "absolute inset-0"
+        standalone ? STANDALONE_FULLSCREEN_CLASS : "absolute inset-0"
       )}
       style={{ transitionDuration: `${FADE_DURATION_MS}ms`, background: palette.backdrop }}
     >
