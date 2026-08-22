@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { PlayIcon } from "@/components/icons";
 import { cn, isVideoSource } from "@/lib/utils";
 import { STANDALONE_FULLSCREEN_CLASS } from "./standaloneCoverPosition";
 
@@ -103,13 +102,12 @@ export function EnvelopeMediaCover({
           type="button"
           onClick={handleTap}
           aria-label={language === "ar" ? "فتح" : "Open"}
-          className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/10 transition-colors active:bg-black/20"
+          className={cn(
+            "absolute inset-0 flex flex-col items-center justify-center gap-3",
+            !mediaIsVideo && "bg-black/10 transition-colors active:bg-black/20"
+          )}
         >
-          {mediaIsVideo ? (
-            <span className="flex size-16 items-center justify-center rounded-full border border-white/40 bg-white/15 shadow-[0_8px_30px_rgba(0,0,0,0.35)] backdrop-blur-sm transition-transform active:scale-95">
-              <PlayIcon className="size-6 fill-current text-white ms-0.5" />
-            </span>
-          ) : (
+          {mediaIsVideo ? null : (
             <span
               className={cn(
                 "rounded-full border border-white/40 bg-black/25 px-4 py-1.5 text-[11px] font-medium tracking-[0.2em] text-white uppercase backdrop-blur-sm",
