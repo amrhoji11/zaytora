@@ -48,8 +48,12 @@ export interface TemplateDto {
   // with the same background.
   heroIllustrationUrl?: string | null;
   decorationImageUrl?: string | null;
-  // The one-time cinematic clip VideoOpeningCover.tsx plays when the guest
-  // taps to open — only used when envelopeStyle is "video" (see below).
+  // The envelope's opening media — EnvelopeMediaCover.tsx renders this as
+  // the closed/tap-to-open screen whenever it's set, independent of
+  // envelopeStyle below. Despite the field name (kept as-is to avoid a
+  // rename migration), this can be either a video (plays once on tap) or a
+  // plain image (fades away instantly on tap) — EnvelopeMediaCover tells
+  // them apart by content, not a separate flag.
   openingVideoUrl?: string | null;
   // A looping video AmbientVideoBackground.tsx renders behind the revealed
   // invitation content, independent of envelopeStyle/openingVideoUrl and of
@@ -66,8 +70,8 @@ export interface TemplateDto {
   // only when set; unset/unrecognized values keep every template's original
   // rendering exactly as before these existed.
   // envelopeStyle: "waxseal" swaps the tap-to-open cover for an embossed
-  // wax-seal envelope with a shimmer + light-beam crossfade open. "video"
-  // plays openingVideoUrl once instead (see VideoOpeningCover.tsx).
+  // wax-seal envelope with a shimmer + light-beam crossfade open. Ignored
+  // whenever openingVideoUrl is set (see above), which takes priority.
   envelopeStyle?: string | null;
   // heroFrameStyle: "archIslamic" swaps the hero's plain arch-window photo
   // frame for a wider scalloped Mughal-arch frame with pillar/lantern

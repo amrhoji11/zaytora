@@ -45,7 +45,7 @@ import { DoorSlideEnvelopeCover } from "./DoorSlideEnvelopeCover";
 import { DoorFoldEnvelopeCover } from "./DoorFoldEnvelopeCover";
 import { EnvelopeCover } from "./EnvelopeCover";
 import { WaxSealEnvelopeCover } from "./WaxSealEnvelopeCover";
-import { VideoOpeningCover } from "./VideoOpeningCover";
+import { EnvelopeMediaCover } from "./EnvelopeMediaCover";
 import { AmbientVideoBackground } from "./AmbientVideoBackground";
 import { STANDALONE_FULLSCREEN_CLASS } from "./standaloneCoverPosition";
 import { ArchIslamicHeroFrame } from "./ArchIslamicHeroFrame";
@@ -1704,14 +1704,9 @@ export function InvitationCanvas({
           standalone={standalone}
         />
       )}
-      {showEnvelope &&
-        templatesLoaded &&
-        !template?.envelopePhotoUrl &&
-        template?.envelopeStyle === "video" &&
-        template?.openingVideoUrl && (
-        <VideoOpeningCover
-          videoSrc={template.openingVideoUrl}
-          posterSrc={template.heroIllustrationUrl ?? template.backgroundImageUrl}
+      {showEnvelope && templatesLoaded && !template?.envelopePhotoUrl && template?.openingVideoUrl && (
+        <EnvelopeMediaCover
+          mediaSrc={template.openingVideoUrl}
           namesFont={value.envelopeNameFont}
           language={language === "ar" ? "ar" : "en"}
           onOpen={handleEnvelopeOpen}
@@ -1780,7 +1775,7 @@ export function InvitationCanvas({
         template?.envelopeStyle !== "crimsonSeal" &&
         template?.envelopeStyle !== "oliveSeal" &&
         template?.envelopeStyle !== "navyGoldSeal" &&
-        !(template?.envelopeStyle === "video" && template?.openingVideoUrl) && (
+        !template?.openingVideoUrl && (
         <EnvelopeCover
           firstName={value.firstName ?? ""}
           secondName={value.invitationType === "couple" ? value.secondName : null}

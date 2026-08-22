@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { LoaderIcon, UploadIcon, XIcon } from "@/components/icons";
 import { CATEGORY_IDS, CATEGORY_LABELS, type CategoryId } from "@/lib/categories";
-import { listEnvelopes } from "@/lib/services/envelopes.service";
+import { isVideoSource } from "@/lib/utils";
 import { uploadTemplateImage, uploadTemplateVideo } from "@/lib/services/templates.service";
-import type { EnvelopeDto, TemplateDto, TemplateWriteRequest } from "@/types/api";
+import type { TemplateDto, TemplateWriteRequest } from "@/types/api";
 
 const LAYOUTS = ["full-bleed", "boxed-hero", "overlay", "none"] as const;
 const AMBIENT_EFFECTS = ["", "smoke", "petals", "sparkle", "snow", "none"] as const;
@@ -13,12 +13,6 @@ const NAME_FONTS = ["", "font-cinzel", "font-serif", "font-sans", "italic font-s
 const HERO_FRAME_STYLES = ["", "archIslamic"] as const;
 const DATE_REVEAL_STYLES = ["", "scratch"] as const;
 const INVITATION_CARD_STYLES = ["", "archIslamic"] as const;
-// The only envelopeStyle value still settable from this modal — every other
-// legacy hand-drawn value (waxseal/crimsonSeal/oliveSeal/navyGoldSeal) is
-// deliberately no longer editable here (see handleSave's force-clear) now
-// that the admin envelope library covers that need. "video" is new: plays
-// openingVideoUrl once instead of any hand-drawn/library cover.
-const ENVELOPE_STYLES = ["", "video"] as const;
 
 const COPY = {
   ar: {
@@ -28,14 +22,14 @@ const COPY = {
     imageUrl: "رابط صورة الغلاف الرئيسية (مطلوب)",
     backgroundImageUrl: "رابط صورة الخلفية الحية (اختياري — نفس الصورة أعلاه إن تُركت فارغة)",
     uploadFromDevice: "أو ارفع صورة من جهازك",
+    uploadEnvelopeFromDevice: "أو ارفع صورة أو فيديو من جهازك",
     uploadVideoFromDevice: "أو ارفع فيديو من جهازك",
     uploading: "جارٍ الرفع...",
     uploadError: "تعذّر رفع الصورة. تأكد إنها JPG أو PNG أو WebP بحجم أقل من 8 ميغابايت.",
+    uploadEnvelopeError: "تعذّر الرفع. تأكد إنه JPG أو PNG أو WebP أو MP4 أو WebM بحجم أقل من 25 ميغابايت.",
     uploadVideoError: "تعذّر رفع الفيديو. تأكد إنه MP4 أو WebM بحجم أقل من 25 ميغابايت.",
-    openingVideoUrl: "فيديو فتح الظرف (اختياري)",
+    openingVideoUrl: "الظرف (صورة أو فيديو، اختياري) — يفتح عند الضغط عليه",
     ambientVideoUrl: "فيديو خلفية متحرك (اختياري)",
-    envelopeStyle: "نمط فتح الظرف",
-    envelopeStyleValues: { "": "افتراضي / حسب مكتبة الظروف", video: "فيديو (يتطلب فيديو فتح الظرف أعلاه)" } as Record<string, string>,
     layout: "طريقة عرض الصورة",
     layoutHint: {
       "full-bleed": "خلفية كاملة خلف الصفحة",
@@ -57,10 +51,6 @@ const COPY = {
       archIslamic: "قوس إسلامي",
       scratch: "بطاقة خدش",
     } as Record<string, string>,
-    envelopeLibrary: "ظرف الفتح (اختياري)",
-    envelopeLibraryNone: "بدون",
-    envelopeLibraryHint: "زوّد ظروف جديدة من صفحة \"الظروف\" بلوحة التحكم.",
-    envelopeLibraryLoadError: "تعذّر تحميل قائمة الظروف.",
     isPopular: "قالب شائع (يظهر أولاً في الترتيب)",
     save: "حفظ التعديلات",
     cancel: "إلغاء",
@@ -74,14 +64,14 @@ const COPY = {
     imageUrl: "Cover image URL (required)",
     backgroundImageUrl: "Live background image URL (optional — same as above if left blank)",
     uploadFromDevice: "Or upload a photo from your device",
+    uploadEnvelopeFromDevice: "Or upload a photo or video from your device",
     uploadVideoFromDevice: "Or upload a video from your device",
     uploading: "Uploading...",
     uploadError: "Couldn't upload the image. Make sure it's a JPG, PNG, or WebP under 8MB.",
+    uploadEnvelopeError: "Couldn't upload. Make sure it's a JPG, PNG, WebP, MP4, or WebM under 25MB.",
     uploadVideoError: "Couldn't upload the video. Make sure it's an MP4 or WebM under 25MB.",
-    openingVideoUrl: "Envelope-opening video (optional)",
+    openingVideoUrl: "Envelope (photo or video, optional) — opens on tap",
     ambientVideoUrl: "Ambient background video (optional)",
-    envelopeStyle: "Envelope opening style",
-    envelopeStyleValues: { "": "Default / from envelope library", video: "Video (requires the opening video above)" } as Record<string, string>,
     layout: "Photo layout",
     layoutHint: {
       "full-bleed": "Full-bleed photo behind the whole page",
@@ -103,10 +93,6 @@ const COPY = {
       archIslamic: "Islamic arch",
       scratch: "Scratch card",
     } as Record<string, string>,
-    envelopeLibrary: "Opening envelope (optional)",
-    envelopeLibraryNone: "None",
-    envelopeLibraryHint: "Add new envelopes from the \"Envelopes\" admin page.",
-    envelopeLibraryLoadError: "Couldn't load the envelope list.",
     isPopular: "Popular template (sorts first)",
     save: "Save changes",
     cancel: "Cancel",
@@ -177,7 +163,6 @@ function TemplateEditModalContent({
     decorationImageUrl: record.decorationImageUrl ?? "",
     openingVideoUrl: record.openingVideoUrl ?? "",
     ambientVideoUrl: record.ambientVideoUrl ?? "",
-    envelopeStyle: record.envelopeStyle === "video" ? "video" : "",
     ambientEffect: record.ambientEffect ?? "",
     heroFrameStyle: record.heroFrameStyle ?? "",
     dateRevealStyle: record.dateRevealStyle ?? "",
@@ -189,9 +174,6 @@ function TemplateEditModalContent({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const [envelopes, setEnvelopes] = useState<EnvelopeDto[]>([]);
-  const [envelopesError, setEnvelopesError] = useState(false);
-
   // Which upload field is mid-flight, if any — lets every "upload from
   // device" button below share one handler per asset type while each shows
   // its own loading state independently.
@@ -200,20 +182,6 @@ function TemplateEditModalContent({
   const [uploadingField, setUploadingField] = useState<ImageField | VideoField | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadVideoError, setUploadVideoError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    listEnvelopes()
-      .then((data) => {
-        if (!cancelled) setEnvelopes(data);
-      })
-      .catch(() => {
-        if (!cancelled) setEnvelopesError(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   function patch(next: Partial<TemplateWriteRequest>) {
     setForm((current) => ({ ...current, ...next }));
@@ -239,7 +207,7 @@ function TemplateEditModalContent({
       const { url } = await uploadTemplateVideo(file);
       patch({ [field]: url });
     } catch {
-      setUploadVideoError(t.uploadVideoError);
+      setUploadVideoError(field === "openingVideoUrl" ? t.uploadEnvelopeError : t.uploadVideoError);
     } finally {
       setUploadingField(null);
     }
@@ -268,10 +236,10 @@ function TemplateEditModalContent({
         ambientEffect: form.ambientEffect?.trim() || null,
         // Legacy hardcoded envelope styles (waxseal/crimsonSeal/oliveSeal/
         // navyGoldSeal) are no longer editable here — force-cleared on every
-        // save so a template can only show an envelope from the admin's own
-        // /admin/envelopes library (envelopeId below), unless "video" is
-        // explicitly selected and an opening video is actually attached.
-        envelopeStyle: form.envelopeStyle === "video" && form.openingVideoUrl?.trim() ? "video" : null,
+        // save. Not needed for openingVideoUrl either anymore: the frontend
+        // now renders EnvelopeMediaCover whenever openingVideoUrl is set,
+        // full stop, regardless of this field's value.
+        envelopeStyle: null,
         heroFrameStyle: form.heroFrameStyle?.trim() || null,
         dateRevealStyle: form.dateRevealStyle?.trim() || null,
         invitationCardStyle: form.invitationCardStyle?.trim() || null,
@@ -407,17 +375,21 @@ function TemplateEditModalContent({
                   onChange={(event) => patch({ openingVideoUrl: event.target.value })}
                   className={inputClass}
                 />
-                {form.openingVideoUrl && (
-                  <video src={form.openingVideoUrl} muted className="h-14 w-9 shrink-0 rounded-lg border border-border object-cover" />
-                )}
+                {form.openingVideoUrl &&
+                  (isVideoSource(form.openingVideoUrl) ? (
+                    <video src={form.openingVideoUrl} muted className="h-14 w-9 shrink-0 rounded-lg border border-border object-cover" />
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={form.openingVideoUrl} alt="" className="h-14 w-9 shrink-0 rounded-lg border border-border object-cover" />
+                  ))}
               </div>
             </Field>
             <label className="mt-1.5 flex w-fit cursor-pointer items-center gap-1.5 rounded-lg border border-dashed border-[#C8A24A]/40 px-3 py-1.5 text-xs font-medium text-[#C8A24A] transition-colors hover:bg-[#C8A24A]/5">
               {uploadingField === "openingVideoUrl" ? <LoaderIcon className="size-3.5 animate-spin" /> : <UploadIcon className="size-3.5" />}
-              {uploadingField === "openingVideoUrl" ? t.uploading : t.uploadVideoFromDevice}
+              {uploadingField === "openingVideoUrl" ? t.uploading : t.uploadEnvelopeFromDevice}
               <input
                 type="file"
-                accept="video/mp4,video/webm"
+                accept="image/png,image/jpeg,image/webp,video/mp4,video/webm"
                 disabled={uploadingField !== null}
                 onChange={(event) => {
                   const file = event.target.files?.[0];
@@ -462,20 +434,6 @@ function TemplateEditModalContent({
           {uploadVideoError && (
             <p className="text-xs font-medium text-rose-700 sm:col-span-2 dark:text-rose-400">{uploadVideoError}</p>
           )}
-
-          <Field label={t.envelopeStyle}>
-            <select
-              value={form.envelopeStyle ?? ""}
-              onChange={(event) => patch({ envelopeStyle: event.target.value })}
-              className={inputClass}
-            >
-              {ENVELOPE_STYLES.map((style) => (
-                <option key={style || "default"} value={style}>
-                  {t.envelopeStyleValues[style]}
-                </option>
-              ))}
-            </select>
-          </Field>
 
           <div className="sm:col-span-2">
             <Field label={t.pageBg}>
@@ -542,40 +500,6 @@ function TemplateEditModalContent({
               ))}
             </select>
           </Field>
-
-          <div className="sm:col-span-2">
-            <Field label={t.envelopeLibrary}>
-              <div className="flex items-center gap-3">
-                <select
-                  value={form.envelopeId ?? ""}
-                  onChange={(event) => patch({ envelopeId: event.target.value })}
-                  className={inputClass}
-                >
-                  <option value="">{t.envelopeLibraryNone}</option>
-                  {envelopes.map((envelope) => (
-                    <option key={envelope.id} value={envelope.id}>
-                      {envelope.name}
-                    </option>
-                  ))}
-                </select>
-                {form.envelopeId &&
-                  (() => {
-                    const selected = envelopes.find((e) => e.id === form.envelopeId);
-                    return selected ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={selected.photoUrl}
-                        alt={selected.name}
-                        className="h-14 w-9 shrink-0 rounded-lg border border-border object-cover"
-                      />
-                    ) : null;
-                  })()}
-              </div>
-            </Field>
-            <p className="mt-1.5 text-[11px] text-muted-foreground">
-              {envelopesError ? t.envelopeLibraryLoadError : t.envelopeLibraryHint}
-            </p>
-          </div>
 
           <Field label={t.heroFrameStyle}>
             <select

@@ -127,16 +127,18 @@ public class Template
     // swaps EnvelopeCover's blurred-photo-badge for an embossed cream paper
     // envelope with a circular wax-seal initials badge, an idle shimmer
     // sweep across its floral engraving, and a golden light-beam crossfade
-    // into the hero on open. "video" plays OpeningVideoUrl once instead of
-    // any hand-drawn cover (see VideoOpeningCover.tsx) — pairs with
-    // OpeningVideoUrl the same way "customPhoto" pairs with EnvelopeId
-    // below. Null/anything else keeps the original cover.
+    // into the hero on open. Null/anything else keeps the original cover
+    // unless OpeningVideoUrl is set (see below), which takes priority over
+    // every value here.
     public string? EnvelopeStyle { get; set; }
 
-    // The one-time cinematic clip VideoOpeningCover.tsx plays when the guest
-    // taps to open (only used when EnvelopeStyle == "video"). Ignored
-    // otherwise, same "unused unless explicitly opted into" convention as
-    // the four scene-style switches above.
+    // The envelope's opening media — EnvelopeMediaCover.tsx renders this
+    // full-bleed as the closed/tap-to-open screen instead of any hand-drawn
+    // cover, whenever it's set (independent of EnvelopeStyle above). Despite
+    // the field name (kept as-is to avoid a rename migration), this can be
+    // either a video (plays once on tap, quote fades in) or a plain image
+    // (fades away instantly on tap) — EnvelopeMediaCover tells them apart by
+    // content, not by a separate flag.
     public string? OpeningVideoUrl { get; set; }
 
     // A looping video AmbientVideoBackground.tsx renders behind the revealed

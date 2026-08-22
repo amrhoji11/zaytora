@@ -332,16 +332,26 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
     }
 
     // POST /api/templates/video — admin uploads OpeningVideoUrl/AmbientVideoUrl
-    // (TemplateEditModal), same pattern as UploadImage above. No server-side
-    // compression exists for video (SixLabors.ImageSharp can't touch it --
-    // R2FileStorageService.TryCompressImage just uploads it unmodified), so
-    // the size cap here is the only real guard against an admin uploading an
-    // unreasonably large clip.
+    // (TemplateEditModal). Despite the route/DTO names (kept as-is to avoid
+    // an unnecessary migration/rename sweep), OpeningVideoUrl is really one
+    // unified "envelope media" slot now — the frontend's EnvelopeMediaCover
+    // detects image vs video itself (isVideoSource) and renders accordingly,
+    // so this endpoint accepts both. AmbientVideoUrl stays video-only in
+    // practice (nothing reads it as an image), but there's no reason to
+    // reject an image there either. No server-side compression exists for
+    // video (SixLabors.ImageSharp can't touch it -- R2FileStorageService.
+    // TryCompressImage just uploads it unmodified); an uploaded image still
+    // gets the same compression UploadImage's images get, since both paths
+    // share storage.UploadAsync. The size cap is the real guard against an
+    // admin uploading an unreasonably large clip.
     private const long MaxVideoBytes = 25 * 1024 * 1024;
     private static readonly Dictionary<string, string> AllowedVideoContentTypes = new()
     {
         ["video/mp4"] = ".mp4",
         ["video/webm"] = ".webm",
+        ["image/png"] = ".png",
+        ["image/jpeg"] = ".jpg",
+        ["image/webp"] = ".webp",
     };
 
     [HttpPost("video")]
@@ -356,11 +366,11 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
         }
         if (file.Length > MaxVideoBytes)
         {
-            return BadRequest(new { message = "Video must be 25MB or smaller." });
+            return BadRequest(new { message = "File must be 25MB or smaller." });
         }
         if (!AllowedVideoContentTypes.TryGetValue(file.ContentType, out var extension))
         {
-            return BadRequest(new { message = "Video must be an MP4 or WebM file." });
+            return BadRequest(new { message = "File must be an MP4, WebM, JPG, PNG, or WebP file." });
         }
 
         var url = await storage.UploadAsync(file, "templates-video", extension, $"{Request.Scheme}://{Request.Host}", cancellationToken);
