@@ -64,7 +64,7 @@ export function AmbientVideoBackground({
       />
       <div
         className={cn("pointer-events-none z-[1]", standalone ? STANDALONE_FULLSCREEN_CLASS : "absolute inset-0")}
-        style={{ background: textIsLight ? "rgba(0,0,0,0.28)" : "rgba(255,255,255,0.35)" }}
+        style={{ background: textIsLight ? "rgba(0,0,0,0.14)" : "rgba(255,255,255,0.18)" }}
         aria-hidden
       />
     </>
