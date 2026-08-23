@@ -139,12 +139,17 @@ export function EnvelopeMediaCover({
       // real fallback path.
       .catch(() => handleFinish());
     // Recovery kick for the "stuck, not slow" case above: if play() hasn't
-    // taken effect within a normal human tap-to-reaction window, force a
-    // fresh load() + play() once rather than just waiting out the full
-    // multi-second stall fallback for something a simple retry can fix.
+    // taken effect within a normal human tap-to-reaction window, retry it
+    // once rather than just waiting out the full multi-second stall
+    // fallback for something a simple retry can fix. No video.load() here
+    // (that was the previous version) -- load() resets the element back to
+    // its very first frame, which is a real, visible flash/reset on
+    // real-device recordings, not just a silent internal retry. Now that
+    // the videos this actually needs to rescue are under 1MB instead of
+    // several MB, a bare retry is enough; the reset was solving a buffering
+    // problem that's already gone at the source.
     window.setTimeout(() => {
       if (video && video.paused) {
-        video.load();
         video.muted = false;
         video.play().catch(() => {});
       }
