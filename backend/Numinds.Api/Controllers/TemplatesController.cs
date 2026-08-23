@@ -349,8 +349,12 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
     // TryCompressImage just uploads it unmodified); an uploaded image still
     // gets the same compression UploadImage's images get, since both paths
     // share storage.UploadAsync. The size cap is the real guard against an
-    // admin uploading an unreasonably large clip.
-    private const long MaxVideoBytes = 25 * 1024 * 1024;
+    // admin uploading an unreasonably large clip -- 25MB let an actual 4K/60
+    // clip (17MB) straight through once, which made a guest's phone unable
+    // to load an envelope-opening video at all. A phone-sized clip a couple
+    // seconds long has no legitimate reason to be anywhere near that big;
+    // every video already live on the platform is under 4MB.
+    private const long MaxVideoBytes = 6 * 1024 * 1024;
     private static readonly Dictionary<string, string> AllowedVideoContentTypes = new()
     {
         ["video/mp4"] = ".mp4",
@@ -372,7 +376,7 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
         }
         if (file.Length > MaxVideoBytes)
         {
-            return BadRequest(new { message = "File must be 25MB or smaller." });
+            return BadRequest(new { message = "File must be 6MB or smaller -- compress it first (e.g. HandBrake or ffmpeg), a phone-sized clip a few seconds long shouldn't need to be any bigger." });
         }
         if (!AllowedVideoContentTypes.TryGetValue(file.ContentType, out var extension))
         {
