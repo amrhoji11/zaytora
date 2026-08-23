@@ -118,11 +118,13 @@ export function EnvelopeMediaCover({
     // Resume still muted first -- muted playback is never gesture-gated, so
     // this is the one call guaranteed not to be silently refused, unlike a
     // *fresh* unmuted play() -- and unmuting an already-playing video
-    // afterward isn't held to that same strict rule. Flipping the order the
-    // other way (unmute, then play()) was what a real device kept
-    // rejecting: asking for unmuted autoplay to start from a standing
-    // pause, which is exactly the case iOS is strictest about.
-    if (video) video.currentTime = 0;
+    // afterward isn't held to that same strict rule. Deliberately NOT
+    // resetting currentTime here first: a real-device recording showed the
+    // video freezing solid for the full stall-fallback window with zero
+    // progress, consistent with a WebKit play() promise that never settles
+    // at all (not slow -- stuck) when a seek and a play() land back to
+    // back. It's already sitting at ~0 from the mount-time freeze below, so
+    // skipping the seek removes that overlap for free.
     video
       ?.play()
       .then(() => {
@@ -136,6 +138,17 @@ export function EnvelopeMediaCover({
       // finished video ends in anyway, so it's a safe default rather than a
       // real fallback path.
       .catch(() => handleFinish());
+    // Recovery kick for the "stuck, not slow" case above: if play() hasn't
+    // taken effect within a normal human tap-to-reaction window, force a
+    // fresh load() + play() once rather than just waiting out the full
+    // multi-second stall fallback for something a simple retry can fix.
+    window.setTimeout(() => {
+      if (video && video.paused) {
+        video.load();
+        video.muted = false;
+        video.play().catch(() => {});
+      }
+    }, 700);
     // Covers the other failure shape: play() itself resolves (playback
     // genuinely starts) but then stalls on bad data mid-clip and never
     // fires "ended" -- the catch above never runs for that case. This
