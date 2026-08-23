@@ -35,6 +35,14 @@ export function useMusicPlayer(url?: string | null, startSeconds = 0) {
   // Set when play() is called while still inside that gap — onReady drains
   // it, so a fast tap still results in playback instead of silently no-op'ing.
   const pendingPlayRef = useRef(false);
+  // Set whenever playVideo() is asked for outside a guaranteed-fresh gesture
+  // (the onReady-deferred case, or a plain play() call -- either can land
+  // well after the tap that triggered it). Calling unMute() *immediately*
+  // after playVideo() assumes the request already succeeded, which isn't
+  // reliable -- onStateChange's PLAYING event is the one signal that
+  // actually confirms the iframe started, so that's what drains this flag
+  // and does the real unmute, instead of guessing at the same instant.
+  const shouldUnmuteRef = useRef(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -148,13 +156,17 @@ export function useMusicPlayer(url?: string | null, startSeconds = 0) {
                   startAppliedRef.current = true;
                   event.target.seekTo(startSeconds, true);
                 }
+                shouldUnmuteRef.current = true;
                 event.target.playVideo();
-                event.target.unMute();
               }
             },
             onStateChange: (event) => {
               if (event.data === YTApi.PlayerState.PLAYING) {
                 setIsPlaying(true);
+                if (shouldUnmuteRef.current) {
+                  shouldUnmuteRef.current = false;
+                  event.target.unMute();
+                }
               } else if (event.data === YTApi.PlayerState.PAUSED) {
                 setIsPlaying(false);
               } else if (event.data === YTApi.PlayerState.ENDED) {
@@ -207,13 +219,14 @@ export function useMusicPlayer(url?: string | null, startSeconds = 0) {
         startAppliedRef.current = true;
         youtubePlayerRef.current.seekTo(startSeconds, true);
       }
-      youtubePlayerRef.current.playVideo();
       // onReady always leaves the player muted (see its own comment) --
       // this is the only other place playVideo() gets called, so it's the
-      // only other place that needs to undo that, whether this call is
-      // itself the direct gesture (the music button) or a later one after
-      // the queued envelope-tap play already unmuted it (harmless no-op).
-      youtubePlayerRef.current.unMute();
+      // only other place that needs to undo that. Same reasoning as the
+      // onReady branch: flag it and let onStateChange's confirmed PLAYING
+      // transition do the actual unMute(), instead of assuming this
+      // playVideo() call landed immediately.
+      shouldUnmuteRef.current = true;
+      youtubePlayerRef.current.playVideo();
       return;
     }
 
