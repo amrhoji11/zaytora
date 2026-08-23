@@ -136,6 +136,12 @@ export function useMusicPlayer(url?: string | null, startSeconds = 0) {
               playerReadyRef.current = true;
               event.target.setVolume(Math.round(volume * 100));
               setDuration(event.target.getDuration());
+              // Always start muted -- see the play() comment below for why:
+              // this specific playVideo() call almost always lands outside
+              // the envelope tap's own gesture window (the IFrame API takes
+              // a moment to load), and muted playback is the one thing
+              // guaranteed not to be silently refused for that reason.
+              event.target.mute();
               if (pendingPlayRef.current) {
                 pendingPlayRef.current = false;
                 if (!startAppliedRef.current && startSeconds > 0) {
@@ -143,6 +149,7 @@ export function useMusicPlayer(url?: string | null, startSeconds = 0) {
                   event.target.seekTo(startSeconds, true);
                 }
                 event.target.playVideo();
+                event.target.unMute();
               }
             },
             onStateChange: (event) => {
@@ -201,6 +208,12 @@ export function useMusicPlayer(url?: string | null, startSeconds = 0) {
         youtubePlayerRef.current.seekTo(startSeconds, true);
       }
       youtubePlayerRef.current.playVideo();
+      // onReady always leaves the player muted (see its own comment) --
+      // this is the only other place playVideo() gets called, so it's the
+      // only other place that needs to undo that, whether this call is
+      // itself the direct gesture (the music button) or a later one after
+      // the queued envelope-tap play already unmuted it (harmless no-op).
+      youtubePlayerRef.current.unMute();
       return;
     }
 
