@@ -313,6 +313,14 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Ping target for an external keep-alive scheduler (e.g. cron-job.org) that
+// stops Render's free tier from spinning this instance down after ~15
+// minutes idle -- a cold spin-up otherwise costs the first real request
+// (login, template list, studio load) 30-60s. Deliberately touches nothing
+// (no DB, no auth) so the ping itself can never be the thing that's slow or
+// failing.
+app.MapGet("/health", () => Results.Ok("ok"));
+
 app.MapControllers();
 
 using (var scope = app.Services.CreateScope())
