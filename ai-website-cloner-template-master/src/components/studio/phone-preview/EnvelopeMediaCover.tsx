@@ -65,6 +65,15 @@ export function EnvelopeMediaCover({
   const mediaIsVideo = isVideoSource(mediaSrc);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [started, setStarted] = useState(false);
+  // Mirrors `started` but reads synchronously inside onPlay below -- a tap
+  // can land while the mount-time muted play() is still an in-flight
+  // promise, and that promise's own "playing" event can fire *after* the
+  // tap already flipped `started` to true. The onPlay closure over `started`
+  // state would still see the stale `false` from the render it was created
+  // in and re-pause the video the tap just started -- freezing it right at
+  // the moment it should have opened. A ref has no such staleness: it's set
+  // synchronously in handleTap, so onPlay always reads what's true right now.
+  const startedRef = useRef(false);
   const [quoteVisible, setQuoteVisible] = useState(false);
   const [closing, setClosing] = useState(false);
   const [hidden, setHidden] = useState(false);
@@ -104,6 +113,7 @@ export function EnvelopeMediaCover({
       return;
     }
     setStarted(true);
+    startedRef.current = true;
     const video = videoRef.current;
     if (video) {
       video.muted = false;
@@ -170,7 +180,7 @@ export function EnvelopeMediaCover({
           muted
           autoPlay
           onPlay={(event) => {
-            if (!started) event.currentTarget.pause();
+            if (!startedRef.current) event.currentTarget.pause();
           }}
           onTimeUpdate={(event) => {
             const video = event.currentTarget;
