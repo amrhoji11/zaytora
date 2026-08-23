@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn, isVideoSource } from "@/lib/utils";
 import { STANDALONE_FULLSCREEN_CLASS } from "./standaloneCoverPosition";
 
@@ -70,6 +70,25 @@ export function EnvelopeMediaCover({
   const [hidden, setHidden] = useState(false);
   const initials = [firstName?.[0], secondName?.[0]].filter(Boolean).join(" & ");
   const showInitialsPatch = Boolean(initials) && initialsXPercent != null && initialsYPercent != null;
+
+  // Same fix AmbientVideoBackground already needed for the same reason:
+  // React commits `muted`/`autoPlay` as DOM properties, not HTML attributes,
+  // which can leave a browser evaluating this video's autoplay eligibility
+  // before the property has actually landed -- silently leaving it paused
+  // forever with no error, no matter how the JSX attributes are written.
+  // Setting `.muted` and calling `.play()` imperatively here, after mount,
+  // sidesteps that timing gap. onPlay (below) re-pauses it the instant real
+  // playback starts, so this never does more than paint one still frame.
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !mediaIsVideo) return;
+    video.muted = true;
+    video.play().catch(() => {});
+    // mediaSrc is effectively static for a given cover instance -- omitting
+    // mediaIsVideo (derived from it) from the deps avoids an ESLint nag for
+    // a value that never independently changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mediaSrc]);
 
   function handleFinish() {
     if (closing) return;
