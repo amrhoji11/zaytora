@@ -78,7 +78,13 @@ export function EnvelopeMediaCover({
       return;
     }
     setStarted(true);
-    videoRef.current?.play().catch(() => {});
+    // A slow connection can leave the video without enough buffered data to
+    // play yet -- rejecting the play() promise. Without this fallback the
+    // tap button is already gone (started=true) but nothing ever advances,
+    // stranding the guest on a frozen frame with no way back in. Revealing
+    // the invitation underneath is the same outcome a finished video ends
+    // in anyway, so it's a safe default rather than a real fallback path.
+    videoRef.current?.play().catch(() => handleFinish());
   }
 
   if (hidden) return null;
@@ -86,7 +92,13 @@ export function EnvelopeMediaCover({
   return (
     <div
       className={cn(
-        "z-[1000] overflow-hidden transition-opacity ease-in-out",
+        // A `<video>` with no `poster` renders fully transparent until its
+        // first frame decodes -- on a slow connection that gap is long
+        // enough for AmbientVideoBackground (playing underneath, autoplay
+        // muted so browsers fetch it eagerly) to show through where this
+        // cover should be solid. bg-black keeps the cover opaque the whole
+        // time, closed-video-poster included.
+        "z-[1000] overflow-hidden bg-black transition-opacity ease-in-out",
         closing ? "pointer-events-none opacity-0" : "opacity-100",
         standalone ? STANDALONE_FULLSCREEN_CLASS : "absolute inset-0"
       )}
