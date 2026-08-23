@@ -883,6 +883,12 @@ export function InvitationCanvas({
   // and expects to see every keystroke reflected immediately) never shows
   // it, and neither does a not-yet-named draft.
   const showEnvelope = standalone && Boolean(names);
+  // Gates AmbientVideoBackground below -- while the envelope is still
+  // closed, nothing should be playing/visible behind it at all (a guest on
+  // a slow connection would otherwise see the ambient video load and play
+  // through the still-loading envelope before its own cover paints). Starts
+  // true whenever there's no envelope to wait for in the first place.
+  const [envelopeOpened, setEnvelopeOpened] = useState(!showEnvelope);
 
   // Shared by every envelope variant's onOpen. music.play() has to run
   // synchronously inside the click so the browser's autoplay policy allows
@@ -897,6 +903,7 @@ export function InvitationCanvas({
   // that collision without changing how anything looks or sounds.
   const ENVELOPE_TRANSITION_MS = 550;
   function handleEnvelopeOpen() {
+    setEnvelopeOpened(true);
     if (music.canPlay) music.play();
     window.setTimeout(() => autoScroll.start(), ENVELOPE_TRANSITION_MS);
   }
@@ -1064,7 +1071,7 @@ export function InvitationCanvas({
             reading as a digital wash. */}
         <div className="paper-texture pointer-events-none absolute inset-0 z-[5] opacity-[0.07]" aria-hidden />
 
-        {template?.ambientVideoUrl && (
+        {template?.ambientVideoUrl && envelopeOpened && (
           <AmbientVideoBackground videoSrc={template.ambientVideoUrl} standalone={standalone} textIsLight={theme.isDark} />
         )}
 
