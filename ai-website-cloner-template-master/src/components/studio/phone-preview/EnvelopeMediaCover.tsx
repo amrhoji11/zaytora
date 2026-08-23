@@ -115,17 +115,27 @@ export function EnvelopeMediaCover({
     setStarted(true);
     startedRef.current = true;
     const video = videoRef.current;
-    if (video) {
-      video.muted = false;
-      video.currentTime = 0;
-    }
-    // A slow connection can leave the video without enough buffered data to
-    // play yet -- rejecting the play() promise. Without this fallback the
-    // tap button is already gone (started=true) but nothing ever advances,
-    // stranding the guest on a frozen frame with no way back in. Revealing
-    // the invitation underneath is the same outcome a finished video ends
-    // in anyway, so it's a safe default rather than a real fallback path.
-    video?.play().catch(() => handleFinish());
+    // Resume still muted first -- muted playback is never gesture-gated, so
+    // this is the one call guaranteed not to be silently refused, unlike a
+    // *fresh* unmuted play() -- and unmuting an already-playing video
+    // afterward isn't held to that same strict rule. Flipping the order the
+    // other way (unmute, then play()) was what a real device kept
+    // rejecting: asking for unmuted autoplay to start from a standing
+    // pause, which is exactly the case iOS is strictest about.
+    if (video) video.currentTime = 0;
+    video
+      ?.play()
+      .then(() => {
+        if (video) video.muted = false;
+      })
+      // A slow connection can leave the video without enough buffered data
+      // to play yet -- rejecting the play() promise. Without this fallback
+      // the tap button is already gone (started=true) but nothing ever
+      // advances, stranding the guest on a frozen frame with no way back
+      // in. Revealing the invitation underneath is the same outcome a
+      // finished video ends in anyway, so it's a safe default rather than a
+      // real fallback path.
+      .catch(() => handleFinish());
     // Covers the other failure shape: play() itself resolves (playback
     // genuinely starts) but then stalls on bad data mid-clip and never
     // fires "ended" -- the catch above never runs for that case. This
