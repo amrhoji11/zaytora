@@ -85,13 +85,18 @@ export function EnvelopeMediaCover({
       return;
     }
     setStarted(true);
+    const video = videoRef.current;
+    if (video) {
+      video.muted = false;
+      video.currentTime = 0;
+    }
     // A slow connection can leave the video without enough buffered data to
     // play yet -- rejecting the play() promise. Without this fallback the
     // tap button is already gone (started=true) but nothing ever advances,
     // stranding the guest on a frozen frame with no way back in. Revealing
     // the invitation underneath is the same outcome a finished video ends
     // in anyway, so it's a safe default rather than a real fallback path.
-    videoRef.current?.play().catch(() => handleFinish());
+    video?.play().catch(() => handleFinish());
     // Covers the other failure shape: play() itself resolves (playback
     // genuinely starts) but then stalls on bad data mid-clip and never
     // fires "ended" -- the catch above never runs for that case. This
@@ -132,6 +137,22 @@ export function EnvelopeMediaCover({
           src={mediaSrc}
           playsInline
           preload="auto"
+          // muted+autoPlay isn't there to actually play the closed-envelope
+          // state -- it's the one reliable way to get this video's first
+          // frame to paint at all. `preload="auto"` is only ever a hint;
+          // on a real device (cellular, Low Power Mode) a browser can
+          // ignore it and never fetch a byte until something forces
+          // playback, leaving the cover permanently blank. Muted autoplay
+          // is exempt from that everywhere, so it kicks the fetch off for
+          // real -- onPlay immediately re-pauses it (before handleTap has
+          // run) so the guest only ever sees a still first frame, not
+          // silent playback. handleTap unmutes and restarts it for the
+          // real, audible playthrough.
+          muted
+          autoPlay
+          onPlay={(event) => {
+            if (!started) event.currentTarget.pause();
+          }}
           onTimeUpdate={(event) => {
             const video = event.currentTarget;
             if (!quoteVisible && video.duration && video.currentTime / video.duration > 0.35) {
