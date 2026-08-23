@@ -5,6 +5,13 @@ import { cn, isVideoSource } from "@/lib/utils";
 import { STANDALONE_FULLSCREEN_CLASS } from "./standaloneCoverPosition";
 
 const FADE_DURATION_MS = 500;
+// Safety net for a tap whose play() call resolves (so the earlier catch
+// never fires) but then stalls mid-buffer on a bad connection and never
+// reaches "ended" -- without this a guest in that exact spot is stuck
+// forever with no tap target left (the OPEN button already unmounted).
+// Comfortably longer than every opening clip actually in use today, so it
+// never cuts a normal playthrough short.
+const STUCK_VIDEO_FALLBACK_MS = 8000;
 
 const QUOTE_BY_LANGUAGE: Record<"ar" | "en", string> = {
   ar: "أنتم مدعوون لحضور يومنا المميز",
@@ -85,6 +92,13 @@ export function EnvelopeMediaCover({
     // the invitation underneath is the same outcome a finished video ends
     // in anyway, so it's a safe default rather than a real fallback path.
     videoRef.current?.play().catch(() => handleFinish());
+    // Covers the other failure shape: play() itself resolves (playback
+    // genuinely starts) but then stalls on bad data mid-clip and never
+    // fires "ended" -- the catch above never runs for that case. This
+    // timer guarantees the guest reaches the invitation either way.
+    // handleFinish() is idempotent (guarded by `closing`), so it's harmless
+    // if the video already finished normally before this fires.
+    window.setTimeout(handleFinish, STUCK_VIDEO_FALLBACK_MS);
   }
 
   if (hidden) return null;
@@ -96,13 +110,20 @@ export function EnvelopeMediaCover({
         // first frame decodes -- on a slow connection that gap is long
         // enough for AmbientVideoBackground (playing underneath, autoplay
         // muted so browsers fetch it eagerly) to show through where this
-        // cover should be solid. bg-black keeps the cover opaque the whole
-        // time, closed-video-poster included.
-        "z-[1000] overflow-hidden bg-black transition-opacity ease-in-out",
+        // cover should be solid. Filling it with the template's own page
+        // background (the same color the canvas already uses everywhere
+        // else, set as --tpl-page-bg-solid higher up the tree) keeps the
+        // cover opaque without an off-brand black flash -- a plain gray
+        // fallback covers the rare case this renders somewhere that
+        // variable isn't defined.
+        "z-[1000] overflow-hidden transition-opacity ease-in-out",
         closing ? "pointer-events-none opacity-0" : "opacity-100",
         standalone ? STANDALONE_FULLSCREEN_CLASS : "absolute inset-0"
       )}
-      style={{ transitionDuration: `${FADE_DURATION_MS}ms` }}
+      style={{
+        transitionDuration: `${FADE_DURATION_MS}ms`,
+        backgroundColor: "var(--tpl-page-bg-solid, #1a1a1a)",
+      }}
     >
       {mediaIsVideo ? (
         <video
