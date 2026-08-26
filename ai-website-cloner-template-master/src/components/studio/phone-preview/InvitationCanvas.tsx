@@ -1261,11 +1261,12 @@ export function InvitationCanvas({
             <>
               {/* Main invitation card — the reference's calligraphic centerpiece:
               title, formal invitation copy, the short day/date line, venue
-              name, the "بانتظار تشريفكم" tag note, and the couple's names
-              closing it out, all inside one glass card rather than a single
-              plain paragraph. Title + flanking icon swap per occasionType
-              (resolveOccasionTheme) — "دعوة زفاف" with rings for a wedding,
-              "حفل تخرج" with a graduation cap, etc. */}
+              name, and the "بانتظار تشريفكم" tag note, all inside one glass
+              card rather than a single plain paragraph. No names line of its
+              own — the couple's names already open the hero above, so
+              repeating them here read as redundant. Title + flanking icon
+              swap per occasionType (resolveOccasionTheme) — "دعوة زفاف" with
+              rings for a wedding, "حفل تخرج" with a graduation cap, etc. */}
           {value.invitationText && template?.invitationCardStyle === "archIslamic" && (
             <ArchIslamicInvitationCard
               firstName={value.firstName ?? ""}
@@ -1300,11 +1301,6 @@ export function InvitationCanvas({
               <p className={cn("text-xs leading-relaxed", cardTextFont, TONE.muted)}>
                 بانتظار تشريفكم لنا لنحتفل معاً بهذه المناسبة السعيدة
               </p>
-              {names && (
-                <p className={cn("mt-1 text-lg", namesFont, TONE.strong)}>
-                  <NamesLine names={names} />
-                </p>
-              )}
             </motion.div>
           )}
 
