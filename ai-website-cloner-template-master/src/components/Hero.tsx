@@ -249,7 +249,7 @@ export function Hero() {
               {/* Screen */}
               <div className="relative bg-background rounded-[1.85rem] overflow-hidden aspect-[9/18]">
                 <Image
-                  src="/images/hero/invitation-preview.jpg"
+                  src="/images/hero/invitation-preview.png"
                   alt="Invitation preview"
                   fill
                   sizes="256px"

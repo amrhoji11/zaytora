@@ -60,7 +60,7 @@ export function InvitationPreviewModal({ open, onClose }: InvitationPreviewModal
           <div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-16 h-3 bg-gray-900 rounded-full z-20" />
           <div className="relative bg-background rounded-[1.85rem] overflow-hidden aspect-[9/18]">
             <Image
-              src="/images/hero/invitation-preview.jpg"
+              src="/images/hero/invitation-preview.png"
               alt={t.imageAlt}
               fill
               sizes="320px"
