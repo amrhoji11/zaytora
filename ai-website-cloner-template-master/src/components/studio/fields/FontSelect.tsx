@@ -32,6 +32,8 @@ const FONT_OPTIONS = {
     { value: "font-cormorant", label: "Cormorant Garamond" },
     { value: "font-herr-von-muellerhoff", label: "Herr Von Muellerhoff (خط أسماء فاخر)" },
     { value: "font-noto-nastaliq", label: "Nastaliq (خط عربي انسيابي متصل)" },
+    { value: "font-alex-brush", label: "Alex Brush (خط يد أنيق)" },
+    { value: "font-parisienne", label: "Parisienne (خط كلاسيكي راقٍ)" },
   ],
   en: [
     { value: "font-cinzel", label: "Cinzel (Classic)" },
@@ -62,6 +64,8 @@ const FONT_OPTIONS = {
     { value: "font-cormorant", label: "Cormorant Garamond" },
     { value: "font-herr-von-muellerhoff", label: "Herr Von Muellerhoff (Elegant Script)" },
     { value: "font-noto-nastaliq", label: "Nastaliq (Flowing Arabic Script)" },
+    { value: "font-alex-brush", label: "Alex Brush (Elegant Handwriting)" },
+    { value: "font-parisienne", label: "Parisienne (Refined Classic Script)" },
   ],
 };
 

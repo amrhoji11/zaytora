@@ -35,6 +35,8 @@
   --font-cormorant: var(--font-cormorant), serif;
   --font-herr-von-muellerhoff: var(--font-herr-von-muellerhoff), cursive;
   --font-noto-nastaliq: var(--font-noto-nastaliq), serif;
+  --font-alex-brush: var(--font-alex-brush), cursive;
+  --font-parisienne: var(--font-parisienne), cursive;
   --color-gold: var(--gold);
   --color-olive-vivid: var(--olive-vivid);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -263,6 +265,12 @@
   }
   .font-noto-nastaliq {
     font-family: var(--font-noto-nastaliq);
+  }
+  .font-alex-brush {
+    font-family: var(--font-alex-brush);
+  }
+  .font-parisienne {
+    font-family: var(--font-parisienne);
   }
   .scrollbar-hide {
     scrollbar-width: none;

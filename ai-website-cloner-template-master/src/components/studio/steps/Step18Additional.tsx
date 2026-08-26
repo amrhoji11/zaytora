@@ -8,7 +8,9 @@ import type { InvitationDetail } from "@/types/studio";
 
 const COPY = {
   ar: {
-    generalTextFont: "خط النص العام",
+    generalTextFont: "خط بطاقة الدعوة",
+    generalTextFontDescription:
+      "بيغيّر خط كل كلمات بطاقة الدعوة الرئيسية دفعة وحدة (العنوان، نص الدعوة، التاريخ، وجملة \"بانتظار تشريفكم\") — اختر خطاً كلاسيكياً مثلاً فتتحول كل هذه الكلمات لنفس الطابع الكلاسيكي.",
     generalTextPreview: "أنتم مدعوون",
     envelopeNameFont: "خط اسم الظرف",
     namesFallback: "أحمد وسارة",
@@ -19,7 +21,9 @@ const COPY = {
     textColorPreview: "دعوة زفاف",
   },
   en: {
-    generalTextFont: "General text font",
+    generalTextFont: "Invitation card font",
+    generalTextFontDescription:
+      "Changes the font of every word on the main invitation card at once (title, invitation text, date, and the \"we look forward to hosting you\" note) — pick Classic, for example, and all of it switches to that same classic style.",
     generalTextPreview: "You are invited",
     envelopeNameFont: "Envelope name font",
     namesFallback: "Ahmed and Sarah",
@@ -52,6 +56,7 @@ export function Step18Additional({
           value={value.generalTextFont ?? ""}
           onChange={(generalTextFont) => onChange({ generalTextFont })}
         />
+        <p className="mt-1.5 text-xs text-muted-foreground">{t.generalTextFontDescription}</p>
         <div className="mt-2 rounded-xl border border-border bg-gold/5 px-4 py-5 text-center">
           <p className={cn("text-sm text-body-foreground", value.generalTextFont || "font-sans")}>{t.generalTextPreview}</p>
         </div>

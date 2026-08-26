@@ -26,6 +26,8 @@ import {
   Cormorant_Garamond,
   Herr_Von_Muellerhoff,
   Noto_Nastaliq_Urdu,
+  Alex_Brush,
+  Parisienne,
 } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "@/context/LanguageContext";
@@ -112,6 +114,11 @@ const herrVonMuellerhoff = Herr_Von_Muellerhoff({ variable: "--font-herr-von-mue
 // Muellerhoff, Great Vibes) do for Latin text — the closest real match for
 // an elegant connected look when the invitation text itself is Arabic.
 const notoNastaliq = Noto_Nastaliq_Urdu({ variable: "--font-noto-nastaliq", subsets: ["arabic"], weight: "400", preload: false });
+// Two more elegant Latin scripts for the couple-names/hero styling
+// (matching the reference invitations' flowing calligraphy look) beyond
+// Dancing Script/Herr Von Muellerhoff above.
+const alexBrush = Alex_Brush({ variable: "--font-alex-brush", subsets: ["latin"], weight: "400", preload: false });
+const parisienne = Parisienne({ variable: "--font-parisienne", subsets: ["latin"], weight: "400", preload: false });
 
 const CURATED_FONT_VARIABLES = [
   cairo,
@@ -138,6 +145,8 @@ const CURATED_FONT_VARIABLES = [
   cormorant,
   herrVonMuellerhoff,
   notoNastaliq,
+  alexBrush,
+  parisienne,
 ]
   .map((font) => font.variable)
   .join(" ");

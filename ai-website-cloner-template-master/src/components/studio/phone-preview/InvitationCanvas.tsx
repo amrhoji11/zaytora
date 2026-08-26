@@ -803,6 +803,12 @@ export function InvitationCanvas({
   // script-styled template like w019 doesn't read in the same font as a
   // bold-caps one like w024 just because neither has a background photo.
   const namesFont = value.namesFont || template?.defaultNamesFont || "font-cinzel";
+  // One font choice drives only the invitation card's own text (title,
+  // invitation copy, date line, the "بانتظار تشريفكم" note) — Step18
+  // Additional's "Invitation card font" picker. Everything else on the
+  // canvas (hero names/event title, family names, venue name, envelope)
+  // keeps its own independent font field, unaffected by this one.
+  const cardTextFont = value.generalTextFont || "";
 
   const language = resolveLanguage(value.language);
   const isRtl = RTL_LANGUAGES.has(language);
@@ -1275,26 +1281,24 @@ export function InvitationCanvas({
           )}
           {value.invitationText && template?.invitationCardStyle !== "archIslamic" && (
             <motion.div {...sectionReveal} className={cn(sectionCardClass(undefined, transparentCards), "flex flex-col items-center gap-4 text-center")}>
-              <p className={cn("flex items-center gap-2 font-cinzel text-2xl tracking-wide", TONE.heading)}>
+              <p className={cn("flex items-center gap-2 text-2xl tracking-wide", cardTextFont || "font-cinzel", TONE.heading)}>
                 <OccasionIcon aria-hidden className="size-5 text-[var(--tpl-accent-70)]" />
                 {occasion.title}
                 <OccasionIcon aria-hidden className="size-5 text-[var(--tpl-accent-70)]" />
               </p>
-              <p className={cn("text-base leading-relaxed", value.generalTextFont || "font-sans", TONE.body)}>
+              <p className={cn("text-base leading-relaxed", cardTextFont || "font-sans", TONE.body)}>
                 {value.invitationText}
               </p>
-              {invitationDateLine && <p className={cn("text-sm font-medium", TONE.strong)}>{invitationDateLine}</p>}
+              {invitationDateLine && (
+                <p className={cn("text-sm font-medium", cardTextFont, TONE.strong)}>{invitationDateLine}</p>
+              )}
               {primaryVenue?.name && (
                 <p className={cn("text-sm", TONE.heading)}>
                   <span aria-hidden>❀</span> {primaryVenue.name} <span aria-hidden>❀</span>
                 </p>
               )}
-              <p className={cn("text-xs leading-relaxed", TONE.muted)}>
-                {/* Bride/groom emoji only make sense for the couple occasions
-                    (wedding/engagement/marriage contract/henna) — this line
-                    used to render them unconditionally for every occasion,
-                    including single-person ones like graduation/birthday. */}
-                🏷️ بانتظار تشريفكم لنا لنحتفل معاً بهذه المناسبة السعيدة ... {value.isCoupleEvent ? "💐👰🏻‍♀️🤵🏻" : "💐🎉"}
+              <p className={cn("text-xs leading-relaxed", cardTextFont, TONE.muted)}>
+                بانتظار تشريفكم لنا لنحتفل معاً بهذه المناسبة السعيدة
               </p>
               {names && (
                 <p className={cn("mt-1 text-lg", namesFont, TONE.strong)}>
