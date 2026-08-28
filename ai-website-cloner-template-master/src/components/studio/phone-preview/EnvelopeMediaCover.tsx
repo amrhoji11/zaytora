@@ -13,11 +13,6 @@ const FADE_DURATION_MS = 500;
 // never cuts a normal playthrough short.
 const STUCK_VIDEO_FALLBACK_MS = 8000;
 
-const QUOTE_BY_LANGUAGE: Record<"ar" | "en", string> = {
-  ar: "أنتم مدعوون لحضور يومنا المميز",
-  en: "You are invited for our special day",
-};
-
 const OPEN_HINT_BY_LANGUAGE: Record<"ar" | "en", string> = {
   ar: "اضغط لفتح الدعوة",
   en: "Tap to open",
@@ -74,7 +69,6 @@ export function EnvelopeMediaCover({
   // the moment it should have opened. A ref has no such staleness: it's set
   // synchronously in handleTap, so onPlay always reads what's true right now.
   const startedRef = useRef(false);
-  const [quoteVisible, setQuoteVisible] = useState(false);
   const [closing, setClosing] = useState(false);
   const [hidden, setHidden] = useState(false);
   const initials = [firstName?.[0], secondName?.[0]].filter(Boolean).join(" & ");
@@ -210,12 +204,6 @@ export function EnvelopeMediaCover({
           onPlay={(event) => {
             if (!startedRef.current) event.currentTarget.pause();
           }}
-          onTimeUpdate={(event) => {
-            const video = event.currentTarget;
-            if (!quoteVisible && video.duration && video.currentTime / video.duration > 0.35) {
-              setQuoteVisible(true);
-            }
-          }}
           onEnded={handleFinish}
         />
       ) : (
@@ -268,23 +256,13 @@ export function EnvelopeMediaCover({
       )}
 
       {mediaIsVideo && started && (
-        <>
-          <div
-            className="pointer-events-none absolute z-10 flex flex-col items-center text-center transition-opacity duration-700"
-            style={{ top: "68%", left: "50%", transform: "translateX(-50%)", width: 280, opacity: quoteVisible ? 0.9 : 0 }}
-          >
-            <p className={cn("italic leading-relaxed text-white", namesFont || "font-cinzel")} style={{ fontSize: 13 }}>
-              {QUOTE_BY_LANGUAGE[language]}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={handleFinish}
-            className="absolute inset-x-0 bottom-6 mx-auto w-max text-[11px] tracking-[0.3em] text-white/70 uppercase underline underline-offset-4 transition-colors hover:text-white"
-          >
-            {language === "ar" ? "تخطي" : "Skip"}
-          </button>
-        </>
+        <button
+          type="button"
+          onClick={handleFinish}
+          className="absolute inset-x-0 bottom-6 mx-auto w-max text-[11px] tracking-[0.3em] text-white/70 uppercase underline underline-offset-4 transition-colors hover:text-white"
+        >
+          {language === "ar" ? "تخطي" : "Skip"}
+        </button>
       )}
     </div>
   );
