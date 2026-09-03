@@ -23,19 +23,22 @@ const OPEN_HINT_BY_LANGUAGE: Record<"ar" | "en", string> = {
 // now, one single "envelope" slot instead of separate video/library-photo
 // paths). Closed state is that media's own first frame/photo, full-bleed,
 // no separate blurred-badge screen on top of it. Tapping anywhere opens it:
-// a video plays through once with a quote fading in partway (see
-// mediaIsVideo branch below); an image just fades away immediately,
+// a video plays through once; an image just fades away immediately,
 // exposing the content underneath, same instant reveal every photo-based
 // cover in this folder does. Same two rules every cover here follows (see
 // EnvelopeCover.tsx's comment): onOpen() fires synchronously inside the tap
 // handler (browser autoplay-audio policy), and the fade-out/unmount on
 // finish is plain CSS + setTimeout, not framer-motion's AnimatePresence
-// (unreliable under this app's React 19 + Turbopack setup).
+// (unreliable under this app's React 19 + Turbopack setup). onRevealed is
+// the one thing NOT shared with every other cover here: it fires at finish
+// (video ended, not tap), since only this cover's own "opening" can run
+// several seconds long.
 export function EnvelopeMediaCover({
   mediaSrc,
   namesFont,
   language,
   onOpen,
+  onRevealed,
   standalone,
   firstName,
   secondName,
@@ -46,6 +49,16 @@ export function EnvelopeMediaCover({
   namesFont?: string | null;
   language: "ar" | "en";
   onOpen: () => void;
+  // Fires once the cover has actually finished showing its media (the video
+  // played through, or the fallback/skip/error path kicked in) and starts
+  // fading away -- distinct from onOpen, which fires immediately on tap,
+  // before a multi-second opening video has even started playing. The rest
+  // of the canvas (ambient background video, the slow auto-scroll "ride")
+  // waits for this instead of the tap: starting them at tap time meant they
+  // silently ran for the video's entire length behind the still-opaque
+  // cover, so by the time it finally faded away the guest found the page
+  // already scrolled several sections down instead of at the top.
+  onRevealed?: () => void;
   standalone: boolean;
   // See Template.EnvelopeInitialsXPercent/YPercent -- when both are set, a
   // frosted patch bearing the couple's real initials is drawn on top of the
@@ -96,6 +109,7 @@ export function EnvelopeMediaCover({
   function handleFinish() {
     if (closing) return;
     setClosing(true);
+    onRevealed?.();
     window.setTimeout(() => setHidden(true), FADE_DURATION_MS);
   }
 

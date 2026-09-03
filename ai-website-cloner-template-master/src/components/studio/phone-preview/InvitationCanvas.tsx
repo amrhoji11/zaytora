@@ -896,17 +896,20 @@ export function InvitationCanvas({
   // true whenever there's no envelope to wait for in the first place.
   const [envelopeOpened, setEnvelopeOpened] = useState(!showEnvelope);
 
-  // Shared by every envelope variant's onOpen. music.play() has to run
-  // synchronously inside the click so the browser's autoplay policy allows
-  // it, but autoScroll.start() is deliberately deferred a beat: the
-  // envelope cover itself fades out (and then unmounts) over its own
-  // ~500ms transition, and starting the ride's scroll ticks immediately
-  // meant they landed right on top of that fade-out/unmount's own reflow —
-  // real-device screen recordings showed a single stutter at almost exactly
-  // that mark (a frozen frame or two, then a catch-up jump), not a
-  // continuous jitter. Letting the cover's own transition finish first
-  // before the ride's timer starts competing for the main thread removes
-  // that collision without changing how anything looks or sounds.
+  // Split in two because they need to fire at genuinely different moments
+  // for EnvelopeMediaCover's video-based covers (see its onRevealed prop):
+  // handleEnvelopeOpen fires on the guest's tap, before anything has
+  // actually played -- music.play() has to run synchronously inside that
+  // click for the browser's autoplay policy to allow it, and resetting
+  // scroll here (while the envelope still fully covers the content) is what
+  // guarantees the reveal starts at the top. handleEnvelopeRevealed fires
+  // once the cover has actually finished showing whatever it shows (a short
+  // CSS transition for every other cover, but a multi-second opening video
+  // for EnvelopeMediaCover) and the invitation is really about to become
+  // visible -- that's the right moment to start the ambient video and the
+  // auto-scroll ride, not the tap. Every cover except EnvelopeMediaCover has
+  // no such gap (its own transition IS the reveal), so its onOpen just
+  // calls both together, unchanged from before this split.
   const ENVELOPE_TRANSITION_MS = 550;
   function handleEnvelopeOpen() {
     // The browser's own scroll-restoration (or just a scroll position left
@@ -921,9 +924,24 @@ export function InvitationCanvas({
     } else if (scrollRef.current) {
       scrollRef.current.scrollTop = 0;
     }
-    setEnvelopeOpened(true);
     if (music.canPlay) music.play();
+  }
+  function handleEnvelopeRevealed() {
+    setEnvelopeOpened(true);
+    // Deliberately deferred a beat: the envelope cover itself fades out
+    // (and then unmounts) over its own ~500ms transition, and starting the
+    // ride's scroll ticks immediately meant they landed right on top of
+    // that fade-out/unmount's own reflow — real-device screen recordings
+    // showed a single stutter at almost exactly that mark (a frozen frame
+    // or two, then a catch-up jump), not a continuous jitter. Letting the
+    // cover's own transition finish first before the ride's timer starts
+    // competing for the main thread removes that collision without
+    // changing how anything looks or sounds.
     window.setTimeout(() => autoScroll.start(), ENVELOPE_TRANSITION_MS);
+  }
+  function handleEnvelopeOpenAndReveal() {
+    handleEnvelopeOpen();
+    handleEnvelopeRevealed();
   }
 
   return (
@@ -1701,25 +1719,25 @@ export function InvitationCanvas({
           firstName={value.firstName ?? ""}
           secondName={value.invitationType === "couple" ? value.secondName : null}
           namesFont={value.envelopeNameFont}
-          onOpen={handleEnvelopeOpen}
+          onOpen={handleEnvelopeOpenAndReveal}
           standalone={standalone}
         />
       )}
       {showEnvelope && templatesLoaded && !template?.envelopePhotoUrl && template?.envelopeStyle === "crimsonSeal" && (
         <CrimsonWaxSealEnvelopeCover
-          onOpen={handleEnvelopeOpen}
+          onOpen={handleEnvelopeOpenAndReveal}
           standalone={standalone}
         />
       )}
       {showEnvelope && templatesLoaded && !template?.envelopePhotoUrl && template?.envelopeStyle === "oliveSeal" && (
         <OliveWaxSealEnvelopeCover
-          onOpen={handleEnvelopeOpen}
+          onOpen={handleEnvelopeOpenAndReveal}
           standalone={standalone}
         />
       )}
       {showEnvelope && templatesLoaded && !template?.envelopePhotoUrl && template?.envelopeStyle === "navyGoldSeal" && (
         <NavyGoldWaxSealEnvelopeCover
-          onOpen={handleEnvelopeOpen}
+          onOpen={handleEnvelopeOpenAndReveal}
           standalone={standalone}
         />
       )}
@@ -1729,6 +1747,7 @@ export function InvitationCanvas({
           namesFont={value.envelopeNameFont}
           language={language === "ar" ? "ar" : "en"}
           onOpen={handleEnvelopeOpen}
+          onRevealed={handleEnvelopeRevealed}
           standalone={standalone}
           firstName={value.firstName}
           secondName={value.invitationType === "couple" ? value.secondName : null}
@@ -1760,7 +1779,7 @@ export function InvitationCanvas({
           imageAlt=""
           sealXPercent={template.envelopeSealXPercent ?? 50}
           sealYPercent={template.envelopeSealYPercent ?? 50}
-          onOpen={handleEnvelopeOpen}
+          onOpen={handleEnvelopeOpenAndReveal}
           standalone={standalone}
         />
       )}
@@ -1772,7 +1791,7 @@ export function InvitationCanvas({
         <DoorSlideEnvelopeCover
           imageSrc={template.envelopePhotoUrl}
           imageAlt=""
-          onOpen={handleEnvelopeOpen}
+          onOpen={handleEnvelopeOpenAndReveal}
           standalone={standalone}
         />
       )}
@@ -1784,7 +1803,7 @@ export function InvitationCanvas({
         <DoorFoldEnvelopeCover
           imageSrc={template.envelopePhotoUrl}
           imageAlt=""
-          onOpen={handleEnvelopeOpen}
+          onOpen={handleEnvelopeOpenAndReveal}
           standalone={standalone}
         />
       )}
@@ -1801,7 +1820,7 @@ export function InvitationCanvas({
           sealXPercent={template.envelopeSealXPercent ?? 50}
           sealYPercent={template.envelopeSealYPercent ?? 50}
           foldPoints={template.envelopeFoldPoints ?? []}
-          onOpen={handleEnvelopeOpen}
+          onOpen={handleEnvelopeOpenAndReveal}
           standalone={standalone}
         />
       )}
@@ -1819,7 +1838,7 @@ export function InvitationCanvas({
           namesFont={value.envelopeNameFont}
           backgroundImageUrl={heroImageUrl}
           unoptimized={usingPreviewImage}
-          onOpen={handleEnvelopeOpen}
+          onOpen={handleEnvelopeOpenAndReveal}
           standalone={standalone}
         />
       )}
