@@ -909,6 +909,18 @@ export function InvitationCanvas({
   // that collision without changing how anything looks or sounds.
   const ENVELOPE_TRANSITION_MS = 550;
   function handleEnvelopeOpen() {
+    // The browser's own scroll-restoration (or just a scroll position left
+    // over from an earlier visit to this exact URL) can leave the page
+    // already scrolled partway down -- invisible while the opaque envelope
+    // covers it, but revealed the instant it fades away. Forcing scroll
+    // back to 0 here, while the envelope still fully covers the content,
+    // guarantees the reveal always starts at the top (family names) rather
+    // than wherever a stale scroll position happened to be.
+    if (standalone) {
+      window.scrollTo(0, 0);
+    } else if (scrollRef.current) {
+      scrollRef.current.scrollTop = 0;
+    }
     setEnvelopeOpened(true);
     if (music.canPlay) music.play();
     window.setTimeout(() => autoScroll.start(), ENVELOPE_TRANSITION_MS);
