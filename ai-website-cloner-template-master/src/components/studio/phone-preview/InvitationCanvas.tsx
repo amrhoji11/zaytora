@@ -807,8 +807,12 @@ export function InvitationCanvas({
   // invitation copy, date line, the "بانتظار تشريفكم" note) — Step18
   // Additional's "Invitation card font" picker. Everything else on the
   // canvas (hero names/event title, family names, venue name, envelope)
-  // keeps its own independent font field, unaffected by this one.
-  const cardTextFont = value.generalTextFont || "";
+  // keeps its own independent font field, unaffected by this one. Same
+  // guest-choice-then-template-default precedence as namesFont above: a
+  // template's own curated default (set once by an admin, see
+  // Template.DefaultNamesFont) is what a guest previewing it with nothing
+  // customized yet actually sees, instead of the plain hardcoded fallback.
+  const cardTextFont = value.generalTextFont || template?.defaultNamesFont || "";
 
   const language = resolveLanguage(value.language);
   const isRtl = RTL_LANGUAGES.has(language);

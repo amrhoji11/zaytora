@@ -5,11 +5,11 @@ import { LoaderIcon, UploadIcon, XIcon } from "@/components/icons";
 import { CATEGORY_IDS, CATEGORY_LABELS, type CategoryId } from "@/lib/categories";
 import { isVideoSource } from "@/lib/utils";
 import { uploadTemplateImage, uploadTemplateVideo } from "@/lib/services/templates.service";
+import { FONT_OPTIONS } from "@/components/studio/fields/FontSelect";
 import type { TemplateDto, TemplateWriteRequest } from "@/types/api";
 
 const LAYOUTS = ["full-bleed", "boxed-hero", "overlay", "none"] as const;
 const AMBIENT_EFFECTS = ["", "smoke", "petals", "sparkle", "snow", "none"] as const;
-const NAME_FONTS = ["", "font-cinzel", "font-serif", "font-sans", "italic font-serif"] as const;
 const HERO_FRAME_STYLES = ["", "archIslamic"] as const;
 const DATE_REVEAL_STYLES = ["", "scratch"] as const;
 const INVITATION_CARD_STYLES = ["", "archIslamic"] as const;
@@ -525,9 +525,10 @@ function TemplateEditModalContent({
               onChange={(event) => patch({ defaultNamesFont: event.target.value })}
               className={inputClass}
             >
-              {NAME_FONTS.map((font) => (
-                <option key={font || "default"} value={font}>
-                  {font || (language === "ar" ? "الافتراضي" : "Default")}
+              <option value="">{language === "ar" ? "الافتراضي" : "Default"}</option>
+              {FONT_OPTIONS[language].map((font) => (
+                <option key={font.value} value={font.value}>
+                  {font.label}
                 </option>
               ))}
             </select>

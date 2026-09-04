@@ -2,7 +2,10 @@
 
 import { useLanguage } from "@/context/LanguageContext";
 
-const FONT_OPTIONS = {
+// Exported so the admin's per-template "default font" picker (see
+// TemplateEditModal.tsx) offers this same full catalog instead of
+// maintaining its own separate, easily-stale shortlist.
+export const FONT_OPTIONS = {
   ar: [
     { value: "font-cinzel", label: "Cinzel (كلاسيكي)" },
     { value: "font-serif", label: "Serif" },
