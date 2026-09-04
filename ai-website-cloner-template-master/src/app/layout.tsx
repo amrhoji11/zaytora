@@ -28,6 +28,18 @@ import {
   Noto_Nastaliq_Urdu,
   Alex_Brush,
   Parisienne,
+  Markazi_Text,
+  Lemonada,
+  Noto_Kufi_Arabic,
+  Vazirmatn,
+  Baloo_Bhaijaan_2,
+  Marcellus,
+  Italiana,
+  Bodoni_Moda,
+  Sacramento,
+  Allura,
+  Tangerine,
+  Cinzel_Decorative,
 } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "@/context/LanguageContext";
@@ -119,6 +131,24 @@ const notoNastaliq = Noto_Nastaliq_Urdu({ variable: "--font-noto-nastaliq", subs
 // Dancing Script/Herr Von Muellerhoff above.
 const alexBrush = Alex_Brush({ variable: "--font-alex-brush", subsets: ["latin"], weight: "400", preload: false });
 const parisienne = Parisienne({ variable: "--font-parisienne", subsets: ["latin"], weight: "400", preload: false });
+// A second, larger batch — added after customer feedback that the picker's
+// options read as too plain next to competitors' much longer lists. Rounds
+// out both sides: more Arabic styles (a classic Naskh-adjacent serif, a
+// rounded modern face, a contemporary Kufi, a Persian/Arabic sans, a bold
+// rounded display) and more Latin ones (elegant serifs and additional
+// wedding-invitation scripts) beyond what was already curated above.
+const markaziText = Markazi_Text({ variable: "--font-markazi-text", subsets: ["arabic", "latin"], weight: "400", preload: false });
+const lemonada = Lemonada({ variable: "--font-lemonada", subsets: ["arabic", "latin"], weight: "400", preload: false });
+const notoKufiArabic = Noto_Kufi_Arabic({ variable: "--font-noto-kufi-arabic", subsets: ["arabic"], weight: "400", preload: false });
+const vazirmatn = Vazirmatn({ variable: "--font-vazirmatn", subsets: ["arabic", "latin"], weight: "400", preload: false });
+const balooBhaijaan2 = Baloo_Bhaijaan_2({ variable: "--font-baloo-bhaijaan-2", subsets: ["arabic"], weight: "400", preload: false });
+const marcellus = Marcellus({ variable: "--font-marcellus", subsets: ["latin"], weight: "400", preload: false });
+const italiana = Italiana({ variable: "--font-italiana", subsets: ["latin"], weight: "400", preload: false });
+const bodoniModa = Bodoni_Moda({ variable: "--font-bodoni-moda", subsets: ["latin"], weight: "400", preload: false });
+const sacramento = Sacramento({ variable: "--font-sacramento", subsets: ["latin"], weight: "400", preload: false });
+const allura = Allura({ variable: "--font-allura", subsets: ["latin"], weight: "400", preload: false });
+const tangerine = Tangerine({ variable: "--font-tangerine", subsets: ["latin"], weight: "400", preload: false });
+const cinzelDecorative = Cinzel_Decorative({ variable: "--font-cinzel-decorative", subsets: ["latin"], weight: ["400", "700"], preload: false });
 
 const CURATED_FONT_VARIABLES = [
   cairo,
@@ -147,6 +177,18 @@ const CURATED_FONT_VARIABLES = [
   notoNastaliq,
   alexBrush,
   parisienne,
+  markaziText,
+  lemonada,
+  notoKufiArabic,
+  vazirmatn,
+  balooBhaijaan2,
+  marcellus,
+  italiana,
+  bodoniModa,
+  sacramento,
+  allura,
+  tangerine,
+  cinzelDecorative,
 ]
   .map((font) => font.variable)
   .join(" ");

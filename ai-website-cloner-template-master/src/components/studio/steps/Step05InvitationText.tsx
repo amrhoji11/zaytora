@@ -21,6 +21,7 @@ const COPY = {
     familyNamesFont: "خط أسماء العائلات",
     invitationText: "نص الدعوة",
     invitationTextPlaceholder: "يتشرفون بدعوتكم...",
+    invitationTextFont: "خط نص الدعوة",
   },
   en: {
     hint: 'Example: family name: "Al Rashid" · invitation text: "You are cordially invited to their wedding celebration..."',
@@ -33,6 +34,7 @@ const COPY = {
     familyNamesFont: "Family names font",
     invitationText: "Invitation text",
     invitationTextPlaceholder: "You are cordially invited...",
+    invitationTextFont: "Invitation text font",
   },
 };
 
@@ -92,6 +94,16 @@ export function Step05InvitationText({
         placeholder={t.invitationTextPlaceholder}
         onChange={(invitationText) => onChange({ invitationText })}
       />
+      <FontSelect
+        label={t.invitationTextFont}
+        value={value.generalTextFont ?? ""}
+        onChange={(generalTextFont) => onChange({ generalTextFont })}
+      />
+      {value.invitationText && (
+        <p className={cn("text-center text-sm leading-relaxed text-body-foreground", value.generalTextFont || "font-sans")}>
+          {value.invitationText}
+        </p>
+      )}
     </div>
   );
 }

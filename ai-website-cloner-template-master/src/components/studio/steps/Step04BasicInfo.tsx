@@ -36,6 +36,7 @@ const COPY = {
     hijriDateDescription: "عرض التاريخ بالتقويم الهجري (أم القرى) في الدعوة بدلاً من الميلادي",
     thankYouText: "نص الشكر",
     thankYouTextColor: "لون النص",
+    thankYouTextFont: "خط نص الشكر",
     tabSuggestions: "اقتراحات",
     tabCustom: "نص الشكر",
     suggestionsEmpty: "لا توجد اقتراحات متاحة حالياً.",
@@ -62,6 +63,7 @@ const COPY = {
     hijriDateDescription: "Show the date on the invitation using the Hijri (Umm al-Qura) calendar instead of Gregorian",
     thankYouText: "Thank you text",
     thankYouTextColor: "Text color",
+    thankYouTextFont: "Thank you text font",
     tabSuggestions: "Suggestions",
     tabCustom: "Thank you text",
     suggestionsEmpty: "No suggestions available yet.",
@@ -303,6 +305,11 @@ export function Step04BasicInfo({
               value={value.thankYouText ?? ""}
               placeholder="WITH LOVE AND GRATITUDE"
               onChange={(thankYouText) => onChange({ thankYouText, thankYouImageUrl: "" })}
+            />
+            <FontSelect
+              label={t.thankYouTextFont}
+              value={value.eventTitleFont ?? ""}
+              onChange={(eventTitleFont) => onChange({ eventTitleFont })}
             />
             <ColorField
               label={t.thankYouTextColor}

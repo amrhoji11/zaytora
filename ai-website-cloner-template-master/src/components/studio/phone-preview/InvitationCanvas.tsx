@@ -1230,7 +1230,7 @@ export function InvitationCanvas({
               !templatePreviewMode && value.thankYouText && (
                 <motion.p
                   {...heroFade(4)}
-                  className="mt-1 text-[10px] uppercase tracking-widest"
+                  className={cn("mt-1 text-[10px] uppercase tracking-widest", value.eventTitleFont || "font-cinzel")}
                   style={{ color: theme.isDark ? "#ffffff" : (value.thankYouTextColor ?? "#111111") }}
                 >
                   {value.thankYouText}
