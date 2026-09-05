@@ -214,11 +214,16 @@ export function buildMockInvitation(templateId: string | null, category?: string
     isCoupleEvent: content.isCoupleEvent,
 
     eventTitle: content.eventTitle,
-    eventTitleFont: "font-cinzel",
+    // Left unset (rather than hardcoded) so a template's own configured
+    // default font (Template.DefaultNamesFont) actually shows in this
+    // preview instead of being silently overridden by this mock data --
+    // the whole point of previewing an unedited template is seeing its own
+    // real look.
+    eventTitleFont: null,
     invitationType: content.invitationType,
     firstName: content.firstName,
     secondName: content.secondName ?? null,
-    namesFont: "font-cinzel",
+    namesFont: null,
     useNameImage: false,
     eventDateTime: eventDate.toISOString(),
     timezone: "Asia/Riyadh",
@@ -229,7 +234,7 @@ export function buildMockInvitation(templateId: string | null, category?: string
     hideFamilyNames: false,
     familyName1: content.familyName1,
     familyName2: content.familyName2 ?? null,
-    familyNamesFont: "font-cinzel",
+    familyNamesFont: null,
     invitationText: content.invitationText,
 
     venues: [
@@ -297,7 +302,7 @@ export function buildMockInvitation(templateId: string | null, category?: string
     rsvpAttendingCount: 447,
     rsvpWishes: content.rsvpWishes,
 
-    generalTextFont: "font-sans",
-    envelopeNameFont: "font-cinzel",
+    generalTextFont: null,
+    envelopeNameFont: null,
   };
 }

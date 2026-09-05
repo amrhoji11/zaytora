@@ -650,6 +650,7 @@ export function InvitationCanvas({
   previewImageUrl,
   templatePreviewMode = false,
   readOnly = false,
+  templateOverride,
 }: {
   value: InvitationDetail;
   className?: string;
@@ -690,14 +691,23 @@ export function InvitationCanvas({
   // preview flag) leaves this false, so real guests' RSVPs still reach the
   // owner's dashboard normally.
   readOnly?: boolean;
+  // Escape hatch for the admin's template-edit preview (TemplateEditModal):
+  // renders this exact in-progress, not-yet-saved draft instead of fetching
+  // the real templates list and looking one up by value.templateId — an
+  // admin tweaking a color or font needs to see it reflected immediately,
+  // before "Save" has even been clicked, which the normal fetch-then-find
+  // flow has no way to do.
+  templateOverride?: TemplateDto | null;
 }) {
   const [templates, setTemplates] = useState<TemplateDto[]>([]);
   // Which envelope-cover branch to render (the template's own library photo
   // vs. a named style vs. the generic fallback) depends on `template` below,
   // which is only known once this fetch resolves — without this flag the
   // generic EnvelopeCover briefly flashes on first paint, then gets swapped
-  // for the template's real one the instant the fetch finishes.
-  const [templatesLoaded, setTemplatesLoaded] = useState(false);
+  // for the template's real one the instant the fetch finishes. Already
+  // "loaded" when templateOverride supplies the template directly — there's
+  // nothing left to fetch.
+  const [templatesLoaded, setTemplatesLoaded] = useState(Boolean(templateOverride));
   const [openModal, setOpenModal] = useState<string | null>(null);
   const [cameraOpen, setCameraOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -737,6 +747,7 @@ export function InvitationCanvas({
   }, [autoScroll.isActive, autoScroll.pauseForInteraction, standalone]);
 
   useEffect(() => {
+    if (templateOverride) return;
     let cancelled = false;
     getTemplates()
       .then((list) => {
@@ -749,9 +760,9 @@ export function InvitationCanvas({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [templateOverride]);
 
-  const template = templates.find((item) => item.id === value.templateId) ?? null;
+  const template = templateOverride ?? templates.find((item) => item.id === value.templateId) ?? null;
   // A moving video background reads busier than any static photo/gradient
   // this canvas already renders behind section cards — dropping the glass
   // box (see sectionCardClass's `transparent` param) lets the text sit

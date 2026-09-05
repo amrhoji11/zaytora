@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { LoaderIcon, UploadIcon, XIcon } from "@/components/icons";
 import { CATEGORY_IDS, CATEGORY_LABELS, type CategoryId } from "@/lib/categories";
 import { isVideoSource } from "@/lib/utils";
 import { uploadTemplateImage, uploadTemplateVideo } from "@/lib/services/templates.service";
+import { buildMockInvitation } from "@/lib/mockInvitation";
 import { FONT_OPTIONS } from "@/components/studio/fields/FontSelect";
+import { PhonePreview } from "@/components/studio/PhonePreview";
 import type { TemplateDto, TemplateWriteRequest } from "@/types/api";
 
 const LAYOUTS = ["full-bleed", "boxed-hero", "overlay", "none"] as const;
@@ -193,6 +195,23 @@ function TemplateEditModalContent({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadVideoError, setUploadVideoError] = useState<string | null>(null);
 
+  // Fully-populated demo content (names, venue, program...) for the
+  // occasion this template's own category implies — same generator behind
+  // the homepage/templates-grid "Preview" button, reused here so the admin
+  // sees a real-looking invitation rather than an empty draft. Keyed off
+  // record.id/category (never changes while this modal is open), not
+  // `form`, since it's just the content the template gets previewed with,
+  // independent of whatever the admin is currently editing about it.
+  const previewValue = useMemo(
+    () => buildMockInvitation(record.id, record.category),
+    [record.id, record.category]
+  );
+  // The in-progress, not-yet-saved edit -- merges every field this form can
+  // touch on top of the last-saved record, so InvitationCanvas's
+  // templateOverride renders exactly what "Save" would produce, live, as
+  // the admin tweaks each field.
+  const previewTemplate: TemplateDto = useMemo(() => ({ ...record, ...form }), [record, form]);
+
   function patch(next: Partial<TemplateWriteRequest>) {
     setForm((current) => ({ ...current, ...next }));
   }
@@ -272,10 +291,10 @@ function TemplateEditModalContent({
       onClick={onClose}
     >
       <div
-        className="relative flex max-h-[85vh] w-full max-w-lg flex-col overflow-y-auto rounded-2xl bg-card p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200"
+        className="relative flex max-h-[85vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-card shadow-2xl animate-in fade-in zoom-in-95 duration-200"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="flex items-start justify-between gap-3 border-b border-border p-6 pb-4">
           <div>
             <p className="text-lg font-bold text-foreground">{t.title}</p>
             <p className="mt-0.5 text-xs text-muted-foreground">{record.code}</p>
@@ -290,7 +309,18 @@ function TemplateEditModalContent({
           </button>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-6 lg:flex-row lg:overflow-hidden">
+          {/* Live preview — same InvitationCanvas the guest-facing studio
+              uses, fed this template's real demo content + the in-progress
+              form state (not the last-saved record), so every field change
+              below shows up here immediately, before "Save" is even
+              clicked. */}
+          <div className="flex shrink-0 justify-center lg:w-64 lg:overflow-y-auto lg:pb-2">
+            <PhonePreview value={previewValue} templateOverride={previewTemplate} sticky={false} />
+          </div>
+
+          <div className="min-w-0 flex-1 lg:overflow-y-auto lg:pe-1">
+            <div className="grid gap-4 sm:grid-cols-2">
           <Field label={t.category}>
             <select value={form.category} onChange={(event) => patch({ category: event.target.value as CategoryId })} className={inputClass}>
               {CATEGORY_IDS.map((id) => (
@@ -601,9 +631,11 @@ function TemplateEditModalContent({
           </label>
         </div>
 
-        {error && <p className="mt-3 text-xs font-medium text-rose-700 dark:text-rose-400">{error}</p>}
+            {error && <p className="mt-3 text-xs font-medium text-rose-700 dark:text-rose-400">{error}</p>}
+          </div>
+        </div>
 
-        <div className="mt-5 flex items-center justify-end gap-2 border-t border-border pt-4">
+        <div className="flex items-center justify-end gap-2 border-t border-border p-4">
           <button
             type="button"
             onClick={onClose}
