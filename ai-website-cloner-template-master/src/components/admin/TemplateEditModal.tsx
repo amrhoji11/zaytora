@@ -1,15 +1,20 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { LoaderIcon, UploadIcon, XIcon } from "@/components/icons";
 import { CATEGORY_IDS, CATEGORY_LABELS, type CategoryId } from "@/lib/categories";
 import { cn, isVideoSource } from "@/lib/utils";
 import { uploadTemplateImage, uploadTemplateVideo } from "@/lib/services/templates.service";
-import { createMusicSuggestion, uploadMusicSuggestionAudio } from "@/lib/services/musicSuggestions.service";
+import {
+  createMusicSuggestion,
+  listActiveMusicSuggestions,
+  uploadMusicSuggestionAudio,
+} from "@/lib/services/musicSuggestions.service";
+import { PRESET_TRACKS, trackLabel } from "@/lib/musicLibrary";
 import { buildMockInvitation } from "@/lib/mockInvitation";
 import { FONT_OPTIONS } from "@/components/studio/fields/FontSelect";
 import { PhonePreview } from "@/components/studio/PhonePreview";
-import type { TemplateDto, TemplateWriteRequest } from "@/types/api";
+import type { MusicSuggestionDto, TemplateDto, TemplateWriteRequest } from "@/types/api";
 
 const LAYOUTS = ["full-bleed", "boxed-hero", "overlay", "none"] as const;
 const AMBIENT_EFFECTS = ["", "smoke", "petals", "sparkle", "snow", "none"] as const;
@@ -55,6 +60,11 @@ const COPY = {
     invitationTextFont: "خط نص الدعوة الافتراضي (اختياري)",
     chooseFontDefault: "الافتراضي",
     defaultMusic: "الموسيقى الافتراضية (اختياري)",
+    chooseFromLibrary: "اختر من مكتبة الموسيقى المحفوظة",
+    chooseFromLibraryPlaceholder: "-- اختر مقطوعة محفوظة --",
+    libraryGroupBuiltIn: "مكتبة الموسيقى",
+    libraryGroupSuggestions: "مقترحات محفوظة مسبقاً",
+    orEnterManually: "أو أدخل رابطاً / ارفع ملفاً يدوياً",
     musicUrlPlaceholder: "https://youtube.com/watch?v=...",
     uploadAudioFromDevice: "أو ارفع ملف صوتي من جهازك",
     uploadingAudio: "جارٍ رفع الملف الصوتي...",
@@ -114,6 +124,11 @@ const COPY = {
     invitationTextFont: "Default invitation text font (optional)",
     chooseFontDefault: "Default",
     defaultMusic: "Default music (optional)",
+    chooseFromLibrary: "Choose from the saved music library",
+    chooseFromLibraryPlaceholder: "-- Choose a saved track --",
+    libraryGroupBuiltIn: "Music library",
+    libraryGroupSuggestions: "Previously saved suggestions",
+    orEnterManually: "Or enter a link / upload a file manually",
     musicUrlPlaceholder: "https://youtube.com/watch?v=...",
     uploadAudioFromDevice: "Or upload an audio file from your device",
     uploadingAudio: "Uploading audio...",
@@ -235,6 +250,41 @@ function TemplateEditModalContent({
   // shows up in every customer's Step13Music library, not just this
   // template's own default.
   const [saveAsMusicSuggestion, setSaveAsMusicSuggestion] = useState(false);
+
+  // The same combined library Step13Music offers a customer -- the
+  // hardcoded PRESET_TRACKS plus whatever's been saved as a MusicSuggestion
+  // (including via this exact modal's own "also save as a customer
+  // suggestion" checkbox on an earlier template) -- so the admin can pick a
+  // template's default from what's already there instead of re-pasting a
+  // link or re-uploading a file every single time.
+  const [librarySuggestions, setLibrarySuggestions] = useState<MusicSuggestionDto[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    listActiveMusicSuggestions()
+      .then((data) => {
+        if (!cancelled) setLibrarySuggestions(data);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  function selectLibraryTrack(url: string) {
+    if (!url) return;
+    const preset = PRESET_TRACKS.find((track) => track.url === url);
+    if (preset) {
+      patch({ defaultMusicUrl: preset.url, defaultMusicTitle: trackLabel(preset) });
+      return;
+    }
+    const suggestion = librarySuggestions.find((track) => track.url === url);
+    if (suggestion) {
+      patch({
+        defaultMusicUrl: suggestion.url,
+        defaultMusicTitle: suggestion.artist ? `${suggestion.title} - ${suggestion.artist}` : suggestion.title,
+      });
+    }
+  }
 
   // Fully-populated demo content (names, venue, program...) for the
   // occasion this template's own category implies — same generator behind
@@ -704,14 +754,50 @@ function TemplateEditModalContent({
           </Field>
 
           <div className="sm:col-span-2">
-            <Field label={t.defaultMusic}>
-              <input
-                value={form.defaultMusicTitle ?? ""}
-                onChange={(event) => patch({ defaultMusicTitle: event.target.value })}
-                placeholder={t.musicTitlePlaceholder}
+            <p className="mb-1.5 block text-xs font-medium text-body-foreground">{t.defaultMusic}</p>
+
+            <Field label={t.chooseFromLibrary}>
+              <select
+                value={
+                  // Only reflects a library match, not a free-typed/uploaded
+                  // url -- otherwise picking a preset, then editing the
+                  // title by hand, would visually "unselect" it here even
+                  // though the underlying url hasn't changed.
+                  PRESET_TRACKS.some((track) => track.url === form.defaultMusicUrl) ||
+                  librarySuggestions.some((track) => track.url === form.defaultMusicUrl)
+                    ? form.defaultMusicUrl ?? ""
+                    : ""
+                }
+                onChange={(event) => selectLibraryTrack(event.target.value)}
                 className={inputClass}
-              />
+              >
+                <option value="">{t.chooseFromLibraryPlaceholder}</option>
+                <optgroup label={t.libraryGroupBuiltIn}>
+                  {PRESET_TRACKS.map((track) => (
+                    <option key={track.id} value={track.url}>
+                      {trackLabel(track)}
+                    </option>
+                  ))}
+                </optgroup>
+                {librarySuggestions.length > 0 && (
+                  <optgroup label={t.libraryGroupSuggestions}>
+                    {librarySuggestions.map((track) => (
+                      <option key={track.id} value={track.url}>
+                        {track.artist ? `${track.title} - ${track.artist}` : track.title}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+              </select>
             </Field>
+
+            <p className="mb-1.5 mt-3 text-xs text-muted-foreground">{t.orEnterManually}</p>
+            <input
+              value={form.defaultMusicTitle ?? ""}
+              onChange={(event) => patch({ defaultMusicTitle: event.target.value })}
+              placeholder={t.musicTitlePlaceholder}
+              className={inputClass}
+            />
             <input
               value={form.defaultMusicUrl ?? ""}
               onChange={(event) => patch({ defaultMusicUrl: event.target.value })}
