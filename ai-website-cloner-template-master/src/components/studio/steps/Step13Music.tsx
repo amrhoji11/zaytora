@@ -5,7 +5,8 @@ import { TextField } from "@/components/studio/fields/TextField";
 import { HintBox } from "@/components/studio/fields/HintBox";
 import { CheckIcon, LinkIcon, MusicIcon, PauseIcon, PlayIcon, RefreshIcon, TrashIcon, UploadIcon } from "@/components/icons";
 import { cn } from "@/lib/utils";
-import { PRESET_TRACKS, trackLabel } from "@/lib/musicLibrary";
+import { PRESET_TRACKS, trackLabel, type PresetTrack } from "@/lib/musicLibrary";
+import { listActiveMusicSuggestions } from "@/lib/services/musicSuggestions.service";
 import { useMusicPlayer } from "@/components/studio/phone-preview/useMusicPlayer";
 import { useLanguage } from "@/context/LanguageContext";
 import type { InvitationDetail } from "@/types/studio";
@@ -75,6 +76,34 @@ export function Step13Music({
 }) {
   const { language } = useLanguage();
   const t = COPY[language];
+  // Admin-curated tracks (TemplateEditModal's "also save as a customer
+  // suggestion" checkbox, or the standalone music-suggestions management
+  // flow) shown alongside the hardcoded PRESET_TRACKS below rather than
+  // replacing them — nothing already live loses its spot in the library
+  // just because this list started out empty.
+  const [suggestions, setSuggestions] = useState<PresetTrack[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    listActiveMusicSuggestions()
+      .then((data) => {
+        if (!cancelled) {
+          setSuggestions(
+            data.map((s) => ({
+              id: `suggestion-${s.id}`,
+              title: s.title,
+              artist: s.artist ?? undefined,
+              url: s.url,
+              color: "#C8A24A",
+            }))
+          );
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const libraryTracks: PresetTrack[] = [...PRESET_TRACKS, ...suggestions];
   const [previewTrackId, setPreviewTrackId] = useState<string | null>(null);
   const [showLinkInput, setShowLinkInput] = useState(false);
   // Per-preset local overrides — lets a preset slot be swapped for a locally
@@ -86,11 +115,11 @@ export function Step13Music({
 
   const { h, m, s } = secondsToHms(value.musicStartSeconds ?? 0);
 
-  function trackUrl(track: (typeof PRESET_TRACKS)[number]) {
+  function trackUrl(track: PresetTrack) {
     return overrides[track.id] ?? track.url;
   }
 
-  const previewTrack = PRESET_TRACKS.find((track) => track.id === previewTrackId) ?? null;
+  const previewTrack = libraryTracks.find((track) => track.id === previewTrackId) ?? null;
   const previewUrl = previewTrack ? trackUrl(previewTrack) : null;
   const preview = useMusicPlayer(previewUrl);
   // Rows can't call preview.play() the instant they're clicked — for a
@@ -109,11 +138,11 @@ export function Step13Music({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [previewUrl, preview.duration]);
 
-  function selectTrack(track: (typeof PRESET_TRACKS)[number]) {
+  function selectTrack(track: PresetTrack) {
     onChange({ musicUrl: trackUrl(track), musicTitle: trackLabel(track) });
   }
 
-  function togglePreview(track: (typeof PRESET_TRACKS)[number]) {
+  function togglePreview(track: PresetTrack) {
     if (previewTrackId === track.id) {
       preview.togglePlay();
       return;
@@ -144,7 +173,7 @@ export function Step13Music({
 
     // If this preset is the one currently selected for the invitation,
     // repoint its saved musicUrl at the new local file immediately.
-    const track = PRESET_TRACKS.find((item) => item.id === trackId);
+    const track = libraryTracks.find((item) => item.id === trackId);
     if (track && value.musicUrl === trackUrl(track)) {
       onChange({ musicUrl: dataUrl });
     }
@@ -193,7 +222,7 @@ export function Step13Music({
       <div>
         <p className="mb-2 text-sm text-body-foreground">{t.library}</p>
         <div className="space-y-2">
-          {PRESET_TRACKS.map((track) => {
+          {libraryTracks.map((track) => {
             const selected = value.musicUrl === trackUrl(track);
             const isPreviewTrack = previewTrackId === track.id;
             const playing = isPreviewTrack && preview.isPlaying;

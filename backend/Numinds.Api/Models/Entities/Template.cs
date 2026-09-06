@@ -73,6 +73,34 @@ public class Template
     // font-serif"); null falls back to the app-wide default (font-cinzel).
     public string? DefaultNamesFont { get; set; }
 
+    // Four more per-section defaults, same "guest's own pick always wins,
+    // this is only the fallback" role as DefaultNamesFont above, for the
+    // other text sections a guest can independently re-font in the studio:
+    // EventTitleFont — the hero event-title line (Step04's "Event title
+    //   font") and, since Step04 shares one control for both, the thank-you
+    //   caption right below it too.
+    // ThankYouTextFont — a *second*, more specific fallback for that same
+    //   thank-you caption, checked before EventTitleFont above so a template
+    //   can give the two a genuinely different look while the guest hasn't
+    //   chosen either.
+    // FamilyNamesFont — the "family of X & family of Y" hero line
+    //   (Step05's family names font).
+    // InvitationTextFont — the main invitation card's title/copy/date/
+    //   waiting-note block (Step18's "Invitation card font"), checked before
+    //   the broader DefaultNamesFont above.
+    public string? EventTitleFont { get; set; }
+    public string? ThankYouTextFont { get; set; }
+    public string? FamilyNamesFont { get; set; }
+    public string? InvitationTextFont { get; set; }
+
+    // The track InvitationCanvas plays when the guest hasn't picked their
+    // own via Step13Music — either a hosted audio file (uploaded through
+    // MusicSuggestionsController.UploadAudio) or a YouTube link, same
+    // dual-mode convention as Invitation.MusicUrl. Null plays no music at
+    // all, exactly like every template before these fields existed.
+    public string? DefaultMusicUrl { get; set; }
+    public string? DefaultMusicTitle { get; set; }
+
     // Decorative artwork independent of BackgroundImageUrl/Layout, so a
     // photo-less template ("overlay"/"none") isn't limited to flat color +
     // border for its visual identity.

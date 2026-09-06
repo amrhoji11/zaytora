@@ -3,8 +3,9 @@
 import { useMemo, useState } from "react";
 import { LoaderIcon, UploadIcon, XIcon } from "@/components/icons";
 import { CATEGORY_IDS, CATEGORY_LABELS, type CategoryId } from "@/lib/categories";
-import { isVideoSource } from "@/lib/utils";
+import { cn, isVideoSource } from "@/lib/utils";
 import { uploadTemplateImage, uploadTemplateVideo } from "@/lib/services/templates.service";
+import { createMusicSuggestion, uploadMusicSuggestionAudio } from "@/lib/services/musicSuggestions.service";
 import { buildMockInvitation } from "@/lib/mockInvitation";
 import { FONT_OPTIONS } from "@/components/studio/fields/FontSelect";
 import { PhonePreview } from "@/components/studio/PhonePreview";
@@ -48,6 +49,19 @@ const COPY = {
     textColor: "لون النص",
     primaryAccent: "اللون المميز",
     defaultNamesFont: "خط الأسماء الافتراضي (اختياري)",
+    eventTitleFont: "خط عنوان الحدث الافتراضي (اختياري)",
+    thankYouTextFont: "خط نص الشكر الافتراضي (اختياري)",
+    familyNamesFont: "خط أسماء العائلات الافتراضي (اختياري)",
+    invitationTextFont: "خط نص الدعوة الافتراضي (اختياري)",
+    chooseFontDefault: "الافتراضي",
+    defaultMusic: "الموسيقى الافتراضية (اختياري)",
+    musicUrlPlaceholder: "https://youtube.com/watch?v=...",
+    uploadAudioFromDevice: "أو ارفع ملف صوتي من جهازك",
+    uploadingAudio: "جارٍ رفع الملف الصوتي...",
+    uploadAudioError: "تعذّر رفع الملف الصوتي. تأكد إنه MP3 أو WAV أو OGG أو AAC أو M4A بحجم أقل من 8 ميغابايت.",
+    musicTitlePlaceholder: "اسم المقطوعة / الفنان",
+    saveAsMusicSuggestion: "احفظ هذه الموسيقى أيضاً ضمن مقترحات الموسيقى للزبائن",
+    saveAsMusicSuggestionHint: "بتضيفها لمكتبة الموسيقى اللي يختار منها أي زبون بالخطوة 13، مو بس هاد القالب.",
     ambientEffect: "تأثير الجسيمات (اختياري)",
     heroFrameStyle: "إطار صورة المقدمة (اختياري)",
     dateRevealStyle: "طريقة كشف التاريخ (اختياري)",
@@ -94,6 +108,19 @@ const COPY = {
     textColor: "Text color",
     primaryAccent: "Accent color",
     defaultNamesFont: "Default names font (optional)",
+    eventTitleFont: "Default event title font (optional)",
+    thankYouTextFont: "Default thank-you text font (optional)",
+    familyNamesFont: "Default family names font (optional)",
+    invitationTextFont: "Default invitation text font (optional)",
+    chooseFontDefault: "Default",
+    defaultMusic: "Default music (optional)",
+    musicUrlPlaceholder: "https://youtube.com/watch?v=...",
+    uploadAudioFromDevice: "Or upload an audio file from your device",
+    uploadingAudio: "Uploading audio...",
+    uploadAudioError: "Couldn't upload the audio. Make sure it's an MP3, WAV, OGG, AAC, or M4A under 8MB.",
+    musicTitlePlaceholder: "Track name / artist",
+    saveAsMusicSuggestion: "Also save this track as a music suggestion for customers",
+    saveAsMusicSuggestionHint: "Adds it to the library every customer can pick from in Step 13, not just this template.",
     ambientEffect: "Ambient particle effect (optional)",
     heroFrameStyle: "Hero photo frame style (optional)",
     dateRevealStyle: "Date reveal style (optional)",
@@ -169,6 +196,12 @@ function TemplateEditModalContent({
     textColor: record.textColor ?? "",
     primaryAccent: record.primaryAccent ?? "",
     defaultNamesFont: record.defaultNamesFont ?? "",
+    eventTitleFont: record.eventTitleFont ?? "",
+    thankYouTextFont: record.thankYouTextFont ?? "",
+    familyNamesFont: record.familyNamesFont ?? "",
+    invitationTextFont: record.invitationTextFont ?? "",
+    defaultMusicUrl: record.defaultMusicUrl ?? "",
+    defaultMusicTitle: record.defaultMusicTitle ?? "",
     heroIllustrationUrl: record.heroIllustrationUrl ?? "",
     decorationImageUrl: record.decorationImageUrl ?? "",
     openingVideoUrl: record.openingVideoUrl ?? "",
@@ -194,6 +227,14 @@ function TemplateEditModalContent({
   const [uploadingField, setUploadingField] = useState<ImageField | VideoField | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadVideoError, setUploadVideoError] = useState<string | null>(null);
+  const [uploadingAudio, setUploadingAudio] = useState(false);
+  const [uploadAudioError, setUploadAudioError] = useState<string | null>(null);
+  // Not a template field itself -- a one-time action checked at save time:
+  // when on, the same title/url about to be saved as this template's
+  // DefaultMusic also gets POSTed as a standalone MusicSuggestion, so it
+  // shows up in every customer's Step13Music library, not just this
+  // template's own default.
+  const [saveAsMusicSuggestion, setSaveAsMusicSuggestion] = useState(false);
 
   // Fully-populated demo content (names, venue, program...) for the
   // occasion this template's own category implies — same generator behind
@@ -242,6 +283,22 @@ function TemplateEditModalContent({
     }
   }
 
+  async function handleUploadAudio(file: File) {
+    setUploadAudioError(null);
+    setUploadingAudio(true);
+    try {
+      const { url } = await uploadMusicSuggestionAudio(file);
+      patch({
+        defaultMusicUrl: url,
+        defaultMusicTitle: form.defaultMusicTitle || file.name.replace(/\.[^.]+$/, ""),
+      });
+    } catch {
+      setUploadAudioError(t.uploadAudioError);
+    } finally {
+      setUploadingAudio(false);
+    }
+  }
+
   async function handleSave() {
     if (!form.imageUrl.trim()) {
       setError(t.required);
@@ -258,6 +315,12 @@ function TemplateEditModalContent({
         textColor: form.textColor?.trim() || null,
         primaryAccent: form.primaryAccent?.trim() || null,
         defaultNamesFont: form.defaultNamesFont?.trim() || null,
+        eventTitleFont: form.eventTitleFont?.trim() || null,
+        thankYouTextFont: form.thankYouTextFont?.trim() || null,
+        familyNamesFont: form.familyNamesFont?.trim() || null,
+        invitationTextFont: form.invitationTextFont?.trim() || null,
+        defaultMusicUrl: form.defaultMusicUrl?.trim() || null,
+        defaultMusicTitle: form.defaultMusicTitle?.trim() || null,
         heroIllustrationUrl: form.heroIllustrationUrl?.trim() || null,
         decorationImageUrl: form.decorationImageUrl?.trim() || null,
         openingVideoUrl: form.openingVideoUrl?.trim() || null,
@@ -274,6 +337,22 @@ function TemplateEditModalContent({
         invitationCardStyle: form.invitationCardStyle?.trim() || null,
         envelopeId: form.envelopeId?.trim() || null,
       });
+
+      // Best-effort, deliberately after the template save above: the
+      // template's own DefaultMusic taking effect is the operation the
+      // admin actually asked for, so a failure here shouldn't roll that
+      // back or block closing the modal -- worst case the admin re-checks
+      // the box and saves again to retry just the suggestion.
+      const musicUrl = form.defaultMusicUrl?.trim();
+      const musicTitle = form.defaultMusicTitle?.trim();
+      if (saveAsMusicSuggestion && musicUrl && musicTitle) {
+        try {
+          await createMusicSuggestion({ title: musicTitle, url: musicUrl, isActive: true, sortOrder: 0 });
+        } catch {
+          // Swallowed -- see comment above.
+        }
+      }
+
       onClose();
     } catch {
       setError(t.required);
@@ -555,7 +634,7 @@ function TemplateEditModalContent({
               onChange={(event) => patch({ defaultNamesFont: event.target.value })}
               className={inputClass}
             >
-              <option value="">{language === "ar" ? "الافتراضي" : "Default"}</option>
+              <option value="">{t.chooseFontDefault}</option>
               {FONT_OPTIONS[language].map((font) => (
                 <option key={font.value} value={font.value}>
                   {font.label}
@@ -563,6 +642,115 @@ function TemplateEditModalContent({
               ))}
             </select>
           </Field>
+
+          <Field label={t.eventTitleFont}>
+            <select
+              value={form.eventTitleFont ?? ""}
+              onChange={(event) => patch({ eventTitleFont: event.target.value })}
+              className={inputClass}
+            >
+              <option value="">{t.chooseFontDefault}</option>
+              {FONT_OPTIONS[language].map((font) => (
+                <option key={font.value} value={font.value}>
+                  {font.label}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <Field label={t.thankYouTextFont}>
+            <select
+              value={form.thankYouTextFont ?? ""}
+              onChange={(event) => patch({ thankYouTextFont: event.target.value })}
+              className={inputClass}
+            >
+              <option value="">{t.chooseFontDefault}</option>
+              {FONT_OPTIONS[language].map((font) => (
+                <option key={font.value} value={font.value}>
+                  {font.label}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <Field label={t.familyNamesFont}>
+            <select
+              value={form.familyNamesFont ?? ""}
+              onChange={(event) => patch({ familyNamesFont: event.target.value })}
+              className={inputClass}
+            >
+              <option value="">{t.chooseFontDefault}</option>
+              {FONT_OPTIONS[language].map((font) => (
+                <option key={font.value} value={font.value}>
+                  {font.label}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <Field label={t.invitationTextFont}>
+            <select
+              value={form.invitationTextFont ?? ""}
+              onChange={(event) => patch({ invitationTextFont: event.target.value })}
+              className={inputClass}
+            >
+              <option value="">{t.chooseFontDefault}</option>
+              {FONT_OPTIONS[language].map((font) => (
+                <option key={font.value} value={font.value}>
+                  {font.label}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <div className="sm:col-span-2">
+            <Field label={t.defaultMusic}>
+              <input
+                value={form.defaultMusicTitle ?? ""}
+                onChange={(event) => patch({ defaultMusicTitle: event.target.value })}
+                placeholder={t.musicTitlePlaceholder}
+                className={inputClass}
+              />
+            </Field>
+            <input
+              value={form.defaultMusicUrl ?? ""}
+              onChange={(event) => patch({ defaultMusicUrl: event.target.value })}
+              placeholder={t.musicUrlPlaceholder}
+              className={cn(inputClass, "mt-2")}
+            />
+            <label className="mt-1.5 flex w-fit cursor-pointer items-center gap-1.5 rounded-lg border border-dashed border-[#C8A24A]/40 px-3 py-1.5 text-xs font-medium text-[#C8A24A] transition-colors hover:bg-[#C8A24A]/5">
+              {uploadingAudio ? <LoaderIcon className="size-3.5 animate-spin" /> : <UploadIcon className="size-3.5" />}
+              {uploadingAudio ? t.uploadingAudio : t.uploadAudioFromDevice}
+              <input
+                type="file"
+                accept="audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/ogg,audio/aac,audio/mp4,audio/x-m4a"
+                disabled={uploadingAudio}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  if (file) void handleUploadAudio(file);
+                }}
+                className="hidden"
+              />
+            </label>
+            {uploadAudioError && (
+              <p className="mt-1.5 text-xs font-medium text-rose-700 dark:text-rose-400">{uploadAudioError}</p>
+            )}
+            {form.defaultMusicUrl && (
+              <label className="mt-3 flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  checked={saveAsMusicSuggestion}
+                  onChange={(event) => setSaveAsMusicSuggestion(event.target.checked)}
+                  className="mt-0.5 size-4 rounded border-border text-[#C8A24A] focus:ring-[#C8A24A]"
+                />
+                <span>
+                  <span className="block text-sm text-body-foreground">{t.saveAsMusicSuggestion}</span>
+                  <span className="block text-xs text-muted-foreground">{t.saveAsMusicSuggestionHint}</span>
+                </span>
+              </label>
+            )}
+          </div>
 
           <Field label={t.ambientEffect}>
             <select

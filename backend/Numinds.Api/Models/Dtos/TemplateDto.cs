@@ -14,6 +14,12 @@ public class TemplateDto
     public string? TextColor { get; set; }
     public string? PrimaryAccent { get; set; }
     public string? DefaultNamesFont { get; set; }
+    public string? EventTitleFont { get; set; }
+    public string? ThankYouTextFont { get; set; }
+    public string? FamilyNamesFont { get; set; }
+    public string? InvitationTextFont { get; set; }
+    public string? DefaultMusicUrl { get; set; }
+    public string? DefaultMusicTitle { get; set; }
     public string? HeroIllustrationUrl { get; set; }
     public string? DecorationImageUrl { get; set; }
     public string? OpeningVideoUrl { get; set; }
@@ -62,6 +68,12 @@ public class TemplateWriteRequest
     public string? TextColor { get; set; }
     public string? PrimaryAccent { get; set; }
     public string? DefaultNamesFont { get; set; }
+    public string? EventTitleFont { get; set; }
+    public string? ThankYouTextFont { get; set; }
+    public string? FamilyNamesFont { get; set; }
+    public string? InvitationTextFont { get; set; }
+    public string? DefaultMusicUrl { get; set; }
+    public string? DefaultMusicTitle { get; set; }
     public string? HeroIllustrationUrl { get; set; }
     public string? DecorationImageUrl { get; set; }
     public string? OpeningVideoUrl { get; set; }

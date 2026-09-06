@@ -37,6 +37,18 @@ export interface TemplateDto {
   // couple's live names when the guest hasn't picked their own font via
   // Step04BasicInfo. Null falls back to the app-wide default (font-cinzel).
   defaultNamesFont?: string | null;
+  // Four more per-section defaults, same "guest's own pick always wins,
+  // this is only the fallback" role as defaultNamesFont above — see
+  // Models/Entities/Template.cs for which studio font field each backs.
+  eventTitleFont?: string | null;
+  thankYouTextFont?: string | null;
+  familyNamesFont?: string | null;
+  invitationTextFont?: string | null;
+  // The track InvitationCanvas plays when the guest hasn't picked their own
+  // via Step13Music — a hosted audio file or a YouTube link, same dual-mode
+  // convention as InvitationDetail.musicUrl.
+  defaultMusicUrl?: string | null;
+  defaultMusicTitle?: string | null;
   // Decorative artwork independent of backgroundImageUrl/layout, so a
   // photo-less template isn't limited to flat color + border.
   // heroIllustrationUrl renders full-screen (same object-cover treatment as
@@ -127,6 +139,12 @@ export interface TemplateWriteRequest {
   textColor?: string | null;
   primaryAccent?: string | null;
   defaultNamesFont?: string | null;
+  eventTitleFont?: string | null;
+  thankYouTextFont?: string | null;
+  familyNamesFont?: string | null;
+  invitationTextFont?: string | null;
+  defaultMusicUrl?: string | null;
+  defaultMusicTitle?: string | null;
   heroIllustrationUrl?: string | null;
   decorationImageUrl?: string | null;
   openingVideoUrl?: string | null;
@@ -503,6 +521,32 @@ export interface ThankYouSuggestionWriteRequest {
 
 // POST /api/thank-you-suggestions/image response.
 export interface ThankYouSuggestionImageUploadResponse {
+  url: string;
+}
+
+// Admin-curated music tracks a customer can pick from in Step13Music's
+// library, same role as ThankYouSuggestionDto above but for music — either
+// a hosted audio file or a YouTube link (told apart at playback time by
+// useMusicPlayer, not a stored flag).
+export interface MusicSuggestionDto {
+  id: string;
+  title: string;
+  artist?: string | null;
+  url: string;
+  isActive: boolean;
+  sortOrder: number;
+}
+
+export interface MusicSuggestionWriteRequest {
+  title: string;
+  artist?: string | null;
+  url: string;
+  isActive: boolean;
+  sortOrder: number;
+}
+
+// POST /api/music-suggestions/audio response.
+export interface MusicSuggestionAudioUploadResponse {
   url: string;
 }
 

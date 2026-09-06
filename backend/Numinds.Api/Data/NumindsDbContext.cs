@@ -28,6 +28,7 @@ public class NumindsDbContext(DbContextOptions<NumindsDbContext> options)
     public DbSet<Partner> Partners => Set<Partner>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<ThankYouSuggestion> ThankYouSuggestions => Set<ThankYouSuggestion>();
+    public DbSet<MusicSuggestion> MusicSuggestions => Set<MusicSuggestion>();
     public DbSet<SupportMessage> SupportMessages => Set<SupportMessage>();
 
     // Fixed id so the seed row (and its child WhatsApp numbers below) stay

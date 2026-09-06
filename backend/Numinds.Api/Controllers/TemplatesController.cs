@@ -104,6 +104,12 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
                     TextColor = t.TextColor,
                     PrimaryAccent = t.PrimaryAccent,
                     DefaultNamesFont = t.DefaultNamesFont,
+                    EventTitleFont = t.EventTitleFont,
+                    ThankYouTextFont = t.ThankYouTextFont,
+                    FamilyNamesFont = t.FamilyNamesFont,
+                    InvitationTextFont = t.InvitationTextFont,
+                    DefaultMusicUrl = t.DefaultMusicUrl,
+                    DefaultMusicTitle = t.DefaultMusicTitle,
                     HeroIllustrationUrl = t.HeroIllustrationUrl,
                     DecorationImageUrl = t.DecorationImageUrl,
                     OpeningVideoUrl = t.OpeningVideoUrl,
@@ -208,6 +214,12 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
                     TextColor = t.TextColor,
                     PrimaryAccent = t.PrimaryAccent,
                     DefaultNamesFont = t.DefaultNamesFont,
+                    EventTitleFont = t.EventTitleFont,
+                    ThankYouTextFont = t.ThankYouTextFont,
+                    FamilyNamesFont = t.FamilyNamesFont,
+                    InvitationTextFont = t.InvitationTextFont,
+                    DefaultMusicUrl = t.DefaultMusicUrl,
+                    DefaultMusicTitle = t.DefaultMusicTitle,
                     HeroIllustrationUrl = t.HeroIllustrationUrl,
                     DecorationImageUrl = t.DecorationImageUrl,
                     OpeningVideoUrl = t.OpeningVideoUrl,
@@ -270,6 +282,12 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
                     TextColor = t.TextColor,
                     PrimaryAccent = t.PrimaryAccent,
                     DefaultNamesFont = t.DefaultNamesFont,
+                    EventTitleFont = t.EventTitleFont,
+                    ThankYouTextFont = t.ThankYouTextFont,
+                    FamilyNamesFont = t.FamilyNamesFont,
+                    InvitationTextFont = t.InvitationTextFont,
+                    DefaultMusicUrl = t.DefaultMusicUrl,
+                    DefaultMusicTitle = t.DefaultMusicTitle,
                     HeroIllustrationUrl = t.HeroIllustrationUrl,
                     DecorationImageUrl = t.DecorationImageUrl,
                     OpeningVideoUrl = t.OpeningVideoUrl,
@@ -423,6 +441,12 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
             TextColor = request.TextColor,
             PrimaryAccent = request.PrimaryAccent,
             DefaultNamesFont = request.DefaultNamesFont,
+            EventTitleFont = request.EventTitleFont,
+            ThankYouTextFont = request.ThankYouTextFont,
+            FamilyNamesFont = request.FamilyNamesFont,
+            InvitationTextFont = request.InvitationTextFont,
+            DefaultMusicUrl = request.DefaultMusicUrl,
+            DefaultMusicTitle = request.DefaultMusicTitle,
             HeroIllustrationUrl = request.HeroIllustrationUrl,
             DecorationImageUrl = request.DecorationImageUrl,
             OpeningVideoUrl = request.OpeningVideoUrl,
@@ -482,6 +506,11 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
         var oldDecorationImageUrl = template.DecorationImageUrl;
         var oldOpeningVideoUrl = template.OpeningVideoUrl;
         var oldAmbientVideoUrl = template.AmbientVideoUrl;
+        // DefaultMusicUrl is deliberately NOT auto-deleted-on-replace like
+        // the image/video slots below -- the same uploaded track can also be
+        // saved as a standalone MusicSuggestion (TemplateEditModal's "save
+        // as a customer suggestion" checkbox), and deleting the underlying
+        // file here would silently break that suggestion's playback too.
 
         // Code is intentionally left untouched even if Category changes here —
         // re-minting it would break any already-shared invitation link's
@@ -495,6 +524,12 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
         template.TextColor = request.TextColor;
         template.PrimaryAccent = request.PrimaryAccent;
         template.DefaultNamesFont = request.DefaultNamesFont;
+        template.EventTitleFont = request.EventTitleFont;
+        template.ThankYouTextFont = request.ThankYouTextFont;
+        template.FamilyNamesFont = request.FamilyNamesFont;
+        template.InvitationTextFont = request.InvitationTextFont;
+        template.DefaultMusicUrl = request.DefaultMusicUrl;
+        template.DefaultMusicTitle = request.DefaultMusicTitle;
         template.HeroIllustrationUrl = request.HeroIllustrationUrl;
         template.DecorationImageUrl = request.DecorationImageUrl;
         template.OpeningVideoUrl = request.OpeningVideoUrl;
@@ -680,6 +715,12 @@ public class TemplatesController(NumindsDbContext db, IFileStorageService storag
         TextColor = t.TextColor,
         PrimaryAccent = t.PrimaryAccent,
         DefaultNamesFont = t.DefaultNamesFont,
+        EventTitleFont = t.EventTitleFont,
+        ThankYouTextFont = t.ThankYouTextFont,
+        FamilyNamesFont = t.FamilyNamesFont,
+        InvitationTextFont = t.InvitationTextFont,
+        DefaultMusicUrl = t.DefaultMusicUrl,
+        DefaultMusicTitle = t.DefaultMusicTitle,
         HeroIllustrationUrl = t.HeroIllustrationUrl,
         DecorationImageUrl = t.DecorationImageUrl,
         OpeningVideoUrl = t.OpeningVideoUrl,

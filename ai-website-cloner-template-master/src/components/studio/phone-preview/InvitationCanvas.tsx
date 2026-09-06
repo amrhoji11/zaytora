@@ -700,6 +700,12 @@ export function InvitationCanvas({
   templateOverride?: TemplateDto | null;
 }) {
   const [templates, setTemplates] = useState<TemplateDto[]>([]);
+  // Resolved early (right after the state it reads) rather than down by the
+  // templates-fetch effect where it conceptually lives, specifically so
+  // useMusicPlayer below can already fall back to the template's own
+  // DefaultMusicUrl -- a plain derived value, not a hook, so hoisting it
+  // ahead of other hooks changes nothing about hook-call order.
+  const template = templateOverride ?? templates.find((item) => item.id === value.templateId) ?? null;
   // Which envelope-cover branch to render (the template's own library photo
   // vs. a named style vs. the generic fallback) depends on `template` below,
   // which is only known once this fetch resolves — without this flag the
@@ -714,7 +720,19 @@ export function InvitationCanvas({
   // Owned here (not inside MusicPlayerModal) so the track keeps playing
   // across the modal opening/closing, and so the envelope's "OPEN" tap can
   // start it directly.
-  const music = useMusicPlayer(value.musicUrl, value.musicStartSeconds ?? 0);
+  // The guest's own Step13Music pick always wins; otherwise the template
+  // plays its own curated default track (Template.DefaultMusicUrl) so a
+  // guest previewing it with nothing customized yet hears the same mood the
+  // admin set up, instead of silence. Resolved once here (not inline at
+  // each call site) so the bottom-nav music button's visibility and the
+  // player modal's title/preset lookup all agree with what's actually
+  // playing.
+  const resolvedMusicUrl = value.musicUrl || template?.defaultMusicUrl || null;
+  // Only borrows the template's title alongside its own url -- pairing the
+  // guest's own musicTitle (if any) with a template's fallback url would
+  // mislabel whatever track that url actually plays.
+  const resolvedMusicTitle = value.musicUrl ? value.musicTitle : template?.defaultMusicTitle;
+  const music = useMusicPlayer(resolvedMusicUrl, value.musicStartSeconds ?? 0);
   const { audioRef: musicAudioRef, youtubeContainerRef: musicYoutubeContainerRef } = music;
   const standalone = variant === "standalone";
   // Owned here rather than inside EnvelopeCover — it needs to drive the
@@ -762,7 +780,6 @@ export function InvitationCanvas({
     };
   }, [templateOverride]);
 
-  const template = templateOverride ?? templates.find((item) => item.id === value.templateId) ?? null;
   // A moving video background reads busier than any static photo/gradient
   // this canvas already renders behind section cards — dropping the glass
   // box (see sectionCardClass's `transparent` param) lets the text sit
@@ -814,16 +831,25 @@ export function InvitationCanvas({
   // script-styled template like w019 doesn't read in the same font as a
   // bold-caps one like w024 just because neither has a background photo.
   const namesFont = value.namesFont || template?.defaultNamesFont || "font-cinzel";
+  // The hero event-title line, and (since Step04 shares one control for
+  // both) the thank-you caption right below it — same guest-choice-then-
+  // template-default precedence as namesFont above. thankYouFont checks its
+  // own, more specific template default first so an admin can give the two
+  // captions genuinely different looks before a guest has picked either.
+  const eventTitleFont = value.eventTitleFont || template?.eventTitleFont || "font-cinzel";
+  const thankYouFont = value.eventTitleFont || template?.thankYouTextFont || template?.eventTitleFont || "font-cinzel";
+  // The hero's "family of X & family of Y" line.
+  const familyNamesFont = value.familyNamesFont || template?.familyNamesFont || "font-cinzel";
   // One font choice drives only the invitation card's own text (title,
   // invitation copy, date line, the "بانتظار تشريفكم" note) — Step18
   // Additional's "Invitation card font" picker. Everything else on the
   // canvas (hero names/event title, family names, venue name, envelope)
   // keeps its own independent font field, unaffected by this one. Same
-  // guest-choice-then-template-default precedence as namesFont above: a
-  // template's own curated default (set once by an admin, see
-  // Template.DefaultNamesFont) is what a guest previewing it with nothing
-  // customized yet actually sees, instead of the plain hardcoded fallback.
-  const cardTextFont = value.generalTextFont || template?.defaultNamesFont || "";
+  // guest-choice-then-template-default precedence as namesFont above,
+  // checking the more specific InvitationTextFont before the broader
+  // DefaultNamesFont (set on templates from before that dedicated field
+  // existed).
+  const cardTextFont = value.generalTextFont || template?.invitationTextFont || template?.defaultNamesFont || "";
 
   const language = resolveLanguage(value.language);
   const isRtl = RTL_LANGUAGES.has(language);
@@ -849,7 +875,7 @@ export function InvitationCanvas({
 
   const navItems: BottomBarItem[] = [
     { key: "contact", icon: PhoneIcon, label: labels.contact, show: value.contacts.length > 0 },
-    { key: "music", icon: MusicIcon, label: labels.music, show: Boolean(value.musicUrl) },
+    { key: "music", icon: MusicIcon, label: labels.music, show: Boolean(resolvedMusicUrl) },
     { key: "capture", icon: CameraIcon, label: labels.capture, show: !value.hideCameraButton, isAction: true },
     { key: "location", icon: MapPinIcon, label: labels.location, show: value.venues.length > 0 },
     { key: "gift", icon: GiftIcon, label: labels.gift, show: value.enableGifts },
@@ -879,10 +905,10 @@ export function InvitationCanvas({
       case "location":
         return <LocationModal venues={value.venues} openMapsLabel={isRtl ? "افتح خرائط جوجل" : "Open Google Maps"} />;
       case "music": {
-        const preset = findPresetTrackByUrl(value.musicUrl);
+        const preset = findPresetTrackByUrl(resolvedMusicUrl);
         return (
           <MusicPlayerModal
-            title={value.musicTitle}
+            title={resolvedMusicTitle}
             coverImageUrl={heroImageUrl}
             coverColor={preset?.color}
             fallbackLabel={labels.music}
@@ -1145,7 +1171,7 @@ export function InvitationCanvas({
             {!templatePreviewMode && familyNames && (
               <motion.p
                 {...heroFade(0)}
-                className={cn("text-[11px] tracking-wide", value.familyNamesFont || "font-cinzel", TONE.body)}
+                className={cn("text-[11px] tracking-wide", familyNamesFont, TONE.body)}
               >
                 {familyNames}
               </motion.p>
@@ -1156,7 +1182,7 @@ export function InvitationCanvas({
                 className={cn(
                   "text-base tracking-[0.2em] text-[var(--tpl-emphasis)]",
                   TEXT_SHADOW,
-                  value.eventTitleFont || "font-cinzel"
+                  eventTitleFont
                 )}
               >
                 {value.eventTitle}
@@ -1245,7 +1271,7 @@ export function InvitationCanvas({
               !templatePreviewMode && value.thankYouText && (
                 <motion.p
                   {...heroFade(4)}
-                  className={cn("mt-1 text-[10px] uppercase tracking-widest", value.eventTitleFont || "font-cinzel")}
+                  className={cn("mt-1 text-[10px] uppercase tracking-widest", thankYouFont)}
                   style={{ color: theme.isDark ? "#ffffff" : (value.thankYouTextColor ?? "#111111") }}
                 >
                   {value.thankYouText}
