@@ -275,8 +275,15 @@ export function buildMockInvitation(templateId: string | null, category?: string
 
     contacts: content.contacts,
 
-    musicUrl: "https://www.youtube.com/watch?v=NPBCbTZWnq0",
-    musicTitle: "River Flows in You",
+    // Left unset (rather than hardcoded) for the same reason as the font
+    // fields above: a hardcoded track here always wins over
+    // Template.DefaultMusicUrl in InvitationCanvas's fallback chain
+    // (value.musicUrl || template?.defaultMusicUrl), so an admin's own
+    // default track would never audibly show up in any "Preview" flow that
+    // uses this mock (TemplateEditModal's live preview, the templates-grid
+    // Preview button, the homepage sample).
+    musicUrl: null,
+    musicTitle: null,
 
     enableGifts: true,
     giftIban: "SA0000000000000000000000",
