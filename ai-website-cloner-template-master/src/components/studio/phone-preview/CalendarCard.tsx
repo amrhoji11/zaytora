@@ -64,6 +64,8 @@ export function CalendarCard({
   endEventIso,
   eventTitle,
   venueName,
+  saveDateLabel,
+  untitledEventLabel,
 }: {
   month: string;
   day: string;
@@ -77,10 +79,14 @@ export function CalendarCard({
   endEventIso?: string | null;
   eventTitle?: string | null;
   venueName?: string | null;
+  // Both localized by the caller (InvitationCanvas's CANVAS_LABELS) — this
+  // component has no `language` of its own to key off.
+  saveDateLabel: string;
+  untitledEventLabel: string;
 }) {
   function handleSaveDate() {
     if (!eventIso) return;
-    const ics = buildIcsContent({ startIso: eventIso, endIso: endEventIso, title: eventTitle || "دعوة", location: venueName });
+    const ics = buildIcsContent({ startIso: eventIso, endIso: endEventIso, title: eventTitle || untitledEventLabel, location: venueName });
     // iOS Safari — including in-app browsers like Messenger/Instagram's,
     // which is where a guest actually opens this link from — doesn't honor
     // <a download> for blob: URLs; it just navigates to the blob and
@@ -129,7 +135,7 @@ export function CalendarCard({
           className="flex items-center gap-1.5 rounded-full border border-[var(--tpl-accent-30)] bg-[var(--tpl-chip-bg)] px-5 py-2 text-[11px] font-medium text-[var(--tpl-accent)] backdrop-blur-md transition-colors active:scale-95 hover:opacity-90"
         >
           <CalendarIcon className="size-3.5" />
-          احفظ الموعد
+          {saveDateLabel}
         </button>
       )}
     </motion.div>

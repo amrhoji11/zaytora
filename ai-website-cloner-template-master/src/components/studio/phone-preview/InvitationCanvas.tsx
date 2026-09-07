@@ -89,6 +89,151 @@ const NAV_LABELS: Record<
   id: { contact: "Kontak", music: "Musik", capture: "Ambil", location: "Lokasi", rsvp: "Konfirmasi", gift: "Hadiah" },
 };
 
+// Every other section label sprinkled across the canvas below (venue card,
+// accommodation, program, rules, gallery, RSVP stats, the auto-scroll
+// button, modal close buttons...) — previously hardcoded Arabic literals
+// directly in the JSX regardless of `language`, the same bug NAV_LABELS/
+// COUNTDOWN_LABELS above were already written to avoid.
+const CANVAS_LABELS: Record<
+  InvitationLanguage,
+  {
+    waitingNote: string;
+    accommodation: string;
+    program: string;
+    eventDetails: string;
+    galleryMoments: string;
+    attendeeCount: string;
+    wishes: string;
+    openMaps: string;
+    resumeAutoScroll: string;
+    pauseAutoScroll: string;
+    closeModal: string;
+    saveDate: string;
+    untitledEvent: string;
+  }
+> = {
+  ar: {
+    waitingNote: "بانتظار تشريفكم لنا لنحتفل معاً بهذه المناسبة السعيدة",
+    accommodation: "أين تقيمون",
+    program: "برنامج الحفل",
+    eventDetails: "تفاصيل الحدث",
+    galleryMoments: "لحظات من الحفل",
+    attendeeCount: "عدد الحضور",
+    wishes: "التهاني",
+    openMaps: "افتح خرائط جوجل",
+    resumeAutoScroll: "استئناف التمرير التلقائي",
+    pauseAutoScroll: "إيقاف التمرير التلقائي",
+    closeModal: "إغلاق",
+    saveDate: "احفظ الموعد",
+    untitledEvent: "دعوة",
+  },
+  bilingual: {
+    waitingNote: "بانتظار تشريفكم لنا لنحتفل معاً بهذه المناسبة السعيدة",
+    accommodation: "أين تقيمون",
+    program: "برنامج الحفل",
+    eventDetails: "تفاصيل الحدث",
+    galleryMoments: "لحظات من الحفل",
+    attendeeCount: "عدد الحضور",
+    wishes: "التهاني",
+    openMaps: "افتح خرائط جوجل",
+    resumeAutoScroll: "استئناف التمرير التلقائي",
+    pauseAutoScroll: "إيقاف التمرير التلقائي",
+    closeModal: "إغلاق",
+    saveDate: "احفظ الموعد",
+    untitledEvent: "دعوة",
+  },
+  en: {
+    waitingNote: "We look forward to celebrating this joyous occasion with you",
+    accommodation: "Where to Stay",
+    program: "Event Program",
+    eventDetails: "Event Details",
+    galleryMoments: "Moments from the Celebration",
+    attendeeCount: "Attendees",
+    wishes: "Well Wishes",
+    openMaps: "Open Google Maps",
+    resumeAutoScroll: "Resume auto-scroll",
+    pauseAutoScroll: "Pause auto-scroll",
+    closeModal: "Close",
+    saveDate: "Save the Date",
+    untitledEvent: "Invitation",
+  },
+  ro: {
+    waitingNote: "Așteptăm cu nerăbdare să sărbătorim această ocazie fericită alături de tine",
+    accommodation: "Unde să Stați",
+    program: "Programul Evenimentului",
+    eventDetails: "Detaliile Evenimentului",
+    galleryMoments: "Momente de la Sărbătoare",
+    attendeeCount: "Participanți",
+    wishes: "Felicitări",
+    openMaps: "Deschide Google Maps",
+    resumeAutoScroll: "Reia derularea automată",
+    pauseAutoScroll: "Pauză derulare automată",
+    closeModal: "Închide",
+    saveDate: "Salvează Data",
+    untitledEvent: "Invitație",
+  },
+  fr: {
+    waitingNote: "Nous avons hâte de célébrer cette heureuse occasion avec vous",
+    accommodation: "Où Séjourner",
+    program: "Programme de l'Événement",
+    eventDetails: "Détails de l'Événement",
+    galleryMoments: "Moments de la Célébration",
+    attendeeCount: "Participants",
+    wishes: "Félicitations",
+    openMaps: "Ouvrir Google Maps",
+    resumeAutoScroll: "Reprendre le défilement automatique",
+    pauseAutoScroll: "Mettre en pause le défilement automatique",
+    closeModal: "Fermer",
+    saveDate: "Enregistrer la Date",
+    untitledEvent: "Invitation",
+  },
+  es: {
+    waitingNote: "Esperamos celebrar esta feliz ocasión junto a ti",
+    accommodation: "Dónde Alojarse",
+    program: "Programa del Evento",
+    eventDetails: "Detalles del Evento",
+    galleryMoments: "Momentos de la Celebración",
+    attendeeCount: "Asistentes",
+    wishes: "Felicitaciones",
+    openMaps: "Abrir Google Maps",
+    resumeAutoScroll: "Reanudar desplazamiento automático",
+    pauseAutoScroll: "Pausar desplazamiento automático",
+    closeModal: "Cerrar",
+    saveDate: "Guardar la Fecha",
+    untitledEvent: "Invitación",
+  },
+  hi: {
+    waitingNote: "हम इस खुशी के मौके पर आपके साथ जश्न मनाने के लिए उत्सुक हैं",
+    accommodation: "कहाँ ठहरें",
+    program: "कार्यक्रम अनुसूची",
+    eventDetails: "आयोजन विवरण",
+    galleryMoments: "समारोह के पल",
+    attendeeCount: "उपस्थित लोग",
+    wishes: "शुभकामनाएं",
+    openMaps: "गूगल मैप्स खोलें",
+    resumeAutoScroll: "ऑटो-स्क्रॉल फिर से शुरू करें",
+    pauseAutoScroll: "ऑटो-स्क्रॉल रोकें",
+    closeModal: "बंद करें",
+    saveDate: "तारीख़ सहेजें",
+    untitledEvent: "निमंत्रण",
+  },
+  id: {
+    waitingNote: "Kami menantikan untuk merayakan momen bahagia ini bersama Anda",
+    accommodation: "Tempat Menginap",
+    program: "Rangkaian Acara",
+    eventDetails: "Detail Acara",
+    galleryMoments: "Momen dari Perayaan",
+    attendeeCount: "Jumlah Tamu",
+    wishes: "Ucapan Selamat",
+    openMaps: "Buka Google Maps",
+    resumeAutoScroll: "Lanjutkan gulir otomatis",
+    pauseAutoScroll: "Jeda gulir otomatis",
+    closeModal: "Tutup",
+    saveDate: "Simpan Tanggal",
+    untitledEvent: "Undangan",
+  },
+};
+
 function resolveLanguage(language?: string | null): InvitationLanguage {
   return language && language in NAV_LABELS ? (language as InvitationLanguage) : "ar";
 }
@@ -98,36 +243,154 @@ function resolveLanguage(language?: string | null): InvitationLanguage {
 // invitation (see steps/Step02Occasion.tsx's OCCASION_META), so picking a
 // template for a given occasion there is what makes this canvas read
 // "دعوة زفاف" with rings for a wedding vs. "حفل تخرج" with a graduation cap
-// without any extra wiring. Falls back to the wedding theme for an
-// occasionType this map doesn't recognize (a still-blank/in-progress draft,
-// or a future occasion added to Step02Occasion before this map catches up).
-const OCCASION_THEME: Record<string, { title: string; icon: LucideIcon }> = {
-  wedding: { title: "دعوة زفاف", icon: GemIcon },
-  engagement: { title: "دعوة خطوبة", icon: GemIcon },
-  marriage_contract: { title: "دعوة عقد قران", icon: GemIcon },
-  henna: { title: "دعوة حنة", icon: SparklesIcon },
-  bridal_shower: { title: "دعوة حفلة عروس", icon: SparklesIcon },
-  gender_reveal: { title: "حفل كشف الجنس", icon: SparklesIcon },
-  aqeeqah: { title: "دعوة عقيقة", icon: BabyIcon },
-  graduation: { title: "حفل تخرج", icon: GraduationCapIcon },
-  birthday: { title: "دعوة عيد ميلاد", icon: CakeIcon },
+// without any extra wiring. `titles` is per-language — previously a single
+// hardcoded Arabic string regardless of `language`, matching the same bug
+// formatInvitationDateLine/COUNTDOWN_LABELS had. Falls back to the wedding
+// theme for an occasionType this map doesn't recognize (a still-blank/
+// in-progress draft, or a future occasion added to Step02Occasion before
+// this map catches up).
+const OCCASION_THEME: Record<string, { titles: Record<InvitationLanguage, string>; icon: LucideIcon }> = {
+  wedding: {
+    titles: {
+      ar: "دعوة زفاف",
+      bilingual: "دعوة زفاف",
+      en: "Wedding Invitation",
+      ro: "Invitație la Nuntă",
+      fr: "Invitation de Mariage",
+      es: "Invitación de Boda",
+      hi: "शादी का निमंत्रण",
+      id: "Undangan Pernikahan",
+    },
+    icon: GemIcon,
+  },
+  engagement: {
+    titles: {
+      ar: "دعوة خطوبة",
+      bilingual: "دعوة خطوبة",
+      en: "Engagement Invitation",
+      ro: "Invitație de Logodnă",
+      fr: "Invitation de Fiançailles",
+      es: "Invitación de Compromiso",
+      hi: "सगाई का निमंत्रण",
+      id: "Undangan Pertunangan",
+    },
+    icon: GemIcon,
+  },
+  marriage_contract: {
+    titles: {
+      ar: "دعوة عقد قران",
+      bilingual: "دعوة عقد قران",
+      en: "Marriage Contract Invitation",
+      ro: "Invitație la Contractul de Căsătorie",
+      fr: "Invitation au Contrat de Mariage",
+      es: "Invitación al Contrato Matrimonial",
+      hi: "निकाह का निमंत्रण",
+      id: "Undangan Akad Nikah",
+    },
+    icon: GemIcon,
+  },
+  henna: {
+    titles: {
+      ar: "دعوة حنة",
+      bilingual: "دعوة حنة",
+      en: "Henna Invitation",
+      ro: "Invitație la Henna",
+      fr: "Invitation au Henné",
+      es: "Invitación de Henna",
+      hi: "मेहंदी का निमंत्रण",
+      id: "Undangan Malam Henna",
+    },
+    icon: SparklesIcon,
+  },
+  bridal_shower: {
+    titles: {
+      ar: "دعوة حفلة عروس",
+      bilingual: "دعوة حفلة عروس",
+      en: "Bridal Shower Invitation",
+      ro: "Invitație la Petrecerea Miresei",
+      fr: "Invitation à l'Enterrement de Vie de Jeune Fille",
+      es: "Invitación a la Despedida de Soltera",
+      hi: "ब्राइडल शावर का निमंत्रण",
+      id: "Undangan Bridal Shower",
+    },
+    icon: SparklesIcon,
+  },
+  gender_reveal: {
+    titles: {
+      ar: "حفل كشف الجنس",
+      bilingual: "حفل كشف الجنس",
+      en: "Gender Reveal Party",
+      ro: "Petrecere de Dezvăluire a Sexului",
+      fr: "Fête de Révélation du Genre",
+      es: "Fiesta de Revelación de Género",
+      hi: "जेंडर रिवील पार्टी",
+      id: "Pesta Gender Reveal",
+    },
+    icon: SparklesIcon,
+  },
+  aqeeqah: {
+    titles: {
+      ar: "دعوة عقيقة",
+      bilingual: "دعوة عقيقة",
+      en: "Aqeeqah Invitation",
+      ro: "Invitație la Aqeeqah",
+      fr: "Invitation à l'Aqeeqah",
+      es: "Invitación de Aqeeqah",
+      hi: "अकीका का निमंत्रण",
+      id: "Undangan Aqiqah",
+    },
+    icon: BabyIcon,
+  },
+  graduation: {
+    titles: {
+      ar: "حفل تخرج",
+      bilingual: "حفل تخرج",
+      en: "Graduation Celebration",
+      ro: "Petrecere de Absolvire",
+      fr: "Fête de Remise des Diplômes",
+      es: "Celebración de Graduación",
+      hi: "स्नातक समारोह",
+      id: "Perayaan Wisuda",
+    },
+    icon: GraduationCapIcon,
+  },
+  birthday: {
+    titles: {
+      ar: "دعوة عيد ميلاد",
+      bilingual: "دعوة عيد ميلاد",
+      en: "Birthday Invitation",
+      ro: "Invitație la Ziua de Naștere",
+      fr: "Invitation d'Anniversaire",
+      es: "Invitación de Cumpleaños",
+      hi: "जन्मदिन का निमंत्रण",
+      id: "Undangan Ulang Tahun",
+    },
+    icon: CakeIcon,
+  },
 };
 
-function resolveOccasionTheme(occasionType?: string | null) {
-  return (occasionType && OCCASION_THEME[occasionType]) || OCCASION_THEME.wedding;
+function resolveOccasionTheme(occasionType: string | null | undefined, language: InvitationLanguage) {
+  const theme = (occasionType && OCCASION_THEME[occasionType]) || OCCASION_THEME.wedding;
+  return { title: theme.titles[language], icon: theme.icon };
 }
 
 // Full words ("أيام", "ساعات"...), matching the reference's countdown —
 // not the single-letter abbreviations ("ي", "س"...) used previously.
-const COUNTDOWN_LABELS: Record<InvitationLanguage, { days: string; hours: string; minutes: string; seconds: string }> = {
-  ar: { days: "أيام", hours: "ساعات", minutes: "دقائق", seconds: "ثواني" },
-  bilingual: { days: "أيام", hours: "ساعات", minutes: "دقائق", seconds: "ثواني" },
-  en: { days: "Days", hours: "Hours", minutes: "Minutes", seconds: "Seconds" },
-  ro: { days: "Zile", hours: "Ore", minutes: "Minute", seconds: "Secunde" },
-  fr: { days: "Jours", hours: "Heures", minutes: "Minutes", seconds: "Secondes" },
-  es: { days: "Días", hours: "Horas", minutes: "Minutos", seconds: "Segundos" },
-  hi: { days: "दिन", hours: "घंटे", minutes: "मिनट", seconds: "सेकंड" },
-  id: { days: "Hari", hours: "Jam", minutes: "Menit", seconds: "Detik" },
+// `heading` is the "العد التنازلي" title above the grid — previously
+// hardcoded Arabic regardless of `language`; folded in here instead of a
+// separate map since it's the same countdown widget's own copy.
+const COUNTDOWN_LABELS: Record<
+  InvitationLanguage,
+  { heading: string; days: string; hours: string; minutes: string; seconds: string }
+> = {
+  ar: { heading: "العد التنازلي", days: "أيام", hours: "ساعات", minutes: "دقائق", seconds: "ثواني" },
+  bilingual: { heading: "العد التنازلي", days: "أيام", hours: "ساعات", minutes: "دقائق", seconds: "ثواني" },
+  en: { heading: "Countdown", days: "Days", hours: "Hours", minutes: "Minutes", seconds: "Seconds" },
+  ro: { heading: "Numărătoare inversă", days: "Zile", hours: "Ore", minutes: "Minute", seconds: "Secunde" },
+  fr: { heading: "Compte à rebours", days: "Jours", hours: "Heures", minutes: "Minutes", seconds: "Secondes" },
+  es: { heading: "Cuenta regresiva", days: "Días", hours: "Horas", minutes: "Minutos", seconds: "Segundos" },
+  hi: { heading: "उलटी गिनती", days: "दिन", hours: "घंटे", minutes: "मिनट", seconds: "सेकंड" },
+  id: { heading: "Hitung Mundur", days: "Hari", hours: "Jam", minutes: "Menit", seconds: "Detik" },
 };
 
 // Replaces the ticking countdown grid once the event's own start time has
@@ -273,25 +536,28 @@ function calendarParts(iso: string | null | undefined, locale: string, useHijri:
 // The main invitation card's "يوم السبت الموافق 12.19.2026" line — weekday
 // read localized, the MM.DD.YYYY numerals always Latin (matching the
 // reference's own dot-separated date, and the countdown/calendar widgets'
-// digits elsewhere on this canvas). "يوم"/"الموافق" stay hardcoded Arabic
-// regardless of `language`, matching every other section label on this
-// canvas (برنامج الحفل, تفاصيل الحدث, الموقع...) — a known, existing
-// convention, not something introduced here. Hijri mode swaps the numeric
-// portion for "day month year هـ" (e.g. "19 رجب 1447هـ") since a Hijri
-// year has no fixed MM.DD position to dot-separate the way the Gregorian
-// calendar does.
+// digits elsewhere on this canvas). "يوم"/"الموافق" only render for Arabic/
+// bilingual (locale resolves to "ar") — every other language gets a plain
+// "Weekday, date" line instead of an awkward word-for-word translation of
+// that exact Arabic phrasing. Hijri mode swaps the numeric portion for
+// "day month year هـ"/"AH" (e.g. "19 رجب 1447هـ") since a Hijri year has no
+// fixed MM.DD position to dot-separate the way the Gregorian calendar does.
 function formatInvitationDateLine(iso: string | null | undefined, locale: string, useHijri: boolean) {
   if (!iso) return null;
   const date = parseWallClockDate(iso);
   if (Number.isNaN(date.getTime())) return null;
+  const isArabic = locale === "ar";
   if (useHijri) {
     const hijri = hijriDateParts(date, locale);
-    return `يوم ${hijri.weekday} الموافق ${hijri.day} ${hijri.month} ${hijri.year}هـ`;
+    return isArabic
+      ? `يوم ${hijri.weekday} الموافق ${hijri.day} ${hijri.month} ${hijri.year}هـ`
+      : `${hijri.weekday}, ${hijri.day} ${hijri.month} ${hijri.year} AH`;
   }
   const weekday = new Intl.DateTimeFormat(locale, { weekday: "long" }).format(date);
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
-  return `يوم ${weekday} الموافق ${month}.${day}.${date.getFullYear()}`;
+  const dateStr = `${month}.${day}.${date.getFullYear()}`;
+  return isArabic ? `يوم ${weekday} الموافق ${dateStr}` : `${weekday}, ${dateStr}`;
 }
 
 function useCountdown(iso?: string | null) {
@@ -883,6 +1149,7 @@ export function InvitationCanvas({
   const language = resolveLanguage(value.language);
   const isRtl = RTL_LANGUAGES.has(language);
   const labels = NAV_LABELS[language];
+  const canvas = CANVAS_LABELS[language];
   const countdownLabels = COUNTDOWN_LABELS[language];
   const countdownStartedMessage = COUNTDOWN_STARTED_MESSAGE[language];
 
@@ -898,7 +1165,7 @@ export function InvitationCanvas({
   const countdown = useCountdown(value.eventDateTime);
   const calendar = calendarParts(value.eventDateTime, LOCALE_TAGS[language], useHijri, value.eventEndDateTime);
   const primaryVenue = value.venues[0] ?? null;
-  const occasion = resolveOccasionTheme(value.occasionType);
+  const occasion = resolveOccasionTheme(value.occasionType, language);
   const OccasionIcon = occasion.icon;
   const rules = (value.eventRulesText ?? "").split(RULES_DELIMITER).map((rule) => rule.trim()).filter(Boolean);
 
@@ -932,7 +1199,7 @@ export function InvitationCanvas({
       case "contact":
         return <ContactModal contacts={value.contacts} isRtl={isRtl} />;
       case "location":
-        return <LocationModal venues={value.venues} openMapsLabel={isRtl ? "افتح خرائط جوجل" : "Open Google Maps"} />;
+        return <LocationModal venues={value.venues} openMapsLabel={canvas.openMaps} />;
       case "music": {
         const preset = findPresetTrackByUrl(resolvedMusicUrl);
         return (
@@ -1399,7 +1666,7 @@ export function InvitationCanvas({
                 </p>
               )}
               <p className={cn("text-xs leading-relaxed", cardTextFont, TONE.muted)}>
-                بانتظار تشريفكم لنا لنحتفل معاً بهذه المناسبة السعيدة
+                {canvas.waitingNote}
               </p>
             </motion.div>
           )}
@@ -1412,7 +1679,7 @@ export function InvitationCanvas({
             <motion.div {...sectionReveal} className={cn(sectionCardClass(undefined, transparentCards), "text-center")}>
               <p className={cn("mb-2 flex items-center justify-center gap-1.5 text-[11px] font-semibold", TONE.heading)}>
                 <MapPinIcon className="size-3.5 text-[var(--tpl-accent)]" />
-                الموقع
+                {labels.location}
               </p>
               <p className={cn("text-sm font-medium", TONE.strong)}>{primaryVenue.name}</p>
               {primaryVenue.address && (
@@ -1429,7 +1696,7 @@ export function InvitationCanvas({
             <motion.div {...sectionReveal} className={sectionCardClass(undefined, transparentCards)}>
               <p className={cn("mb-2 flex items-center gap-1.5 text-[11px] font-semibold", TONE.heading)}>
                 <BedDoubleIcon className="size-3.5 text-[var(--tpl-accent)]" />
-                أين تقيمون
+                {canvas.accommodation}
               </p>
               <div className="space-y-2">
                 {value.accommodations.map((hotel, index) => (
@@ -1455,6 +1722,8 @@ export function InvitationCanvas({
               endEventIso={value.eventEndDateTime ?? null}
               eventTitle={value.eventTitle}
               venueName={primaryVenue?.name}
+              saveDateLabel={canvas.saveDate}
+              untitledEventLabel={canvas.untitledEvent}
             />
           )}
 
@@ -1473,7 +1742,7 @@ export function InvitationCanvas({
                 </p>
               ) : (
                 <>
-                  <p className={cn("text-[11px] font-semibold", TONE.heading)}>العد التنازلي</p>
+                  <p className={cn("text-[11px] font-semibold", TONE.heading)}>{countdownLabels.heading}</p>
                   <div className="grid w-full grid-cols-4 gap-2">
                     {[
                       [countdown.days, countdownLabels.days],
@@ -1506,7 +1775,7 @@ export function InvitationCanvas({
             <motion.div {...sectionReveal} className={sectionCardClass("p-4", transparentCards)}>
               <p className={cn("mb-8 flex items-center gap-1.5 text-[11px] font-semibold", TONE.heading)}>
                 <ClipboardListIcon className="size-3.5 text-[var(--tpl-accent)]" />
-                برنامج الحفل
+                {canvas.program}
               </p>
               <ul>
                 {value.programItems.map((item, index) => {
@@ -1586,7 +1855,7 @@ export function InvitationCanvas({
             <motion.div {...sectionReveal} className={sectionCardClass(undefined, transparentCards)}>
               <p className={cn("mb-6 flex items-center gap-1.5 text-[11px] font-semibold", TONE.heading)}>
                 <ClipboardListIcon className="size-3.5 text-[var(--tpl-accent)]" />
-                تفاصيل الحدث
+                {canvas.eventDetails}
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {rules.map((rule) => (
@@ -1624,7 +1893,7 @@ export function InvitationCanvas({
             <motion.div {...sectionReveal} className="px-4">
               <h3 className={cn("mb-4 flex items-center justify-center gap-1.5 text-xl font-normal", TONE.muted)}>
                 <ImageIcon className="size-4 text-[var(--tpl-accent)]" />
-                لحظات من الحفل
+                {canvas.galleryMoments}
               </h3>
               <div className="grid grid-cols-2 gap-3">
                 {value.galleryImages.filter(Boolean).map((url, index) => (
@@ -1651,14 +1920,14 @@ export function InvitationCanvas({
               actually something to show. */}
           {value.rsvpShowLiveCount && value.rsvpAttendingCount > 0 && (
             <motion.div {...sectionReveal} className="text-center">
-              <p className={cn("mb-2 flex items-center justify-center gap-2 text-xs", TONE.heading)}>عدد الحضور</p>
+              <p className={cn("mb-2 flex items-center justify-center gap-2 text-xs", TONE.heading)}>{canvas.attendeeCount}</p>
               <p className={cn("mb-3 text-4xl font-light", TONE.strong)}>{value.rsvpAttendingCount}</p>
             </motion.div>
           )}
 
           {value.rsvpShowMessage && value.rsvpWishes.length > 0 && (
             <motion.div {...sectionReveal} className="px-4">
-              <p className={cn("mb-2 flex items-center justify-center gap-2 text-xs", TONE.heading)}>التهاني</p>
+              <p className={cn("mb-2 flex items-center justify-center gap-2 text-xs", TONE.heading)}>{canvas.wishes}</p>
               <WishesCarousel wishes={value.rsvpWishes} />
             </motion.div>
           )}
@@ -1705,7 +1974,7 @@ export function InvitationCanvas({
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.8 }}
           whileTap={{ scale: 0.9 }}
-          aria-label={autoScroll.isPaused ? "استئناف التمرير التلقائي" : "إيقاف التمرير التلقائي"}
+          aria-label={autoScroll.isPaused ? canvas.resumeAutoScroll : canvas.pauseAutoScroll}
           className={cn(
             "flex size-11 items-center justify-center rounded-full border border-white/30 bg-black/40 text-white shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur-md",
             standalone ? "fixed bottom-24 end-4 z-[999]" : "absolute bottom-20 end-3 z-30"
@@ -1721,7 +1990,7 @@ export function InvitationCanvas({
             <motion.button
               key="modal-backdrop"
               type="button"
-              aria-label="إغلاق"
+              aria-label={canvas.closeModal}
               onClick={() => setOpenModal(null)}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -1745,7 +2014,7 @@ export function InvitationCanvas({
                 <button
                   type="button"
                   onClick={() => setOpenModal(null)}
-                  aria-label="إغلاق"
+                  aria-label={canvas.closeModal}
                   className="absolute end-3 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-full transition-colors hover:bg-gray-100"
                 >
                   <XIcon className="size-3.5 text-gray-500" />
