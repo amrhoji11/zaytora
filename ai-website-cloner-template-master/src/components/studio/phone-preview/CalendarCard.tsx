@@ -16,15 +16,19 @@ const DEFAULT_EVENT_DURATION_MS = 3 * 60 * 60 * 1000;
 
 function buildIcsContent({
   startIso,
+  endIso,
   title,
   location,
 }: {
   startIso: string;
+  // The event's own real end time, when set (a "from - to" invitation) —
+  // falls back to the fixed default duration for the plain single-time case.
+  endIso?: string | null;
   title: string;
   location?: string | null;
 }) {
   const start = new Date(startIso);
-  const end = new Date(start.getTime() + DEFAULT_EVENT_DURATION_MS);
+  const end = endIso ? new Date(endIso) : new Date(start.getTime() + DEFAULT_EVENT_DURATION_MS);
   return [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
@@ -57,6 +61,7 @@ export function CalendarCard({
   weekday,
   time,
   eventIso,
+  endEventIso,
   eventTitle,
   venueName,
 }: {
@@ -67,12 +72,15 @@ export function CalendarCard({
   // Feeds the "احفظ الموعد" download — omitted (button hidden) when there's
   // no valid event date to save.
   eventIso: string | null;
+  // Set on a "from - to" invitation — the saved .ics event ends at this real
+  // time instead of the fixed default duration.
+  endEventIso?: string | null;
   eventTitle?: string | null;
   venueName?: string | null;
 }) {
   function handleSaveDate() {
     if (!eventIso) return;
-    const ics = buildIcsContent({ startIso: eventIso, title: eventTitle || "دعوة", location: venueName });
+    const ics = buildIcsContent({ startIso: eventIso, endIso: endEventIso, title: eventTitle || "دعوة", location: venueName });
     // iOS Safari — including in-app browsers like Messenger/Instagram's,
     // which is where a guest actually opens this link from — doesn't honor
     // <a download> for blob: URLs; it just navigates to the blob and

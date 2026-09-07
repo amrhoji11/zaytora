@@ -25,6 +25,7 @@ public class InvitationDetailDto
     public string? NamesFont { get; set; }
     public bool UseNameImage { get; set; }
     public DateTime? EventDateTime { get; set; }
+    public DateTime? EventEndDateTime { get; set; }
     public string? Timezone { get; set; }
     public bool UseHijriDate { get; set; }
     public string? ThankYouText { get; set; }

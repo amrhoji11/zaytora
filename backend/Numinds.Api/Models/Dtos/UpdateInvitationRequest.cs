@@ -23,6 +23,13 @@ public class UpdateInvitationRequest
     public string? NamesFont { get; set; }
     public bool? UseNameImage { get; set; }
     public DateTime? EventDateTime { get; set; }
+    public DateTime? EventEndDateTime { get; set; }
+    // A null EventEndDateTime is indistinguishable from "not provided" under
+    // this DTO's patch semantics (see the type-level comment above), so
+    // switching an invitation from a time range back to a single time can't
+    // clear the stored end time just by omitting/nulling the field above —
+    // the studio sets this explicit flag instead when it does.
+    public bool? ClearEventEndDateTime { get; set; }
     public string? Timezone { get; set; }
     public bool? UseHijriDate { get; set; }
     public string? ThankYouText { get; set; }

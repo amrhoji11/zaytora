@@ -31,6 +31,10 @@ const COPY = {
     uploadNameImage: "ارفع الشعار أو صورة الاسم",
     deleteImageAria: "حذف الصورة",
     eventDateTime: "تاريخ ووقت الحدث",
+    timeMode: "الوقت",
+    timeModeSingle: "وقت واحد",
+    timeModeRange: "من - إلى",
+    eventEndTime: "وقت الانتهاء",
     detectedTimezone: (tz: string) => `المنطقة الزمنية المكتشفة: ${tz}`,
     hijriDate: "التاريخ الهجري",
     hijriDateDescription: "عرض التاريخ بالتقويم الهجري (أم القرى) في الدعوة بدلاً من الميلادي",
@@ -58,6 +62,10 @@ const COPY = {
     uploadNameImage: "Upload logo or name image",
     deleteImageAria: "Delete image",
     eventDateTime: "Event date and time",
+    timeMode: "Time",
+    timeModeSingle: "Single time",
+    timeModeRange: "From - To",
+    eventEndTime: "End time",
     detectedTimezone: (tz: string) => `Detected timezone: ${tz}`,
     hijriDate: "Hijri date",
     hijriDateDescription: "Show the date on the invitation using the Hijri (Umm al-Qura) calendar instead of Gregorian",
@@ -73,6 +81,36 @@ const COPY = {
 function toDateTimeLocal(value?: string | null) {
   if (!value) return "";
   return value.slice(0, 16);
+}
+
+// The end-time input is HH:MM only (see DateTimeField's "time" variant) —
+// the event is assumed to end the same calendar day it starts, so this
+// grabs just the time-of-day half of a "YYYY-MM-DDTHH:mm" string.
+function toTimeOnly(value?: string | null) {
+  if (!value) return "";
+  return value.slice(11, 16);
+}
+
+// Combines a HH:MM the guest just picked with the start's own date, so
+// eventEndDateTime stays a full "YYYY-MM-DDTHH:mm" wall-clock string like
+// eventDateTime — reused as-is by every date/time formatter downstream
+// instead of teaching them a second, time-only format.
+function combineDateWithTime(baseDateTime: string | null | undefined, time: string) {
+  const datePart = baseDateTime && baseDateTime.length >= 10 ? baseDateTime.slice(0, 10) : new Date().toISOString().slice(0, 10);
+  return `${datePart}T${time}`;
+}
+
+// Default end time offered the moment a guest switches to "from - to" mode,
+// so the field starts populated with something sensible (start + 2h) rather
+// than blank — wraps past midnight rather than producing an invalid hour.
+function addTwoHours(dateTimeLocal: string) {
+  const [datePart, timePart] = dateTimeLocal.split("T");
+  if (!datePart || !timePart) return dateTimeLocal;
+  const [hours, minutes] = timePart.split(":").map(Number);
+  const total = (hours * 60 + minutes + 120) % 1440;
+  const newHours = String(Math.floor(total / 60)).padStart(2, "0");
+  const newMinutes = String(total % 60).padStart(2, "0");
+  return `${datePart}T${newHours}:${newMinutes}`;
 }
 
 export function Step04BasicInfo({
@@ -249,6 +287,48 @@ export function Step04BasicInfo({
         onChange={(eventDateTime) => onChange({ eventDateTime })}
       />
       {value.timezone && <p className="text-xs text-muted-foreground">{t.detectedTimezone(value.timezone)}</p>}
+
+      <div>
+        <p className="mb-1.5 text-sm text-body-foreground">{t.timeMode}</p>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => onChange({ eventEndDateTime: null })}
+            className={cn(
+              "rounded-xl border-2 py-2.5 text-sm font-medium transition-all",
+              !value.eventEndDateTime
+                ? "border-gold bg-gold/10 text-foreground"
+                : "border-border text-body-foreground hover:border-gold/40"
+            )}
+          >
+            {t.timeModeSingle}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (value.eventEndDateTime) return;
+              const start = toDateTimeLocal(value.eventDateTime);
+              onChange({ eventEndDateTime: start ? addTwoHours(start) : combineDateWithTime(value.eventDateTime, "21:00") });
+            }}
+            className={cn(
+              "rounded-xl border-2 py-2.5 text-sm font-medium transition-all",
+              value.eventEndDateTime
+                ? "border-gold bg-gold/10 text-foreground"
+                : "border-border text-body-foreground hover:border-gold/40"
+            )}
+          >
+            {t.timeModeRange}
+          </button>
+        </div>
+      </div>
+      {value.eventEndDateTime && (
+        <DateTimeField
+          label={t.eventEndTime}
+          type="time"
+          value={toTimeOnly(value.eventEndDateTime)}
+          onChange={(time) => onChange({ eventEndDateTime: combineDateWithTime(value.eventDateTime, time) })}
+        />
+      )}
       <ToggleField
         label={t.hijriDate}
         description={t.hijriDateDescription}

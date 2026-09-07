@@ -92,7 +92,15 @@ function buildPatch(detail: InvitationDetail): UpdateInvitationPatch {
   // clobbered by the stale count/wishes this session loaded at open time.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { id, status, editUrl, createdAt, updatedAt, rsvpAttendingCount, rsvpWishes, ...patch } = detail;
-  return patch;
+  return {
+    ...patch,
+    // See UpdateInvitationPatch's own comment — every save resends the
+    // whole form (not just the current step's slice, despite this
+    // function's usual per-step framing), so this is recomputed fresh each
+    // time from whatever's currently in eventEndDateTime rather than
+    // tracked as separate "did the guest just switch modes" state.
+    clearEventEndDateTime: detail.eventEndDateTime == null,
+  };
 }
 
 function clampStepIndex(index: number, stepCount: number) {

@@ -290,6 +290,20 @@ public class InvitationsController(
             // Timezone, exactly as it always was.
             invitation.EventDateTime = DateTime.SpecifyKind(request.EventDateTime.Value, DateTimeKind.Utc);
         }
+        // Checked before the "set" branch below: switching from a time range
+        // back to a single time sends ClearEventEndDateTime=true (see the
+        // DTO's own comment for why a plain null can't signal this), and
+        // that must win even though the studio also resends whatever stale
+        // EventEndDateTime value is still sitting in its local form state.
+        if (request.ClearEventEndDateTime == true)
+        {
+            invitation.EventEndDateTime = null;
+        }
+        else if (request.EventEndDateTime is not null)
+        {
+            // Same wall-clock-not-real-UTC handling as EventDateTime above.
+            invitation.EventEndDateTime = DateTime.SpecifyKind(request.EventEndDateTime.Value, DateTimeKind.Utc);
+        }
         if (request.Timezone is not null) invitation.Timezone = request.Timezone;
         if (request.UseHijriDate is not null) invitation.UseHijriDate = request.UseHijriDate.Value;
         if (request.ThankYouText is not null) invitation.ThankYouText = request.ThankYouText;
@@ -787,6 +801,7 @@ public class InvitationsController(
         NamesFont = invitation.NamesFont,
         UseNameImage = invitation.UseNameImage,
         EventDateTime = invitation.EventDateTime,
+        EventEndDateTime = invitation.EventEndDateTime,
         Timezone = invitation.Timezone,
         UseHijriDate = invitation.UseHijriDate,
         ThankYouText = invitation.ThankYouText,

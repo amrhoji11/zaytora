@@ -3,11 +3,15 @@ export function DateTimeField({
   required,
   value,
   onChange,
+  type = "datetime-local",
 }: {
   label?: string;
   required?: boolean;
   value: string;
   onChange: (value: string) => void;
+  // "time" renders a bare HH:MM picker — used for a range's end time, where
+  // the date is implied to match the start rather than picked separately.
+  type?: "datetime-local" | "time";
 }) {
   return (
     <div>
@@ -18,7 +22,7 @@ export function DateTimeField({
         </label>
       )}
       <input
-        type="datetime-local"
+        type={type}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         className="w-full rounded-xl border border-border bg-background/5 px-3.5 py-2.5 text-sm text-foreground outline-none transition-colors [color-scheme:dark] focus:border-gold"

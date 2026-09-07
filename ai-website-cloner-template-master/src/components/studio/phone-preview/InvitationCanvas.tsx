@@ -191,18 +191,42 @@ function hijriDateParts(date: Date, locale: string) {
   return { weekday: get("weekday"), day: get("day"), month: get("month"), year: get("year") };
 }
 
-function formatEventDate(iso: string | null | undefined, locale: string, useHijri: boolean) {
+function formatEventDate(
+  iso: string | null | undefined,
+  locale: string,
+  useHijri: boolean,
+  endIso?: string | null
+) {
   if (!iso) return null;
   const date = parseWallClockDate(iso);
   if (Number.isNaN(date.getTime())) return null;
-  return new Intl.DateTimeFormat(resolveDateLocale(locale, useHijri), {
+  const dateLocale = resolveDateLocale(locale, useHijri);
+  const endDate = endIso ? parseWallClockDate(endIso) : null;
+  const hasEnd = endDate && !Number.isNaN(endDate.getTime());
+  if (!hasEnd) {
+    return new Intl.DateTimeFormat(dateLocale, {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(date);
+  }
+  // A time range can't reuse Intl's single combined date+time format above
+  // (it only ever states one time) — built manually instead: the date
+  // portion stays exactly as it reads today, with "من X إلى Y"/"X – Y"
+  // appended for the two times.
+  const dateWords = new Intl.DateTimeFormat(dateLocale, {
     weekday: "long",
     day: "numeric",
     month: "long",
     year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
   }).format(date);
+  const timeFormatter = new Intl.DateTimeFormat(dateLocale, { hour: "numeric", minute: "2-digit" });
+  const startTime = timeFormatter.format(date);
+  const endTime = timeFormatter.format(endDate);
+  return locale === "ar" ? `${dateWords}، من ${startTime} إلى ${endTime}` : `${dateWords}, ${startTime} – ${endTime}`;
 }
 
 // Short "DD/MM/YYYY" form for the closing footer — distinct from the long,
@@ -224,11 +248,16 @@ function formatShortDate(iso: string | null | undefined) {
 // When useHijriDate is on, day/month/weekday all come from hijriDateParts
 // instead — a Hijri desk calendar showing a Gregorian day-of-month would be
 // actively wrong, not just unlocalized.
-function calendarParts(iso: string | null | undefined, locale: string, useHijri: boolean) {
+function calendarParts(iso: string | null | undefined, locale: string, useHijri: boolean, endIso?: string | null) {
   if (!iso) return null;
   const date = parseWallClockDate(iso);
   if (Number.isNaN(date.getTime())) return null;
-  const time = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", hour12: true }).format(date);
+  const timeFormatter = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+  let time = timeFormatter.format(date);
+  const endDate = endIso ? parseWallClockDate(endIso) : null;
+  if (endDate && !Number.isNaN(endDate.getTime())) {
+    time = `${time} – ${timeFormatter.format(endDate)}`;
+  }
   if (useHijri) {
     const hijri = hijriDateParts(date, locale);
     return { day: hijri.day, month: hijri.month, weekday: hijri.weekday, time };
@@ -864,10 +893,10 @@ export function InvitationCanvas({
     ? ""
     : [value.familyName1, value.familyName2].filter(Boolean).join(" & ");
   const useHijri = Boolean(value.useHijriDate);
-  const eventDate = formatEventDate(value.eventDateTime, LOCALE_TAGS[language], useHijri);
+  const eventDate = formatEventDate(value.eventDateTime, LOCALE_TAGS[language], useHijri, value.eventEndDateTime);
   const invitationDateLine = formatInvitationDateLine(value.eventDateTime, LOCALE_TAGS[language], useHijri);
   const countdown = useCountdown(value.eventDateTime);
-  const calendar = calendarParts(value.eventDateTime, LOCALE_TAGS[language], useHijri);
+  const calendar = calendarParts(value.eventDateTime, LOCALE_TAGS[language], useHijri, value.eventEndDateTime);
   const primaryVenue = value.venues[0] ?? null;
   const occasion = resolveOccasionTheme(value.occasionType);
   const OccasionIcon = occasion.icon;
@@ -1423,6 +1452,7 @@ export function InvitationCanvas({
               weekday={calendar.weekday}
               time={calendar.time}
               eventIso={value.eventDateTime ?? null}
+              endEventIso={value.eventEndDateTime ?? null}
               eventTitle={value.eventTitle}
               venueName={primaryVenue?.name}
             />

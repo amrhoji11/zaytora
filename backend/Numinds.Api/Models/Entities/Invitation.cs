@@ -39,6 +39,10 @@ public class Invitation
     public string? NamesFont { get; set; }
     public bool UseNameImage { get; set; }
     public DateTime? EventDateTime { get; set; }
+    // Optional end of a time range (e.g. 5:00 PM - 7:00 PM) — null means the
+    // event has a single start time only, the original behavior. Same
+    // "wall-clock, not a real UTC instant" convention as EventDateTime.
+    public DateTime? EventEndDateTime { get; set; }
     public string? Timezone { get; set; }
     public bool UseHijriDate { get; set; }
     public string? ThankYouText { get; set; }

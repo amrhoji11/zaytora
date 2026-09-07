@@ -49,6 +49,9 @@ export interface InvitationDetail {
   // but won't survive a reload until the API grows a matching field.
   nameImageUrl?: string | null;
   eventDateTime?: string | null;
+  // Optional end of a time range (e.g. "5:00 PM - 7:00 PM") — null/unset
+  // means the event has a single start time only, the original behavior.
+  eventEndDateTime?: string | null;
   timezone?: string | null;
   useHijriDate: boolean;
   thankYouText?: string | null;
@@ -129,4 +132,12 @@ export interface InvitationDetail {
 // Every field optional — a step only ever sends the slice it owns.
 export type UpdateInvitationPatch = Partial<
   Omit<InvitationDetail, "id" | "status" | "editUrl" | "createdAt" | "updatedAt">
-> & { status?: string };
+> & {
+  status?: string;
+  // Write-only signal, not part of InvitationDetail itself — a plain
+  // eventEndDateTime: null is indistinguishable from "not sent" under the
+  // API's patch semantics (see UpdateInvitationRequest.cs), so switching
+  // back to a single time has to say so explicitly to actually clear the
+  // stored end time instead of leaving the old one in place.
+  clearEventEndDateTime?: boolean;
+};
