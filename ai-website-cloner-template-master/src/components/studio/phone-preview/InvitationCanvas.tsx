@@ -91,7 +91,6 @@ const NAV_LABELS: Record<
 const CANVAS_LABELS: Record<
   InvitationLanguage,
   {
-    waitingNote: string;
     accommodation: string;
     program: string;
     eventDetails: string;
@@ -107,7 +106,6 @@ const CANVAS_LABELS: Record<
   }
 > = {
   ar: {
-    waitingNote: "بانتظار تشريفكم لنا لنحتفل معاً بهذه المناسبة السعيدة",
     accommodation: "أين تقيمون",
     program: "برنامج الحفل",
     eventDetails: "تفاصيل الحدث",
@@ -122,7 +120,6 @@ const CANVAS_LABELS: Record<
     untitledEvent: "دعوة",
   },
   bilingual: {
-    waitingNote: "بانتظار تشريفكم لنا لنحتفل معاً بهذه المناسبة السعيدة",
     accommodation: "أين تقيمون",
     program: "برنامج الحفل",
     eventDetails: "تفاصيل الحدث",
@@ -137,7 +134,6 @@ const CANVAS_LABELS: Record<
     untitledEvent: "دعوة",
   },
   en: {
-    waitingNote: "We look forward to celebrating this joyous occasion with you",
     accommodation: "Where to Stay",
     program: "Event Program",
     eventDetails: "Event Details",
@@ -152,7 +148,6 @@ const CANVAS_LABELS: Record<
     untitledEvent: "Invitation",
   },
   ro: {
-    waitingNote: "Așteptăm cu nerăbdare să sărbătorim această ocazie fericită alături de tine",
     accommodation: "Unde să Stați",
     program: "Programul Evenimentului",
     eventDetails: "Detaliile Evenimentului",
@@ -167,7 +162,6 @@ const CANVAS_LABELS: Record<
     untitledEvent: "Invitație",
   },
   fr: {
-    waitingNote: "Nous avons hâte de célébrer cette heureuse occasion avec vous",
     accommodation: "Où Séjourner",
     program: "Programme de l'Événement",
     eventDetails: "Détails de l'Événement",
@@ -182,7 +176,6 @@ const CANVAS_LABELS: Record<
     untitledEvent: "Invitation",
   },
   es: {
-    waitingNote: "Esperamos celebrar esta feliz ocasión junto a ti",
     accommodation: "Dónde Alojarse",
     program: "Programa del Evento",
     eventDetails: "Detalles del Evento",
@@ -197,7 +190,6 @@ const CANVAS_LABELS: Record<
     untitledEvent: "Invitación",
   },
   hi: {
-    waitingNote: "हम इस खुशी के मौके पर आपके साथ जश्न मनाने के लिए उत्सुक हैं",
     accommodation: "कहाँ ठहरें",
     program: "कार्यक्रम अनुसूची",
     eventDetails: "आयोजन विवरण",
@@ -212,7 +204,6 @@ const CANVAS_LABELS: Record<
     untitledEvent: "निमंत्रण",
   },
   id: {
-    waitingNote: "Kami menantikan untuk merayakan momen bahagia ini bersama Anda",
     accommodation: "Tempat Menginap",
     program: "Rangkaian Acara",
     eventDetails: "Detail Acara",
@@ -1506,9 +1497,6 @@ export function InvitationCanvas({
             <motion.div {...sectionReveal} className={cn(sectionCardClass(undefined, transparentCards), "flex flex-col items-center gap-4 text-center")}>
               <p className={cn("text-base leading-relaxed", cardTextFont || "font-sans", TONE.body)}>
                 {value.invitationText}
-              </p>
-              <p className={cn("text-xs leading-relaxed", cardTextFont, TONE.muted)}>
-                {canvas.waitingNote}
               </p>
             </motion.div>
           )}
