@@ -44,6 +44,9 @@ export interface InvitationDetail {
   firstName?: string | null;
   secondName?: string | null;
   namesFont?: string | null;
+  // "horizontal" (default when unset) or "vertical" — only meaningful for a
+  // couple invitation with both names set; a solo invitation ignores it.
+  namesLayout?: "horizontal" | "vertical" | null;
   useNameImage: boolean;
   // Not yet backed by a backend column — persists for the editing session
   // but won't survive a reload until the API grows a matching field.

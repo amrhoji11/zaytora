@@ -37,6 +37,9 @@ public class Invitation
     public string? FirstName { get; set; }
     public string? SecondName { get; set; }
     public string? NamesFont { get; set; }
+    // "horizontal" (default when null) or "vertical" — only meaningful for a
+    // couple invitation with both names set.
+    public string? NamesLayout { get; set; }
     public bool UseNameImage { get; set; }
     public DateTime? EventDateTime { get; set; }
     // Optional end of a time range (e.g. 5:00 PM - 7:00 PM) — null means the

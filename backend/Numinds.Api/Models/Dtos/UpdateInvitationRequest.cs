@@ -21,6 +21,7 @@ public class UpdateInvitationRequest
     public string? FirstName { get; set; }
     public string? SecondName { get; set; }
     public string? NamesFont { get; set; }
+    public string? NamesLayout { get; set; }
     public bool? UseNameImage { get; set; }
     public DateTime? EventDateTime { get; set; }
     public DateTime? EventEndDateTime { get; set; }

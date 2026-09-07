@@ -26,6 +26,9 @@ const COPY = {
     secondName: "الاسم الثاني",
     secondNamePlaceholder: "سارة",
     namesFont: "خط الأسماء",
+    namesLayout: "ترتيب الأسماء",
+    namesLayoutHorizontal: "أفقي",
+    namesLayoutVertical: "عمودي",
     nameImage: "شعار / صورة الاسم",
     nameImageDescription: "استبدل الاسم بصورة شعار في القسم الأول من الدعوة.",
     uploadNameImage: "ارفع الشعار أو صورة الاسم",
@@ -57,6 +60,9 @@ const COPY = {
     secondName: "Second name",
     secondNamePlaceholder: "Sarah",
     namesFont: "Names font",
+    namesLayout: "Names layout",
+    namesLayoutHorizontal: "Horizontal",
+    namesLayoutVertical: "Vertical",
     nameImage: "Logo / name image",
     nameImageDescription: "Replace the names with a logo image in the invitation's opening section.",
     uploadNameImage: "Upload logo or name image",
@@ -228,12 +234,44 @@ export function Step04BasicInfo({
         value={value.namesFont ?? ""}
         onChange={(namesFont) => onChange({ namesFont })}
       />
+      {value.invitationType === "couple" && (
+        <div>
+          <p className="mb-1.5 text-sm text-body-foreground">{t.namesLayout}</p>
+          <div className="grid grid-cols-2 gap-3">
+            {(["horizontal", "vertical"] as const).map((layout) => (
+              <button
+                key={layout}
+                type="button"
+                onClick={() => onChange({ namesLayout: layout })}
+                className={cn(
+                  "rounded-xl border-2 py-2.5 text-sm font-medium transition-all",
+                  (value.namesLayout ?? "horizontal") === layout
+                    ? "border-gold bg-gold/10 text-foreground"
+                    : "border-border text-body-foreground hover:border-gold/40"
+                )}
+              >
+                {layout === "horizontal" ? t.namesLayoutHorizontal : t.namesLayoutVertical}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       {value.firstName && (
         <div className="rounded-xl border border-border bg-gold/5 px-4 py-5 text-center">
-          <p className={cn("text-lg text-gold", value.namesFont || "font-cinzel")}>
-            {value.firstName}
-            {value.invitationType === "couple" && value.secondName ? ` & ${value.secondName}` : ""}
-          </p>
+          {value.invitationType === "couple" && value.secondName && value.namesLayout === "vertical" ? (
+            <p className={cn("text-lg text-gold", value.namesFont || "font-cinzel")}>
+              {value.firstName}
+              <br />
+              &amp;
+              <br />
+              {value.secondName}
+            </p>
+          ) : (
+            <p className={cn("text-lg text-gold", value.namesFont || "font-cinzel")}>
+              {value.firstName}
+              {value.invitationType === "couple" && value.secondName ? ` & ${value.secondName}` : ""}
+            </p>
+          )}
         </div>
       )}
 

@@ -274,6 +274,7 @@ public class InvitationsController(
         if (request.FirstName is not null) invitation.FirstName = request.FirstName;
         if (request.SecondName is not null) invitation.SecondName = request.SecondName;
         if (request.NamesFont is not null) invitation.NamesFont = request.NamesFont;
+        if (request.NamesLayout is not null) invitation.NamesLayout = request.NamesLayout;
         if (request.UseNameImage is not null) invitation.UseNameImage = request.UseNameImage.Value;
         if (request.EventDateTime is not null)
         {
@@ -799,6 +800,7 @@ public class InvitationsController(
         FirstName = invitation.FirstName,
         SecondName = invitation.SecondName,
         NamesFont = invitation.NamesFont,
+        NamesLayout = invitation.NamesLayout,
         UseNameImage = invitation.UseNameImage,
         EventDateTime = invitation.EventDateTime,
         EventEndDateTime = invitation.EventEndDateTime,

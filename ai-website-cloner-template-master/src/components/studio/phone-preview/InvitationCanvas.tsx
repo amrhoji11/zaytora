@@ -753,11 +753,24 @@ const TIMELINE_REVEAL_VIEWPORT = { once: true, margin: "-42% 0px -42% 0px" } as 
 // script while the names on either side stay in the invitation's own font.
 // Falls back to the plain string when there's no " & " to split on (a solo
 // invitationType, or a name containing no literal ampersand-joined pair),
-// so this is a pure presentational swap, never a data reshape.
-function NamesLine({ names }: { names: string }) {
+// so this is a pure presentational swap, never a data reshape. `layout`
+// (default "horizontal", the original single-line behavior) stacks the two
+// names with the "&" centered between them on its own line instead — the
+// hero's own value.namesLayout choice; every other caller (the closing
+// footer's own signature line) leaves this at its default.
+function NamesLine({ names, layout = "horizontal" }: { names: string; layout?: "horizontal" | "vertical" }) {
   const parts = names.split(" & ");
   if (parts.length !== 2) return <>{names}</>;
   const [first, second] = parts;
+  if (layout === "vertical") {
+    return (
+      <span className="flex flex-col items-center gap-1">
+        <span>{first}</span>
+        <span className="font-great-vibes text-[0.7em] leading-none">&amp;</span>
+        <span>{second}</span>
+      </span>
+    );
+  }
   return (
     <>
       {first} <span className="font-great-vibes">&amp;</span> {second}
@@ -1283,8 +1296,21 @@ export function InvitationCanvas({
               on mount, so the couple's names and date settle into place
               instead of popping in all at once. Each line's delay is fixed
               at mount time (not tied to render count), so the countdown's
-              once-a-second re-render never restarts or disturbs them. */}
-          <div className="flex min-h-full flex-col items-center justify-center gap-3 px-6 py-10 text-center">
+              once-a-second re-render never restarts or disturbs them.
+              min-h-full was a no-op (this div's own ancestors never define a
+              height for "full" to resolve against), so a full-bleed hero
+              photo's short text cluster hugged the top instead of centering
+              in the photo — leaving a bare gap of pure photo beneath it
+              before the next card. Pinning a real height only when there's
+              an actual full-bleed photo behind it (never for a plain/
+              gradient background, which has no such gap to fill) lets
+              justify-center do its actual job. */}
+          <div
+            className={cn(
+              "flex flex-col items-center justify-center gap-3 px-6 py-10 text-center",
+              isFullBleed && heroImageUrl ? "min-h-[70dvh]" : "min-h-full"
+            )}
+          >
             {/* The hero's only "&" glyph now lives inside the names line
                 below (real names via NamesLine, or PLACEHOLDER_NAMES on a
                 still-blank draft) — a separate always-on decorative mark
@@ -1381,7 +1407,10 @@ export function InvitationCanvas({
                     theme.isDark && "drop-shadow"
                   )}
                 >
-                  <NamesLine names={names || PLACEHOLDER_NAMES[language]} />
+                  <NamesLine
+                    names={names || PLACEHOLDER_NAMES[language]}
+                    layout={value.namesLayout === "vertical" ? "vertical" : "horizontal"}
+                  />
                 </motion.p>
               ))}
             {!templatePreviewMode && value.thankYouImageUrl ? (
