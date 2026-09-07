@@ -391,33 +391,6 @@ function calendarParts(iso: string | null | undefined, locale: string, useHijri:
   };
 }
 
-// The main invitation card's "يوم السبت الموافق 12.19.2026" line — weekday
-// read localized, the MM.DD.YYYY numerals always Latin (matching the
-// reference's own dot-separated date, and the countdown/calendar widgets'
-// digits elsewhere on this canvas). "يوم"/"الموافق" only render for Arabic/
-// bilingual (locale resolves to "ar") — every other language gets a plain
-// "Weekday, date" line instead of an awkward word-for-word translation of
-// that exact Arabic phrasing. Hijri mode swaps the numeric portion for
-// "day month year هـ"/"AH" (e.g. "19 رجب 1447هـ") since a Hijri year has no
-// fixed MM.DD position to dot-separate the way the Gregorian calendar does.
-function formatInvitationDateLine(iso: string | null | undefined, locale: string, useHijri: boolean) {
-  if (!iso) return null;
-  const date = parseWallClockDate(iso);
-  if (Number.isNaN(date.getTime())) return null;
-  const isArabic = locale === "ar";
-  if (useHijri) {
-    const hijri = hijriDateParts(date, locale);
-    return isArabic
-      ? `يوم ${hijri.weekday} الموافق ${hijri.day} ${hijri.month} ${hijri.year}هـ`
-      : `${hijri.weekday}, ${hijri.day} ${hijri.month} ${hijri.year} AH`;
-  }
-  const weekday = new Intl.DateTimeFormat(locale, { weekday: "long" }).format(date);
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const dateStr = `${month}.${day}.${date.getFullYear()}`;
-  return isArabic ? `يوم ${weekday} الموافق ${dateStr}` : `${weekday}, ${dateStr}`;
-}
-
 function useCountdown(iso?: string | null) {
   const [now, setNow] = useState(() => Date.now());
 
@@ -1019,7 +992,6 @@ export function InvitationCanvas({
     : [value.familyName1, value.familyName2].filter(Boolean).join(" & ");
   const useHijri = Boolean(value.useHijriDate);
   const eventDate = formatEventDate(value.eventDateTime, LOCALE_TAGS[language], useHijri, value.eventEndDateTime);
-  const invitationDateLine = formatInvitationDateLine(value.eventDateTime, LOCALE_TAGS[language], useHijri);
   const countdown = useCountdown(value.eventDateTime);
   const calendar = calendarParts(value.eventDateTime, LOCALE_TAGS[language], useHijri, value.eventEndDateTime);
   const primaryVenue = value.venues[0] ?? null;
@@ -1506,14 +1478,6 @@ export function InvitationCanvas({
               <p className={cn("text-base leading-relaxed", cardTextFont || "font-sans", TONE.body)}>
                 {value.invitationText}
               </p>
-              {invitationDateLine && (
-                <p className={cn("text-sm font-medium", cardTextFont, TONE.strong)}>{invitationDateLine}</p>
-              )}
-              {primaryVenue?.name && (
-                <p className={cn("text-sm", TONE.heading)}>
-                  <span aria-hidden>❀</span> {primaryVenue.name} <span aria-hidden>❀</span>
-                </p>
-              )}
               <p className={cn("text-xs leading-relaxed", cardTextFont, TONE.muted)}>
                 {canvas.waitingNote}
               </p>
