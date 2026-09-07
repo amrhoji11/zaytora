@@ -23,7 +23,6 @@ export function ArchIslamicInvitationCard({
   familyName1,
   familyName2,
   invitationText,
-  occasionTitle,
   isRtl,
   accent,
 }: {
@@ -33,7 +32,6 @@ export function ArchIslamicInvitationCard({
   familyName1?: string | null;
   familyName2?: string | null;
   invitationText?: string | null;
-  occasionTitle: string;
   isRtl: boolean;
   accent: string;
 }) {
@@ -80,7 +78,6 @@ export function ArchIslamicInvitationCard({
         </p>
 
         <p className={cn("text-[11px] tracking-[0.15em]", TONE_MUTED)}>{inviteLabel}</p>
-        <p className={cn("text-[11px] font-medium tracking-[0.15em]", TONE_MUTED)}>{occasionTitle}</p>
 
         <div className="flex flex-col items-center gap-1">
           <p className={cn("text-3xl", namesFont || "italic font-serif")} style={{ color: accent }}>

@@ -3,18 +3,13 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
-import type { LucideIcon } from "lucide-react";
 import { canUseNextImage, cn, isVideoSource } from "@/lib/utils";
 import { parseWallClockDate } from "@/lib/format";
 import {
-  BabyIcon,
   BedDoubleIcon,
-  CakeIcon,
   CameraIcon,
   ClipboardListIcon,
-  GemIcon,
   GiftIcon,
-  GraduationCapIcon,
   HeartIcon,
   ImageIcon,
   LoaderIcon,
@@ -24,7 +19,6 @@ import {
   PhoneIcon,
   PlayIcon,
   QrCodeIcon,
-  SparklesIcon,
   XIcon,
 } from "@/components/icons";
 import { getTemplates } from "@/lib/services/templates.service";
@@ -236,142 +230,6 @@ const CANVAS_LABELS: Record<
 
 function resolveLanguage(language?: string | null): InvitationLanguage {
   return language && language in NAV_LABELS ? (language as InvitationLanguage) : "ar";
-}
-
-// Drives the main invitation card's calligraphic header + flanking icon —
-// keyed by the exact `occasionType` codes Step02Occasion writes onto the
-// invitation (see steps/Step02Occasion.tsx's OCCASION_META), so picking a
-// template for a given occasion there is what makes this canvas read
-// "دعوة زفاف" with rings for a wedding vs. "حفل تخرج" with a graduation cap
-// without any extra wiring. `titles` is per-language — previously a single
-// hardcoded Arabic string regardless of `language`, matching the same bug
-// formatInvitationDateLine/COUNTDOWN_LABELS had. Falls back to the wedding
-// theme for an occasionType this map doesn't recognize (a still-blank/
-// in-progress draft, or a future occasion added to Step02Occasion before
-// this map catches up).
-const OCCASION_THEME: Record<string, { titles: Record<InvitationLanguage, string>; icon: LucideIcon }> = {
-  wedding: {
-    titles: {
-      ar: "دعوة زفاف",
-      bilingual: "دعوة زفاف",
-      en: "Wedding Invitation",
-      ro: "Invitație la Nuntă",
-      fr: "Invitation de Mariage",
-      es: "Invitación de Boda",
-      hi: "शादी का निमंत्रण",
-      id: "Undangan Pernikahan",
-    },
-    icon: GemIcon,
-  },
-  engagement: {
-    titles: {
-      ar: "دعوة خطوبة",
-      bilingual: "دعوة خطوبة",
-      en: "Engagement Invitation",
-      ro: "Invitație de Logodnă",
-      fr: "Invitation de Fiançailles",
-      es: "Invitación de Compromiso",
-      hi: "सगाई का निमंत्रण",
-      id: "Undangan Pertunangan",
-    },
-    icon: GemIcon,
-  },
-  marriage_contract: {
-    titles: {
-      ar: "دعوة عقد قران",
-      bilingual: "دعوة عقد قران",
-      en: "Marriage Contract Invitation",
-      ro: "Invitație la Contractul de Căsătorie",
-      fr: "Invitation au Contrat de Mariage",
-      es: "Invitación al Contrato Matrimonial",
-      hi: "निकाह का निमंत्रण",
-      id: "Undangan Akad Nikah",
-    },
-    icon: GemIcon,
-  },
-  henna: {
-    titles: {
-      ar: "دعوة حنة",
-      bilingual: "دعوة حنة",
-      en: "Henna Invitation",
-      ro: "Invitație la Henna",
-      fr: "Invitation au Henné",
-      es: "Invitación de Henna",
-      hi: "मेहंदी का निमंत्रण",
-      id: "Undangan Malam Henna",
-    },
-    icon: SparklesIcon,
-  },
-  bridal_shower: {
-    titles: {
-      ar: "دعوة حفلة عروس",
-      bilingual: "دعوة حفلة عروس",
-      en: "Bridal Shower Invitation",
-      ro: "Invitație la Petrecerea Miresei",
-      fr: "Invitation à l'Enterrement de Vie de Jeune Fille",
-      es: "Invitación a la Despedida de Soltera",
-      hi: "ब्राइडल शावर का निमंत्रण",
-      id: "Undangan Bridal Shower",
-    },
-    icon: SparklesIcon,
-  },
-  gender_reveal: {
-    titles: {
-      ar: "حفل كشف الجنس",
-      bilingual: "حفل كشف الجنس",
-      en: "Gender Reveal Party",
-      ro: "Petrecere de Dezvăluire a Sexului",
-      fr: "Fête de Révélation du Genre",
-      es: "Fiesta de Revelación de Género",
-      hi: "जेंडर रिवील पार्टी",
-      id: "Pesta Gender Reveal",
-    },
-    icon: SparklesIcon,
-  },
-  aqeeqah: {
-    titles: {
-      ar: "دعوة عقيقة",
-      bilingual: "دعوة عقيقة",
-      en: "Aqeeqah Invitation",
-      ro: "Invitație la Aqeeqah",
-      fr: "Invitation à l'Aqeeqah",
-      es: "Invitación de Aqeeqah",
-      hi: "अकीका का निमंत्रण",
-      id: "Undangan Aqiqah",
-    },
-    icon: BabyIcon,
-  },
-  graduation: {
-    titles: {
-      ar: "حفل تخرج",
-      bilingual: "حفل تخرج",
-      en: "Graduation Celebration",
-      ro: "Petrecere de Absolvire",
-      fr: "Fête de Remise des Diplômes",
-      es: "Celebración de Graduación",
-      hi: "स्नातक समारोह",
-      id: "Perayaan Wisuda",
-    },
-    icon: GraduationCapIcon,
-  },
-  birthday: {
-    titles: {
-      ar: "دعوة عيد ميلاد",
-      bilingual: "دعوة عيد ميلاد",
-      en: "Birthday Invitation",
-      ro: "Invitație la Ziua de Naștere",
-      fr: "Invitation d'Anniversaire",
-      es: "Invitación de Cumpleaños",
-      hi: "जन्मदिन का निमंत्रण",
-      id: "Undangan Ulang Tahun",
-    },
-    icon: CakeIcon,
-  },
-};
-
-function resolveOccasionTheme(occasionType: string | null | undefined, language: InvitationLanguage) {
-  const theme = (occasionType && OCCASION_THEME[occasionType]) || OCCASION_THEME.wedding;
-  return { title: theme.titles[language], icon: theme.icon };
 }
 
 // Full words ("أيام", "ساعات"...), matching the reference's countdown —
@@ -1165,8 +1023,6 @@ export function InvitationCanvas({
   const countdown = useCountdown(value.eventDateTime);
   const calendar = calendarParts(value.eventDateTime, LOCALE_TAGS[language], useHijri, value.eventEndDateTime);
   const primaryVenue = value.venues[0] ?? null;
-  const occasion = resolveOccasionTheme(value.occasionType, language);
-  const OccasionIcon = occasion.icon;
   const rules = (value.eventRulesText ?? "").split(RULES_DELIMITER).map((rule) => rule.trim()).filter(Boolean);
 
   const navItems: BottomBarItem[] = [
@@ -1627,13 +1483,12 @@ export function InvitationCanvas({
           {!templatePreviewMode && (
             <>
               {/* Main invitation card — the reference's calligraphic centerpiece:
-              title, formal invitation copy, the short day/date line, venue
-              name, and the "بانتظار تشريفكم" tag note, all inside one glass
-              card rather than a single plain paragraph. No names line of its
-              own — the couple's names already open the hero above, so
-              repeating them here read as redundant. Title + flanking icon
-              swap per occasionType (resolveOccasionTheme) — "دعوة زفاف" with
-              rings for a wedding, "حفل تخرج" with a graduation cap, etc. */}
+              formal invitation copy, the short day/date line, venue name, and
+              the "بانتظار تشريفكم" tag note, all inside one glass card rather
+              than a single plain paragraph. No names line or occasion-type
+              title of its own — the couple's names already open the hero
+              above, and the guest's own eventTitle covers the "what is this"
+              job, so repeating either here read as redundant. */}
           {value.invitationText && template?.invitationCardStyle === "archIslamic" && (
             <ArchIslamicInvitationCard
               firstName={value.firstName ?? ""}
@@ -1642,18 +1497,12 @@ export function InvitationCanvas({
               familyName1={value.familyName1}
               familyName2={value.familyName2}
               invitationText={value.invitationText}
-              occasionTitle={occasion.title}
               isRtl={isRtl}
               accent={theme.vars["--tpl-accent"]}
             />
           )}
           {value.invitationText && template?.invitationCardStyle !== "archIslamic" && (
             <motion.div {...sectionReveal} className={cn(sectionCardClass(undefined, transparentCards), "flex flex-col items-center gap-4 text-center")}>
-              <p className={cn("flex items-center gap-2 text-2xl tracking-wide", cardTextFont || "font-cinzel", TONE.heading)}>
-                <OccasionIcon aria-hidden className="size-5 text-[var(--tpl-accent-70)]" />
-                {occasion.title}
-                <OccasionIcon aria-hidden className="size-5 text-[var(--tpl-accent-70)]" />
-              </p>
               <p className={cn("text-base leading-relaxed", cardTextFont || "font-sans", TONE.body)}>
                 {value.invitationText}
               </p>
