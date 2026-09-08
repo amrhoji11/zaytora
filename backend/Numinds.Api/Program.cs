@@ -142,6 +142,12 @@ if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(goo
 
 builder.Services.AddHttpClient<IEmailSender, ResendEmailSender>();
 
+// Server-side complement to the frontend's Meta Pixel (see MetaPixel.tsx) --
+// reports new-account signups to Meta's Conversions API. See
+// MetaConversionsApiService for the Meta:PixelId/Meta:ConversionsApiAccessToken
+// config keys and its degrade-gracefully-when-unset behavior.
+builder.Services.AddHttpClient<IMetaConversionsApiService, MetaConversionsApiService>();
+
 // R2 (Cloudflare's S3-compatible object storage) for admin-uploaded images
 // (partner logos, template covers, envelope photos, thank-you-suggestion
 // cards) -- Render's own filesystem is ephemeral and wipes anything written

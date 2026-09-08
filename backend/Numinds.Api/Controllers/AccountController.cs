@@ -17,6 +17,7 @@ public class AccountController(
     SignInManager<ApplicationUser> signInManager,
     UserManager<ApplicationUser> userManager,
     IEmailSender emailSender,
+    IMetaConversionsApiService metaConversions,
     IConfiguration configuration) : ControllerBase
 {
     private string FrontendBaseUrl => configuration["Frontend:BaseUrl"] ?? "http://localhost:3000";
@@ -69,6 +70,12 @@ public class AccountController(
         }
 
         await signInManager.SignInAsync(user, isPersistent: true);
+
+        await metaConversions.SendCompleteRegistrationAsync(
+            user.Email!,
+            HttpContext.Connection.RemoteIpAddress?.ToString(),
+            Request.Headers.UserAgent.ToString(),
+            HttpContext.RequestAborted);
 
         return Ok(await ToDtoAsync(user));
     }
@@ -234,9 +241,11 @@ public class AccountController(
             return Redirect($"{FrontendBaseUrl}/login?error=external-login-failed");
         }
 
+        var isNewUser = false;
         var user = await userManager.FindByEmailAsync(email);
         if (user is null)
         {
+            isNewUser = true;
             user = new ApplicationUser
             {
                 UserName = email,
@@ -259,6 +268,16 @@ public class AccountController(
         }
 
         await signInManager.SignInAsync(user, isPersistent: true);
+
+        if (isNewUser)
+        {
+            await metaConversions.SendCompleteRegistrationAsync(
+                user.Email!,
+                HttpContext.Connection.RemoteIpAddress?.ToString(),
+                Request.Headers.UserAgent.ToString(),
+                HttpContext.RequestAborted);
+        }
+
         return Redirect($"{FrontendBaseUrl}{returnUrl}");
     }
 
