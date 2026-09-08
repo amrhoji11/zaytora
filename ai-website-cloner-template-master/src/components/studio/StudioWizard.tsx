@@ -35,6 +35,8 @@ const COPY = {
     limitReached: "وصلت للحد الأقصى (5) دعوات. احذف إحدى دعواتك الحالية من لوحة التحكم لتتمكن من إنشاء دعوة جديدة.",
     forbidden: "هذه الدعوة ليست ملكك، ولا يمكنك تعديلها. تأكد من الرابط أو ارجع للوحة التحكم لفتح دعواتك الخاصة.",
     notFound: "تعذّر فتح هذه الدعوة — ربما تم حذفها، أو الرابط غير صحيح. ارجع للوحة التحكم لفتح دعواتك الخاصة.",
+    connectionError: "تعذّر الاتصال بالخادم مؤقتاً — دعوتك ما زالت محفوظة بأمان. تحقق من اتصالك بالإنترنت وأعد المحاولة.",
+    retry: "أعد المحاولة",
     goToDashboard: "الذهاب للوحة التحكم",
     back: "رجوع",
     next: "التالي",
@@ -62,6 +64,8 @@ const COPY = {
     limitReached: "You've reached the maximum of 5 invitations. Delete one from your dashboard to create a new one.",
     forbidden: "This invitation isn't yours, so you can't edit it. Double-check the link, or go to your dashboard to open your own invitations.",
     notFound: "Couldn't open this invitation — it may have been deleted, or the link is wrong. Go to your dashboard to open your own invitations.",
+    connectionError: "Couldn't reach the server — your invitation is still saved safely. Check your connection and try again.",
+    retry: "Try again",
     goToDashboard: "Go to dashboard",
     back: "Back",
     next: "Next",
@@ -151,7 +155,10 @@ export function StudioWizard() {
   const [phase, setPhase] = useState<Phase>("design");
   const [completedOrder, setCompletedOrder] = useState<OrderCreatedResponse | null>(null);
   const [saving, setSaving] = useState(false);
-  const [loadError, setLoadError] = useState<"generic" | "limitReached" | "forbidden" | "notFound" | null>(null);
+  const [loadError, setLoadError] = useState<"generic" | "limitReached" | "forbidden" | "notFound" | "connection" | null>(null);
+  // Bumped by the "connection" error state's retry button to re-run the
+  // load effect below without touching invitationIdParam itself.
+  const [retryToken, setRetryToken] = useState(0);
   const [stepNavOpen, setStepNavOpen] = useState(false);
   const [stepError, setStepError] = useState<StepErrorCode | null>(null);
   // Captured on first render, before this page load's own rememberInvitation()
@@ -183,15 +190,19 @@ export function StudioWizard() {
           }
         } catch (error) {
           // A specific invitation was requested (via the URL or a "continue
-          // last draft" link) and couldn't be loaded — could be deleted, or
-          // someone else's draft (the backend 404s either way rather than
-          // leaking which). Silently starting a brand-new draft here instead
-          // used to be the fallback, but that quietly burned the 5-invitation
-          // cap with junk every time a stale link was clicked — surface it
-          // instead and let the user explicitly start a new one if they want.
+          // last draft" link) and couldn't be loaded. Only a genuine 404
+          // means it's actually deleted or someone else's draft (the
+          // backend 404s either way rather than leaking which) — anything
+          // else (a timed-out request, a network blip, the backend still
+          // waking up from an idle Render instance) is a transient failure
+          // that says nothing about whether the invitation still exists.
+          // Treating both the same used to send a guest who just hit a slow
+          // connection straight to "this may have been deleted" with no way
+          // back in except starting over from scratch, even though their
+          // draft was sitting there untouched the whole time.
           if (!cancelled) {
             console.error("[studio] failed to load invitation:", error);
-            setLoadError("notFound");
+            setLoadError(error instanceof ApiError && error.status === 404 ? "notFound" : "connection");
           }
         }
         return;
@@ -227,7 +238,7 @@ export function StudioWizard() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [invitationIdParam]);
+  }, [invitationIdParam, retryToken]);
 
   useEffect(() => {
     if (!form || !user) return;
@@ -296,6 +307,11 @@ export function StudioWizard() {
     }
   }
 
+  function handleRetryLoad() {
+    setLoadError(null);
+    setRetryToken((current) => current + 1);
+  }
+
   async function handleBack() {
     // No validate() call here on purpose — unlike handleNext, going back
     // should never be blocked by the step you're leaving being incomplete.
@@ -311,18 +327,30 @@ export function StudioWizard() {
           ? t.forbidden
           : loadError === "notFound"
             ? t.notFound
-            : t.loadError;
+            : loadError === "connection"
+              ? t.connectionError
+              : t.loadError;
     return (
       <div className="min-h-screen bg-background">
         <div className="mx-auto max-w-lg py-24 text-center">
           <p className="text-body-foreground">{message}</p>
-          {loadError !== "generic" && (
-            <Link
-              href="/dashboard"
+          {loadError === "connection" ? (
+            <button
+              type="button"
+              onClick={handleRetryLoad}
               className="mt-4 inline-flex items-center justify-center rounded-full bg-gold px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gold/90"
             >
-              {t.goToDashboard}
-            </Link>
+              {t.retry}
+            </button>
+          ) : (
+            loadError !== "generic" && (
+              <Link
+                href="/dashboard"
+                className="mt-4 inline-flex items-center justify-center rounded-full bg-gold px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gold/90"
+              >
+                {t.goToDashboard}
+              </Link>
+            )
           )}
         </div>
       </div>
