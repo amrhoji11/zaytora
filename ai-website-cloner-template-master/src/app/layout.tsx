@@ -46,6 +46,7 @@ import { LanguageProvider } from "@/context/LanguageContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { CurrencyProvider } from "@/context/CurrencyContext";
 import { ThemeProvider } from "@/context/ThemeContext";
+import { MetaPixel } from "@/components/MetaPixel";
 
 // Runs before hydration so the correct theme class is already on <html>
 // by first paint — without this, ThemeProvider's own useEffect would apply
@@ -244,6 +245,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://i.ytimg.com" />
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground" suppressHydrationWarning>
+        <MetaPixel />
         <ThemeProvider>
           <AuthProvider>
             <LanguageProvider>
