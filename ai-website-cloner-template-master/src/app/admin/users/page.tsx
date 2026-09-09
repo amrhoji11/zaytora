@@ -1,13 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { LoaderIcon, SearchIcon, ShieldIcon, UserIcon } from "@/components/icons";
+import { LoaderIcon, SearchIcon, ShieldIcon, TrashIcon, UserIcon } from "@/components/icons";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
-import { listUsers, changeUserRole } from "@/lib/services/users.service";
+import { listUsers, changeUserRole, deleteUser } from "@/lib/services/users.service";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { Pagination } from "@/components/admin/Pagination";
+import { UserDeleteDialog } from "@/components/admin/UserDeleteDialog";
 import type { UserDto } from "@/types/api";
 
 const PAGE_SIZE = 20;
@@ -17,6 +18,7 @@ const COPY = {
   ar: {
     subtitle: "أدر حسابات المستخدمين وصلاحيات الأدمن.",
     searchPlaceholder: "ابحث بالاسم أو البريد الإلكتروني...",
+    joinNumber: "#",
     name: "الاسم",
     email: "البريد الإلكتروني",
     phone: "الهاتف",
@@ -31,10 +33,14 @@ const COPY = {
     totalUsers: "إجمالي المستخدمين",
     selfDemoteError: "لا يمكنك إزالة صلاحية الأدمن عن حسابك الخاص.",
     genericError: "تعذّر تحديث الصلاحية.",
+    delete: "حذف",
+    selfDeleteError: "لا يمكنك حذف حسابك الخاص من هنا.",
+    deleteError: "تعذّر حذف المستخدم.",
   },
   en: {
     subtitle: "Manage user accounts and admin permissions.",
     searchPlaceholder: "Search name or email...",
+    joinNumber: "#",
     name: "Name",
     email: "Email",
     phone: "Phone",
@@ -49,6 +55,9 @@ const COPY = {
     totalUsers: "Total users",
     selfDemoteError: "You can't remove your own admin role.",
     genericError: "Couldn't update the role.",
+    delete: "Delete",
+    selfDeleteError: "You can't delete your own account from here.",
+    deleteError: "Couldn't delete the user.",
   },
 };
 
@@ -65,6 +74,10 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [errorId, setErrorId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const deletingUser = users.find((u) => u.id === deletingId) ?? null;
   const loadRequestIdRef = useRef(0);
 
   useEffect(() => {
@@ -100,14 +113,42 @@ export default function AdminUsersPage() {
     setBusyId(target.id);
     setErrorId(null);
     try {
-      const updated = await changeUserRole(target.id, { role: target.isAdmin ? null : "Admin" });
-      setUsers((current) => current.map((u) => (u.id === target.id ? updated : u)));
+      await changeUserRole(target.id, { role: target.isAdmin ? null : "Admin" });
+      // A full reload (not an in-place row patch) -- promoting/demoting
+      // changes where this row belongs in the list (admins are pinned to
+      // the top) and shifts every other non-admin's join number by one,
+      // neither of which a single patched row could reflect correctly.
+      await load();
     } catch (error) {
       console.error("[admin/users] failed to change role:", error);
       setErrorId(target.id);
       window.setTimeout(() => setErrorId((current) => (current === target.id ? null : current)), 4000);
     } finally {
       setBusyId(null);
+    }
+  }
+
+  function openDeleteDialog(target: UserDto) {
+    setDeleteError(null);
+    setDeletingId(target.id);
+  }
+
+  async function confirmDeleteUser() {
+    if (!deletingId) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteUser(deletingId);
+      setDeletingId(null);
+      // Same reasoning as handleToggleRole -- removing a row shifts every
+      // later non-admin's join number, so a full reload keeps them correct
+      // instead of just splicing the deleted row out client-side.
+      await load();
+    } catch (error) {
+      console.error("[admin/users] failed to delete user:", error);
+      setDeleteError(t.deleteError);
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -149,16 +190,18 @@ export default function AdminUsersPage() {
           <p className="py-8 text-center text-sm text-muted-foreground">{t.empty}</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] table-fixed text-start text-sm">
+            <table className="w-full min-w-[820px] table-fixed text-start text-sm">
               <colgroup>
-                <col className="w-[24%]" />
-                <col className="w-[28%]" />
-                <col className="w-[16%]" />
-                <col className="w-[12%]" />
+                <col className="w-[6%]" />
                 <col className="w-[20%]" />
+                <col className="w-[26%]" />
+                <col className="w-[14%]" />
+                <col className="w-[12%]" />
+                <col className="w-[22%]" />
               </colgroup>
               <thead>
                 <tr className="border-b border-border text-xs uppercase tracking-wide text-muted-foreground">
+                  <th className="py-2 text-center font-medium">{t.joinNumber}</th>
                   <th className="py-2 text-start font-medium">{t.name}</th>
                   <th className="py-2 text-left font-medium">{t.email}</th>
                   <th className="py-2 text-left font-medium">{t.phone}</th>
@@ -170,7 +213,25 @@ export default function AdminUsersPage() {
                 {users.map((u) => {
                   const isSelf = u.id === currentUser?.id;
                   return (
-                    <tr key={u.id} className="border-b border-border last:border-0">
+                    <tr
+                      key={u.id}
+                      className={cn(
+                        "border-b border-border last:border-0",
+                        // Pinned-to-the-top admins get a subtle tint so they
+                        // read as a distinct group at a glance, separate
+                        // from the numbered rows below them.
+                        u.isAdmin && "bg-[#C8A24A]/5"
+                      )}
+                    >
+                      <td className="py-3 text-center">
+                        {u.isAdmin ? (
+                          <ShieldIcon className="mx-auto size-3.5 text-[#C8A24A]" />
+                        ) : (
+                          <span className="text-muted-foreground" dir="ltr">
+                            {u.joinNumber ?? "—"}
+                          </span>
+                        )}
+                      </td>
                       <td className="py-3 pe-4 font-medium text-foreground">
                         <span className="block truncate" title={u.displayName}>
                           {u.displayName}
@@ -198,21 +259,34 @@ export default function AdminUsersPage() {
                           <LoaderIcon className="size-4 animate-spin text-muted-foreground" />
                         ) : (
                           <div className="flex flex-col items-start gap-1">
-                            <button
-                              type="button"
-                              disabled={u.isAdmin && isSelf}
-                              onClick={() => handleToggleRole(u)}
-                              className={cn(
-                                "rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors",
-                                u.isAdmin && isSelf
-                                  ? "cursor-not-allowed bg-background/5 text-muted-foreground"
-                                  : u.isAdmin
-                                    ? "bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-400 hover:bg-rose-100 dark:bg-rose-900/50"
-                                    : "bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:bg-emerald-900/50"
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                disabled={u.isAdmin && isSelf}
+                                onClick={() => handleToggleRole(u)}
+                                className={cn(
+                                  "rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors",
+                                  u.isAdmin && isSelf
+                                    ? "cursor-not-allowed bg-background/5 text-muted-foreground"
+                                    : u.isAdmin
+                                      ? "bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-400 hover:bg-rose-100 dark:bg-rose-900/50"
+                                      : "bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:bg-emerald-900/50"
+                                )}
+                              >
+                                {u.isAdmin ? t.removeAdmin : t.makeAdmin}
+                              </button>
+                              {!isSelf && (
+                                <button
+                                  type="button"
+                                  onClick={() => openDeleteDialog(u)}
+                                  aria-label={t.delete}
+                                  title={t.delete}
+                                  className="flex size-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-rose-100 dark:bg-rose-950/50 hover:text-rose-700 dark:text-rose-400"
+                                >
+                                  <TrashIcon className="size-3.5" />
+                                </button>
                               )}
-                            >
-                              {u.isAdmin ? t.removeAdmin : t.makeAdmin}
-                            </button>
+                            </div>
                             {errorId === u.id && (
                               <span className="text-[11px] text-rose-700 dark:text-rose-400">
                                 {u.isAdmin && isSelf ? t.selfDemoteError : t.genericError}
@@ -235,6 +309,16 @@ export default function AdminUsersPage() {
           </div>
         )}
       </div>
+
+      <UserDeleteDialog
+        open={Boolean(deletingId)}
+        displayName={deletingUser?.displayName ?? ""}
+        language={language}
+        error={deleteError}
+        deleting={deleting}
+        onConfirm={confirmDeleteUser}
+        onCancel={() => setDeletingId(null)}
+      />
     </div>
   );
 }

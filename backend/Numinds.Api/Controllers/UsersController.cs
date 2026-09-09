@@ -18,9 +18,19 @@ public class UsersController(
     RoleManager<IdentityRole<Guid>> roleManager) : ControllerBase
 {
     // GET /api/users — admin, for a new /admin/users page. `search` matches
-    // DisplayName/Email/UserName (AspNetUsers.NormalizedEmail already carries
-    // Identity's own unique index, so this stays fast without an extra one);
-    // paginated since the user base only grows.
+    // DisplayName/Email. Sort order: every admin first (pinned to the top,
+    // unnumbered on the frontend), then everyone else oldest-to-newest by
+    // CreatedAt -- JoinNumber is their 1-based rank among non-admins only,
+    // computed over the *entire* user base regardless of the current
+    // search/page, so a given account's number never shifts as someone
+    // else is promoted/demoted or a different page/search is viewed.
+    //
+    // Loaded fully into memory rather than paginated in SQL: the whole
+    // point is a rank that's stable across pages, which a purely
+    // SQL-paginated query can't produce without a second full-table pass
+    // anyway. A wedding-invitation site's user base is nowhere near the
+    // size where that's a real cost -- the admin-only templates/partners
+    // lists elsewhere in this app already load in full the same way.
     [HttpGet]
     public async Task<ActionResult<PagedResult<UserDto>>> List(
         [FromQuery] string? search,
@@ -31,37 +41,86 @@ public class UsersController(
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 500);
 
-        var query = db.Users.AsNoTracking().AsQueryable();
-        var term = search?.Trim();
-        if (!string.IsNullOrEmpty(term))
-        {
-            query = query.Where(u =>
-                u.DisplayName.Contains(term) ||
-                (u.Email != null && u.Email.Contains(term)));
-        }
-
-        var totalCount = await query.CountAsync(cancellationToken);
-        var users = await query
-            .OrderBy(u => u.DisplayName)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync(cancellationToken);
-
-        // One extra query for the current page's admin flags, rather than
-        // N IsInRoleAsync calls — GetUsersInRoleAsync doesn't take an id
-        // filter, so intersecting with the current page's ids client-side
-        // is the cheapest option since Admin rows are always few.
         var adminIds = (await userManager.GetUsersInRoleAsync(Roles.Admin))
             .Select(u => u.Id)
             .ToHashSet();
 
+        var allUsers = await db.Users.AsNoTracking().ToListAsync(cancellationToken);
+
+        var joinNumberByUserId = allUsers
+            .Where(u => !adminIds.Contains(u.Id))
+            .OrderBy(u => u.CreatedAt)
+            .Select((u, index) => (u.Id, Number: index + 1))
+            .ToDictionary(x => x.Id, x => x.Number);
+
+        var term = search?.Trim();
+        var matching = string.IsNullOrEmpty(term)
+            ? allUsers
+            : allUsers.Where(u => u.DisplayName.Contains(term) || (u.Email != null && u.Email.Contains(term))).ToList();
+
+        var ordered = matching
+            .OrderByDescending(u => adminIds.Contains(u.Id))
+            .ThenBy(u => u.CreatedAt)
+            .ToList();
+
+        var pageItems = ordered
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+
         return Ok(new PagedResult<UserDto>
         {
-            Items = users.Select(u => ToDto(u, adminIds.Contains(u.Id))).ToList(),
-            TotalCount = totalCount,
+            Items = pageItems
+                .Select(u =>
+                {
+                    var isAdmin = adminIds.Contains(u.Id);
+                    // Dictionary<Guid, int>.GetValueOrDefault would silently
+                    // return 0 (int's own default) for an admin, who was
+                    // deliberately excluded when this map was built -- an
+                    // explicit null here is what actually renders as "no
+                    // number, pinned to the top" on the frontend, not a
+                    // literal 0th place.
+                    int? joinNumber = isAdmin ? null : joinNumberByUserId.GetValueOrDefault(u.Id);
+                    return ToDto(u, isAdmin, joinNumber);
+                })
+                .ToList(),
+            TotalCount = ordered.Count,
             Page = page,
             PageSize = pageSize,
         });
+    }
+
+    // DELETE /api/users/{id} — admin removes another account entirely.
+    // Self-delete is refused here (same reasoning as the role-demote guard
+    // below): use the account's own DELETE /api/account instead, which
+    // signs the caller out cleanly rather than leaving an admin's session
+    // pointing at a user that no longer exists mid-request. Invitations/
+    // Orders this user owned aren't deleted -- see NumindsDbContext's
+    // SetNull FK behavior, same as an invitation's own deletion orphaning
+    // its Order rather than cascading.
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+    {
+        var currentUserId = userManager.GetUserId(User);
+        if (string.Equals(currentUserId, id.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequest(new { title = "You can't delete your own account from here." });
+        }
+
+        var user = await userManager.FindByIdAsync(id.ToString());
+        if (user is null)
+        {
+            return NotFound();
+        }
+
+        var result = await userManager.DeleteAsync(user);
+        if (!result.Succeeded)
+        {
+            var title = string.Join(" ", result.Errors.Select(e => e.Description));
+            return BadRequest(new { title });
+        }
+
+        return NoContent();
     }
 
     // PATCH /api/users/{id}/role — Role: "Admin" to promote, null to demote.
@@ -104,10 +163,16 @@ public class UsersController(
             isAdmin = false;
         }
 
-        return Ok(ToDto(user, isAdmin));
+        // JoinNumber omitted (null) here -- an accurate one needs this
+        // user's rank against the whole non-admin list, same computation
+        // List() does over everyone. The frontend re-fetches the full list
+        // right after a successful toggle instead of patching this one row
+        // in place, so the correct number (or "pinned, unnumbered" for a
+        // fresh admin) shows up within the same action either way.
+        return Ok(ToDto(user, isAdmin, joinNumber: null));
     }
 
-    private static UserDto ToDto(ApplicationUser u, bool isAdmin) => new()
+    private static UserDto ToDto(ApplicationUser u, bool isAdmin, int? joinNumber) => new()
     {
         Id = u.Id.ToString(),
         DisplayName = u.DisplayName,
@@ -115,5 +180,6 @@ public class UsersController(
         AvatarUrl = u.AvatarUrl,
         PhoneNumber = u.PhoneNumber,
         IsAdmin = isAdmin,
+        JoinNumber = joinNumber,
     };
 }

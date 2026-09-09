@@ -11,6 +11,11 @@ public class UserDto
     public string? PhoneNumber { get; set; }
     // True when the user is in the "Admin" IdentityRole — gates /admin on the frontend.
     public bool IsAdmin { get; set; }
+    // Sequential position (1, 2, 3...) among non-admin users ordered by
+    // CreatedAt ascending -- only meaningful on GET /api/users (the admin
+    // list); null everywhere else (account/me, register, login), and null
+    // for admins there too, since they're pinned to the top unnumbered.
+    public int? JoinNumber { get; set; }
 }
 
 // PATCH /api/users/{id}/role — Role is "Admin" to promote, or null/omitted

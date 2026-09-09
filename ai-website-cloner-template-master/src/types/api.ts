@@ -210,6 +210,11 @@ export interface UserDto {
   avatarUrl?: string;
   phoneNumber?: string | null;
   isAdmin: boolean;
+  // 1-based rank among non-admin users ordered by join date, oldest
+  // first -- only meaningful on GET /api/users (the admin list); null for
+  // admins (pinned to the top, unnumbered) and everywhere else this DTO
+  // is reused (account/me, register, login).
+  joinNumber?: number | null;
 }
 
 // PATCH /api/users/{id}/role — "Admin" to promote, null to demote back to a

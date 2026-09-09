@@ -16,3 +16,10 @@ export function listUsers(query: PagedQuery = {}) {
 export function changeUserRole(id: string, payload: ChangeUserRoleRequest) {
   return apiClient.patch<UserDto>(`/users/${id}/role`, payload);
 }
+
+// Admin — permanently removes another account. The backend rejects
+// deleting your own account this way (use the account's own self-service
+// delete for that).
+export function deleteUser(id: string) {
+  return apiClient.delete<void>(`/users/${id}`);
+}
