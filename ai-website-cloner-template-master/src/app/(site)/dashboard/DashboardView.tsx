@@ -46,6 +46,11 @@ interface BookingRow {
   // link — everything else is still a draft awaiting admin approval, so the
   // dashboard flags it rather than implying it's already shareable.
   isPaid: boolean;
+  // A pending order still awaiting the admin's manual bank-transfer
+  // confirmation -- deleting this draft now would orphan that order (its
+  // InvitationId gets nulled out server-side), so the delete dialog warns
+  // first instead of silently losing the admin's ability to review it.
+  hasPendingOrder: boolean;
 }
 
 const DEMO_USER = {
@@ -318,6 +323,7 @@ export function DashboardView() {
           galleryCount: s.galleryCount,
           names: [s.firstName, s.secondName].filter(Boolean).join(" & ") || t.untitled,
           isPaid: s.isPaid,
+          hasPendingOrder: s.hasPendingOrder,
         }))
       );
     } catch (error) {
@@ -566,6 +572,7 @@ export function DashboardView() {
       <DeleteConfirmDialog
         open={Boolean(deleteTarget)}
         names={deleteTarget?.names ?? ""}
+        hasPendingOrder={deleteTarget?.hasPendingOrder ?? false}
         language={language}
         onConfirm={confirmDelete}
         onCancel={() => setDeleteTarget(null)}

@@ -268,6 +268,7 @@ export interface InvitationSummaryDto {
   bookingId: string;
   status: string;
   isPaid: boolean;
+  hasPendingOrder: boolean;
   createdAt: string;
   eventDateTime?: string | null;
   responseCount: number;

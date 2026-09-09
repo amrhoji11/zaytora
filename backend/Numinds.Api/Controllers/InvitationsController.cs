@@ -132,10 +132,19 @@ public class InvitationsController(
             .OrderBy(i => i.CreatedAt)
             .ToListAsync(cancellationToken);
 
+        var invitationIds = invitations.Select(i => i.Id).ToList();
+        var pendingOrderInvitationIds = await db.Orders
+            .Where(o => o.InvitationId != null && invitationIds.Contains(o.InvitationId.Value) && o.PaymentStatus == "pending")
+            .Select(o => o.InvitationId!.Value)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+        var pendingOrderInvitationIdSet = pendingOrderInvitationIds.ToHashSet();
+
         var summaries = invitations
             .Select(invitation => new InvitationSummaryDto
             {
                 Id = invitation.Id.ToString(),
+                HasPendingOrder = pendingOrderInvitationIdSet.Contains(invitation.Id),
                 // Derived from the invitation's own id (matches the admin
                 // orders list's order.id.slice(0,8).toUpperCase() pattern) so
                 // it's unique across every account, not just within this

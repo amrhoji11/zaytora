@@ -11,6 +11,11 @@ public class InvitationSummaryDto
     public string BookingId { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public bool IsPaid { get; set; }
+    // True when an Order for this invitation is still awaiting the admin's
+    // manual bank-transfer confirmation -- lets the dashboard warn before a
+    // delete that would silently orphan that order (see
+    // InvitationsController.Delete/OrdersController.UpdateStatus).
+    public bool HasPendingOrder { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? EventDateTime { get; set; }
     public int ResponseCount { get; set; }
