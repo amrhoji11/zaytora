@@ -5,12 +5,13 @@ using Numinds.Api.Data;
 using Numinds.Api.Models;
 using Numinds.Api.Models.Dtos;
 using Numinds.Api.Models.Entities;
+using Numinds.Api.Services;
 
 namespace Numinds.Api.Controllers;
 
 [ApiController]
 [Route("api/orders")]
-public class OrdersController(NumindsDbContext db) : ControllerBase
+public class OrdersController(NumindsDbContext db, IMetaConversionsApiService metaConversions) : ControllerBase
 {
     // POST /api/orders — anonymous is allowed, same reasoning as
     // InvitationsController.Create: a guest can be mid-checkout before ever
@@ -301,12 +302,29 @@ public class OrdersController(NumindsDbContext db) : ControllerBase
             order.PaidAt = DateTime.UtcNow;
         }
 
+        // An invitation can end up with more than one Order — most often a
+        // guest editing an already-approved invitation and (before that was
+        // fixed) getting routed through checkout again, or an admin's own
+        // duplicate/stale test order. Computed once, up front, since every
+        // block below needs it: crediting a partner or reporting a Purchase
+        // to Meta must not double up if a different order for the same
+        // invitation is already paid, and rejecting *this* order must not
+        // undo an approval (or a partner's earned credit) that already
+        // happened through that other, still-paid order.
+        var hasOtherPaidOrder = await db.Orders.AnyAsync(
+            o => o.InvitationId == order.InvitationId && o.Id != order.Id && o.PaymentStatus == "paid",
+            cancellationToken);
+
         // Credit (or reverse) the referring partner's stats only on an
         // actual paid/not-paid transition — not on every PATCH, so an admin
         // re-confirming an already-paid order (or re-rejecting an
         // already-failed one) can't inflate the numbers, and correcting a
-        // mis-click (paid -> failed, or back) keeps them accurate either way.
-        if (!string.IsNullOrEmpty(order.PromoCodeUsed) && wasPaid != (request.Status == "paid"))
+        // mis-click (paid -> failed, or back) keeps them accurate either
+        // way. Also skipped whenever hasOtherPaidOrder is true: crediting
+        // would double-count a sale already credited through the other paid
+        // order, and reversing would claw back credit that other order is
+        // still legitimately earning.
+        if (!string.IsNullOrEmpty(order.PromoCodeUsed) && wasPaid != (request.Status == "paid") && !hasOtherPaidOrder)
         {
             var partner = await db.Partners.FirstOrDefaultAsync(
                 p => p.PromoCode != null && p.PromoCode.ToLower() == order.PromoCodeUsed.ToLower(),
@@ -333,28 +351,28 @@ public class OrdersController(NumindsDbContext db) : ControllerBase
             {
                 invitation.Status = "paid";
             }
-            else
+            else if (!hasOtherPaidOrder)
             {
-                // An invitation can end up with more than one Order — most
-                // often a guest editing an already-approved invitation and
-                // (before that was fixed) getting routed through checkout
-                // again, or an admin's own duplicate/stale test order.
-                // Rejecting *this* order must not undo an approval that
-                // already happened through a different, still-paid order —
-                // only demote the invitation if no other order for it is
-                // actually paid.
-                var hasOtherPaidOrder = await db.Orders.AnyAsync(
-                    o => o.InvitationId == order.InvitationId && o.Id != order.Id && o.PaymentStatus == "paid",
-                    cancellationToken);
-                if (!hasOtherPaidOrder)
-                {
-                    invitation.Status = "rejected";
-                }
+                invitation.Status = "rejected";
             }
             invitation.UpdatedAt = DateTime.UtcNow;
         }
 
         await db.SaveChangesAsync(cancellationToken);
+
+        // Only on the actual pending/failed -> paid transition, and only
+        // when no other order for this invitation was already paid --
+        // matches the partner-stats guard above, so an admin re-saving an
+        // already-paid order (no-op re-confirmation, or just editing the
+        // AdminNote) or confirming a stale duplicate order for an
+        // invitation that's genuinely already been paid for can't
+        // double-report the same sale to Meta.
+        if (!wasPaid && request.Status == "paid" && !hasOtherPaidOrder)
+        {
+            await metaConversions.SendPurchaseAsync(
+                order.Id.ToString(), order.CustomerEmail, order.AmountUsd, cancellationToken);
+        }
+
         return Ok(await ToDtoAsync(order, cancellationToken));
     }
 

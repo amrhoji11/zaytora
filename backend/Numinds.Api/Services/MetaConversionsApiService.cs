@@ -4,13 +4,14 @@ using System.Text;
 
 namespace Numinds.Api.Services;
 
-// Server-side half of the Meta Pixel (see MetaPixel.tsx on the frontend) --
-// reports the same signup as a "CompleteRegistration" event straight to
-// Meta's Graph API, so it's still counted even when a visitor's browser
-// never ran the client-side pixel (ad blocker, tracking protection, JS
-// disabled). Meta:PixelId/Meta:ConversionsApiAccessToken aren't configured
-// yet -- until they are, sends are skipped with a warning log, same
-// "degrade instead of crash" pattern as ResendEmailSender above.
+// Server-side complement to the frontend's Meta Pixel (see MetaPixel.tsx) --
+// reports events straight to Meta's Graph API so they're still counted even
+// when a visitor's browser never ran the client-side pixel (ad blocker,
+// tracking protection, JS disabled), and covers events with no browser
+// session to fire from at all (see SendPurchaseAsync). Meta:PixelId/
+// Meta:ConversionsApiAccessToken aren't configured yet -- until they are,
+// sends are skipped with a warning log, same "degrade instead of crash"
+// pattern as ResendEmailSender.
 public class MetaConversionsApiService(
     HttpClient httpClient,
     IConfiguration configuration,
@@ -18,32 +19,48 @@ public class MetaConversionsApiService(
 {
     private const string GraphApiVersion = "v21.0";
 
-    public async Task SendCompleteRegistrationAsync(
+    public Task SendCompleteRegistrationAsync(
         string email,
         string? clientIpAddress,
         string? userAgent,
         CancellationToken cancellationToken)
     {
-        var pixelId = configuration["Meta:PixelId"];
-        var accessToken = configuration["Meta:ConversionsApiAccessToken"];
-        if (string.IsNullOrWhiteSpace(pixelId) || string.IsNullOrWhiteSpace(accessToken))
-        {
-            logger.LogWarning(
-                "Meta:PixelId/Meta:ConversionsApiAccessToken are not configured - skipping " +
-                "CompleteRegistration Conversions API event for {Email}.",
-                email);
-            return;
-        }
+        var userData = BuildUserData(email, clientIpAddress, userAgent);
+        return SendEventAsync("CompleteRegistration", userData, customData: null, actionSource: "website", logContext: email, cancellationToken);
+    }
 
+    public Task SendPurchaseAsync(
+        string orderId,
+        string customerEmail,
+        decimal valueUsd,
+        CancellationToken cancellationToken)
+    {
+        // No client_ip_address/client_user_agent -- this fires from the
+        // admin's own confirmation click, not the customer's browser
+        // session, so there's nothing genuine to attach here.
+        var userData = BuildUserData(customerEmail, clientIpAddress: null, userAgent: null);
+        var customData = new Dictionary<string, object>
+        {
+            ["currency"] = "USD",
+            ["value"] = valueUsd,
+            ["order_id"] = orderId,
+        };
+        // "system_generated" (not "website") -- accurately reflects that
+        // this event originates from an internal admin action reconciling
+        // an out-of-band bank transfer, not a customer's own website visit.
+        return SendEventAsync("Purchase", userData, customData, actionSource: "system_generated", logContext: orderId, cancellationToken);
+    }
+
+    private static Dictionary<string, object> BuildUserData(string email, string? clientIpAddress, string? userAgent)
+    {
         // Meta requires user_data identifiers (email included) to arrive
         // pre-hashed -- lowercase+trim first since the hash is otherwise
-        // sensitive to casing/whitespace a real user's input commonly varies
-        // by, which would silently degrade match quality for no reason.
-        var hashedEmail = Sha256Hex(email.Trim().ToLowerInvariant());
-
+        // sensitive to casing/whitespace a real user's input commonly
+        // varies by, which would silently degrade match quality for no
+        // reason.
         var userData = new Dictionary<string, object>
         {
-            ["em"] = new[] { hashedEmail },
+            ["em"] = new[] { Sha256Hex(email.Trim().ToLowerInvariant()) },
         };
         if (!string.IsNullOrWhiteSpace(clientIpAddress))
         {
@@ -53,14 +70,39 @@ public class MetaConversionsApiService(
         {
             userData["client_user_agent"] = userAgent;
         }
+        return userData;
+    }
+
+    private async Task SendEventAsync(
+        string eventName,
+        Dictionary<string, object> userData,
+        Dictionary<string, object>? customData,
+        string actionSource,
+        string logContext,
+        CancellationToken cancellationToken)
+    {
+        var pixelId = configuration["Meta:PixelId"];
+        var accessToken = configuration["Meta:ConversionsApiAccessToken"];
+        if (string.IsNullOrWhiteSpace(pixelId) || string.IsNullOrWhiteSpace(accessToken))
+        {
+            logger.LogWarning(
+                "Meta:PixelId/Meta:ConversionsApiAccessToken are not configured - skipping {EventName} " +
+                "Conversions API event for {Context}.",
+                eventName, logContext);
+            return;
+        }
 
         var eventPayload = new Dictionary<string, object>
         {
-            ["event_name"] = "CompleteRegistration",
+            ["event_name"] = eventName,
             ["event_time"] = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-            ["action_source"] = "website",
+            ["action_source"] = actionSource,
             ["user_data"] = userData,
         };
+        if (customData is not null)
+        {
+            eventPayload["custom_data"] = customData;
+        }
 
         var body = new Dictionary<string, object>
         {
@@ -83,15 +125,16 @@ public class MetaConversionsApiService(
             {
                 var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
                 logger.LogError(
-                    "Meta Conversions API CompleteRegistration send failed ({Status}): {Body}",
-                    response.StatusCode, responseBody);
+                    "Meta Conversions API {EventName} send failed ({Status}): {Body}",
+                    eventName, response.StatusCode, responseBody);
             }
         }
         catch (Exception ex)
         {
             // Best-effort -- a network blip or Meta-side outage here must
-            // never fail the actual account registration it's reporting on.
-            logger.LogError(ex, "Meta Conversions API CompleteRegistration send threw for {Email}.", email);
+            // never fail the real operation (signup, payment confirmation)
+            // it's reporting on.
+            logger.LogError(ex, "Meta Conversions API {EventName} send threw for {Context}.", eventName, logContext);
         }
     }
 
