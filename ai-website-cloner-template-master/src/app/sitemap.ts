@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-const BASE_URL = "https://zaytorainvites.com";
+const BASE_URL = "https://www.zaytorainvites.com";
 
 const PUBLIC_ROUTES = ["", "/OurPartners", "/Prices", "/contact-us", "/guide", "/templates", "/login", "/signup"];
 

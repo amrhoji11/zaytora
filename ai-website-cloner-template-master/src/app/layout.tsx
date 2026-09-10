@@ -195,6 +195,13 @@ const CURATED_FONT_VARIABLES = [
   .join(" ");
 
 export const metadata: Metadata = {
+  // Without this, Next falls back to localhost for resolving any relative
+  // canonical/Open Graph URL it generates -- wrong in production, and one
+  // more place the site's actual domain needs to be declared consistently
+  // (see sitemap.ts/robots.ts, which had the www-less apex domain instead
+  // of this www one the site actually serves from and is verified under
+  // in Search Console).
+  metadataBase: new URL("https://www.zaytorainvites.com"),
   title: "ZAYTORA | زيتورا",
   description:
     "زيتورا لتصميم دعوات رقمية أنيقة في دقائق | Zaytora - Create elegant digital invitations in minutes.",
