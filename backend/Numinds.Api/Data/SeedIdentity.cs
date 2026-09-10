@@ -53,12 +53,15 @@ public static class SeedIdentity
     }
 
     // Grants the Admin role to every email listed under Admin:SeedEmails in
-    // config (appsettings — see appsettings.Development.json). Runs on every
-    // startup, not just first-run: safe/idempotent (IsInRoleAsync guards the
-    // add), and it's what lets a freshly-registered account matching one of
-    // those emails become admin after the next restart, without ever needing
-    // an in-app "manage admins" UI. Accounts not yet registered are simply
-    // skipped — nothing to promote until they sign up.
+    // config (appsettings — see appsettings.Development.json), the first
+    // time each one is seen — it's what lets a freshly-registered account
+    // matching one of those emails become admin after the next restart,
+    // without ever needing an in-app "manage admins" UI. AdminSeedApplied
+    // makes that a one-time bootstrap per email rather than a standing
+    // override: without it, this running on every startup would silently
+    // re-promote someone an admin had deliberately demoted via
+    // /admin/users the moment the app next restarted. Accounts not yet
+    // registered are simply skipped — nothing to promote until they sign up.
     public static async Task RunAdminRoleSeedAsync(IServiceProvider services)
     {
         var configuration = services.GetRequiredService<IConfiguration>();
@@ -75,12 +78,15 @@ public static class SeedIdentity
         foreach (var email in seedEmails)
         {
             var user = await userManager.FindByEmailAsync(email);
-            if (user is null) continue;
+            if (user is null || user.AdminSeedApplied) continue;
 
             if (!await userManager.IsInRoleAsync(user, Roles.Admin))
             {
                 await userManager.AddToRoleAsync(user, Roles.Admin);
             }
+
+            user.AdminSeedApplied = true;
+            await userManager.UpdateAsync(user);
         }
     }
 }
