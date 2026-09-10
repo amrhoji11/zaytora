@@ -11,8 +11,10 @@ namespace Numinds.Api.Controllers;
 
 [ApiController]
 [Route("api/orders")]
-public class OrdersController(NumindsDbContext db, IMetaConversionsApiService metaConversions) : ControllerBase
+public class OrdersController(NumindsDbContext db, IMetaConversionsApiService metaConversions, IConfiguration configuration) : ControllerBase
 {
+    private string FrontendBaseUrl => configuration["Frontend:BaseUrl"] ?? "http://localhost:3000";
+
     // POST /api/orders — anonymous is allowed, same reasoning as
     // InvitationsController.Create: a guest can be mid-checkout before ever
     // logging in. AmountUsd is computed here from PricingSettings (+ promo
@@ -369,8 +371,12 @@ public class OrdersController(NumindsDbContext db, IMetaConversionsApiService me
         // double-report the same sale to Meta.
         if (!wasPaid && request.Status == "paid" && !hasOtherPaidOrder)
         {
+            // No real page URL exists for this event -- it fires from the
+            // admin's confirmation click, not a customer browser session
+            // (see SendPurchaseAsync's own doc comment). The dashboard is
+            // the closest stable, real page on the site to attribute it to.
             await metaConversions.SendPurchaseAsync(
-                order.Id.ToString(), order.CustomerEmail, order.AmountUsd, cancellationToken);
+                order.Id.ToString(), order.CustomerEmail, order.AmountUsd, $"{FrontendBaseUrl}/dashboard", cancellationToken);
         }
 
         return Ok(await ToDtoAsync(order, cancellationToken));

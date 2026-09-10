@@ -11,6 +11,7 @@ public interface IMetaConversionsApiService
         string email,
         string? clientIpAddress,
         string? userAgent,
+        string eventSourceUrl,
         CancellationToken cancellationToken);
 
     // Reports a confirmed sale the moment an admin manually marks an order
@@ -23,5 +24,6 @@ public interface IMetaConversionsApiService
         string orderId,
         string customerEmail,
         decimal valueUsd,
+        string eventSourceUrl,
         CancellationToken cancellationToken);
 }

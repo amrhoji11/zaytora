@@ -71,10 +71,17 @@ public class AccountController(
 
         await signInManager.SignInAsync(user, isPersistent: true);
 
+        // Referer is the actual page the browser's fetch() call was made
+        // from (e.g. https://www.zaytorainvites.com/register) -- falls back
+        // to the site root only for the rare client that omits it.
+        var eventSourceUrl = Request.Headers.Referer.ToString() is { Length: > 0 } referer
+            ? referer
+            : FrontendBaseUrl;
         await metaConversions.SendCompleteRegistrationAsync(
             user.Email!,
             HttpContext.Connection.RemoteIpAddress?.ToString(),
             Request.Headers.UserAgent.ToString(),
+            eventSourceUrl,
             HttpContext.RequestAborted);
 
         return Ok(await ToDtoAsync(user));
@@ -271,10 +278,15 @@ public class AccountController(
 
         if (isNewUser)
         {
+            // No Referer here -- this request is Google's own server-side
+            // redirect back to our callback, not the user's browser on a
+            // frontend page. The page they're actually about to land on
+            // (returnUrl) is the closest genuine substitute.
             await metaConversions.SendCompleteRegistrationAsync(
                 user.Email!,
                 HttpContext.Connection.RemoteIpAddress?.ToString(),
                 Request.Headers.UserAgent.ToString(),
+                $"{FrontendBaseUrl}{returnUrl}",
                 HttpContext.RequestAborted);
         }
 

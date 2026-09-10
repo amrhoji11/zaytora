@@ -23,16 +23,18 @@ public class MetaConversionsApiService(
         string email,
         string? clientIpAddress,
         string? userAgent,
+        string eventSourceUrl,
         CancellationToken cancellationToken)
     {
         var userData = BuildUserData(email, clientIpAddress, userAgent);
-        return SendEventAsync("CompleteRegistration", userData, customData: null, actionSource: "website", logContext: email, cancellationToken);
+        return SendEventAsync("CompleteRegistration", userData, customData: null, actionSource: "website", eventSourceUrl, logContext: email, cancellationToken);
     }
 
     public Task SendPurchaseAsync(
         string orderId,
         string customerEmail,
         decimal valueUsd,
+        string eventSourceUrl,
         CancellationToken cancellationToken)
     {
         // No client_ip_address/client_user_agent -- this fires from the
@@ -48,7 +50,7 @@ public class MetaConversionsApiService(
         // "system_generated" (not "website") -- accurately reflects that
         // this event originates from an internal admin action reconciling
         // an out-of-band bank transfer, not a customer's own website visit.
-        return SendEventAsync("Purchase", userData, customData, actionSource: "system_generated", logContext: orderId, cancellationToken);
+        return SendEventAsync("Purchase", userData, customData, actionSource: "system_generated", eventSourceUrl, logContext: orderId, cancellationToken);
     }
 
     private static Dictionary<string, object> BuildUserData(string email, string? clientIpAddress, string? userAgent)
@@ -78,6 +80,7 @@ public class MetaConversionsApiService(
         Dictionary<string, object> userData,
         Dictionary<string, object>? customData,
         string actionSource,
+        string eventSourceUrl,
         string logContext,
         CancellationToken cancellationToken)
     {
@@ -97,6 +100,7 @@ public class MetaConversionsApiService(
             ["event_name"] = eventName,
             ["event_time"] = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             ["action_source"] = actionSource,
+            ["event_source_url"] = eventSourceUrl,
             ["user_data"] = userData,
         };
         if (customData is not null)
