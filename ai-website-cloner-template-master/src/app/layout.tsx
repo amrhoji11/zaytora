@@ -195,12 +195,25 @@ const CURATED_FONT_VARIABLES = [
   .join(" ");
 
 export const metadata: Metadata = {
-  title: "ZAYTORA",
+  title: "ZAYTORA | زيتورا",
   description:
-    "تصميم دعوات رقمية أنيقة في دقائق | Create elegant digital invitations in minutes.",
+    "زيتورا لتصميم دعوات رقمية أنيقة في دقائق | Zaytora - Create elegant digital invitations in minutes.",
   icons: {
     icon: "/seo/favicon.png",
   },
+};
+
+// Tells Google's Knowledge Graph that "زيتورا"/"زيتورة" (the Arabic
+// transliterations customers actually search for) name the same brand as
+// "Zaytora" -- the site's visible text is Latin-script-only everywhere
+// (header, page titles), so without this there's no crawlable signal
+// connecting those Arabic searches to the site at all.
+const ORGANIZATION_JSON_LD = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Zaytora",
+  alternateName: ["زيتورا", "زيتورة"],
+  url: "https://www.zaytorainvites.com",
 };
 
 // Header/Footer/WhatsAppButton live in (site)/layout.tsx, not here — guest-
@@ -231,6 +244,10 @@ export default function RootLayout({
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: NO_FLASH_THEME_SCRIPT }} />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(ORGANIZATION_JSON_LD) }}
+        />
         {/* The envelope-open tap calls music.play() immediately (see
             InvitationCanvas/useMusicPlayer), but every preset track is a
             YouTube link (musicLibrary.ts) — playback only actually starts
