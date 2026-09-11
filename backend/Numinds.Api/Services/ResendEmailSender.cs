@@ -21,7 +21,7 @@ public class ResendEmailSender(HttpClient httpClient, IConfiguration configurati
             return;
         }
 
-        var from = configuration["Email:Resend:FromAddress"] ?? "Numinds <onboarding@resend.dev>";
+        var from = configuration["Email:Resend:FromAddress"] ?? "Zaytora <onboarding@resend.dev>";
 
         using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.resend.com/emails");
         request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
