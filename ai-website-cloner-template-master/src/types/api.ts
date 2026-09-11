@@ -402,6 +402,7 @@ export interface OrderDto {
   adminNote?: string | null;
   createdAt: string;
   paidAt?: string | null;
+  reminderSentAt?: string | null;
   invitationEditUrl?: string | null;
   templateCode?: string | null;
 }

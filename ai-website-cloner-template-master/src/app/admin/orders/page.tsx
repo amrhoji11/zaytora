@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CheckIcon, ExternalLinkIcon, LoaderIcon, QrCodeIcon, SearchIcon, TrashIcon, XIcon } from "@/components/icons";
+import { CheckIcon, ExternalLinkIcon, LoaderIcon, MailIcon, QrCodeIcon, SearchIcon, TrashIcon, XIcon } from "@/components/icons";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/context/LanguageContext";
-import { listOrders, updateOrderStatus, deleteOrder } from "@/lib/services/orders.service";
+import { listOrders, updateOrderStatus, deleteOrder, sendOrderReminder } from "@/lib/services/orders.service";
 import { formatUsd } from "@/lib/format";
 import { StatusBadge, type StatusTone } from "@/components/admin/StatusBadge";
 import { Pagination } from "@/components/admin/Pagination";
@@ -39,6 +39,9 @@ const COPY = {
     markPaid: "تأكيد الدفع",
     markFailed: "رفض",
     deleteOrder: "حذف الطلب",
+    sendReminder: "إرسال تذكير",
+    reminderSent: (when: string) => `تم إرسال تذكير ${when}`,
+    reminderError: "تعذّر إرسال التذكير.",
     empty: "لا توجد طلبات مطابقة.",
     totalRevenue: "إجمالي الإيرادات (المدفوعة)",
     totalOrders: "عدد الطلبات",
@@ -62,6 +65,9 @@ const COPY = {
     markPaid: "Confirm paid",
     markFailed: "Reject",
     deleteOrder: "Delete order",
+    sendReminder: "Send reminder",
+    reminderSent: (when: string) => `Reminder sent ${when}`,
+    reminderError: "Couldn't send the reminder.",
     empty: "No matching orders.",
     totalRevenue: "Total revenue (paid)",
     totalOrders: "Total orders",
@@ -92,6 +98,7 @@ export default function AdminOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null);
+  const [reminderErrorId, setReminderErrorId] = useState<string | null>(null);
   const loadRequestIdRef = useRef(0);
 
   // Debounce the search box so every keystroke doesn't fire a request.
@@ -156,6 +163,24 @@ export default function AdminOrdersPage() {
       await load();
     } catch (error) {
       console.error("[admin/orders] failed to update order status:", error);
+    } finally {
+      setUpdatingId(null);
+    }
+  }
+
+  async function handleSendReminder(id: string) {
+    setUpdatingId(id);
+    setReminderErrorId(null);
+    try {
+      await sendOrderReminder(id);
+      // Re-fetches (not a patched row) for the same reason as
+      // handleStatusChange -- keeps this in sync if the order's status
+      // happened to change between render and click.
+      await load();
+    } catch (error) {
+      console.error("[admin/orders] failed to send reminder:", error);
+      setReminderErrorId(id);
+      window.setTimeout(() => setReminderErrorId((current) => (current === id ? null : current)), 4000);
     } finally {
       setUpdatingId(null);
     }
@@ -312,6 +337,14 @@ export default function AdminOrdersPage() {
                           >
                             <XIcon className="size-4" />
                           </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSendReminder(order.id)}
+                            title={t.sendReminder}
+                            className="flex size-8 items-center justify-center rounded-full text-[#C8A24A] transition-colors hover:bg-[#C8A24A]/10"
+                          >
+                            <MailIcon className="size-4" />
+                          </button>
                         </>
                       )}
                       <button
@@ -325,6 +358,16 @@ export default function AdminOrdersPage() {
                     </div>
                   )}
                 </div>
+
+                {reminderErrorId === order.id ? (
+                  <p className="mt-1.5 text-end text-[11px] text-rose-700 dark:text-rose-400">{t.reminderError}</p>
+                ) : (
+                  order.reminderSentAt && (
+                    <p className="mt-1.5 text-end text-[11px] text-muted-foreground">
+                      {t.reminderSent(formatDate(order.reminderSentAt, language))}
+                    </p>
+                  )
+                )}
               </div>
             ))}
           </div>

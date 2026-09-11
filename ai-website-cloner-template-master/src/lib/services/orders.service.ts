@@ -52,3 +52,9 @@ export function updateOrderStatus(id: string, payload: UpdateOrderStatusRequest)
 export function deleteOrder(id: string) {
   return apiClient.delete<void>(`/orders/${id}`);
 }
+
+// Admin nudges a customer whose order is still pending to go finish it.
+// Backend rejects this for any order that isn't "pending".
+export function sendOrderReminder(id: string) {
+  return apiClient.post<OrderDto>(`/orders/${id}/send-reminder`);
+}

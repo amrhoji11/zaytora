@@ -45,4 +45,9 @@ public class Order
 
     public DateTime CreatedAt { get; set; }
     public DateTime? PaidAt { get; set; }
+
+    // Set when an admin sends the "complete your order" reminder email --
+    // lets /admin/orders show it was already sent (and when) instead of an
+    // admin having no way to tell whether they already nudged this customer.
+    public DateTime? ReminderSentAt { get; set; }
 }

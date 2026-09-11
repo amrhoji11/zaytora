@@ -11,7 +11,11 @@ namespace Numinds.Api.Controllers;
 
 [ApiController]
 [Route("api/orders")]
-public class OrdersController(NumindsDbContext db, IMetaConversionsApiService metaConversions, IConfiguration configuration) : ControllerBase
+public class OrdersController(
+    NumindsDbContext db,
+    IMetaConversionsApiService metaConversions,
+    IEmailSender emailSender,
+    IConfiguration configuration) : ControllerBase
 {
     private string FrontendBaseUrl => configuration["Frontend:BaseUrl"] ?? "http://localhost:3000";
 
@@ -266,6 +270,41 @@ public class OrdersController(NumindsDbContext db, IMetaConversionsApiService me
         return NoContent();
     }
 
+    // POST /api/orders/{id}/send-reminder — admin nudges a customer whose
+    // order is still "pending" (they started checkout but the admin never
+    // received/confirmed a bank transfer) to go finish it. Pending-only:
+    // reminding someone about an order that's already paid or failed makes
+    // no sense and would just confuse them.
+    [HttpPost("{id:guid}/send-reminder")]
+    [Authorize(Roles = Roles.Admin)]
+    public async Task<ActionResult<OrderDto>> SendReminder(Guid id, CancellationToken cancellationToken)
+    {
+        var order = await db.Orders.FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
+        if (order is null)
+        {
+            return NotFound();
+        }
+
+        if (order.PaymentStatus != "pending")
+        {
+            return BadRequest(new { title = "Only a pending order can get a reminder." });
+        }
+
+        await emailSender.SendAsync(
+            order.CustomerEmail,
+            "أكمل طلبك على زيتورا",
+            $"<p>مرحباً {order.CustomerName}،</p>" +
+            "<p>لاحظنا إنه طلبك على زيتورا لسا قيد الانتظار. سجّل دخولك للوحة التحكم لمتابعة حالة طلبك وإتمام عملية الدفع.</p>" +
+            $"<p><a href=\"{FrontendBaseUrl}/dashboard\">{FrontendBaseUrl}/dashboard</a></p>" +
+            "<p>إذا كنت أتممت التحويل البنكي فعلاً، تجاهل هذه الرسالة — فريقنا بيراجعه قريباً.</p>",
+            cancellationToken);
+
+        order.ReminderSentAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(cancellationToken);
+
+        return Ok(await ToDtoAsync(order, cancellationToken));
+    }
+
     // PATCH /api/orders/{id}/status — admin manually confirms (or rejects)
     // the out-of-band bank transfer they received. This is the approval
     // step for the linked Invitation too, not just the Order: marking
@@ -410,6 +449,7 @@ public class OrdersController(NumindsDbContext db, IMetaConversionsApiService me
         AdminNote = order.AdminNote,
         CreatedAt = order.CreatedAt,
         PaidAt = order.PaidAt,
+        ReminderSentAt = order.ReminderSentAt,
         InvitationEditUrl = invitation is not null ? $"/invitationpublic?id={invitation.Id}&preview=true" : null,
         TemplateCode = invitation?.Template?.Code,
     };

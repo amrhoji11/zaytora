@@ -18,6 +18,7 @@ public class OrderDto
     public string? AdminNote { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? PaidAt { get; set; }
+    public DateTime? ReminderSentAt { get; set; }
 
     // Denormalized for the admin orders table, same reasoning as
     // InvitationSummaryDto — avoids a second round trip per row.
