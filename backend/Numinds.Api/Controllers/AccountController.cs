@@ -82,6 +82,8 @@ public class AccountController(
             HttpContext.Connection.RemoteIpAddress?.ToString(),
             Request.Headers.UserAgent.ToString(),
             eventSourceUrl,
+            request.Fbc,
+            request.Fbp,
             HttpContext.RequestAborted);
 
         return Ok(await ToDtoAsync(user));
@@ -287,6 +289,8 @@ public class AccountController(
                 HttpContext.Connection.RemoteIpAddress?.ToString(),
                 Request.Headers.UserAgent.ToString(),
                 $"{FrontendBaseUrl}{returnUrl}",
+                fbc: null,
+                fbp: null,
                 HttpContext.RequestAborted);
         }
 

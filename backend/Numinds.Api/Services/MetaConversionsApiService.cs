@@ -24,9 +24,11 @@ public class MetaConversionsApiService(
         string? clientIpAddress,
         string? userAgent,
         string eventSourceUrl,
+        string? fbc,
+        string? fbp,
         CancellationToken cancellationToken)
     {
-        var userData = BuildUserData(email, clientIpAddress, userAgent);
+        var userData = BuildUserData(email, clientIpAddress, userAgent, fbc, fbp);
         return SendEventAsync("CompleteRegistration", userData, customData: null, actionSource: "website", eventSourceUrl, logContext: email, cancellationToken);
     }
 
@@ -40,7 +42,7 @@ public class MetaConversionsApiService(
         // No client_ip_address/client_user_agent -- this fires from the
         // admin's own confirmation click, not the customer's browser
         // session, so there's nothing genuine to attach here.
-        var userData = BuildUserData(customerEmail, clientIpAddress: null, userAgent: null);
+        var userData = BuildUserData(customerEmail, clientIpAddress: null, userAgent: null, fbc: null, fbp: null);
         var customData = new Dictionary<string, object>
         {
             ["currency"] = "USD",
@@ -53,7 +55,12 @@ public class MetaConversionsApiService(
         return SendEventAsync("Purchase", userData, customData, actionSource: "system_generated", eventSourceUrl, logContext: orderId, cancellationToken);
     }
 
-    private static Dictionary<string, object> BuildUserData(string email, string? clientIpAddress, string? userAgent)
+    private static Dictionary<string, object> BuildUserData(
+        string email,
+        string? clientIpAddress,
+        string? userAgent,
+        string? fbc,
+        string? fbp)
     {
         // Meta requires user_data identifiers (email included) to arrive
         // pre-hashed -- lowercase+trim first since the hash is otherwise
@@ -71,6 +78,16 @@ public class MetaConversionsApiService(
         if (!string.IsNullOrWhiteSpace(userAgent))
         {
             userData["client_user_agent"] = userAgent;
+        }
+        // fbc/fbp come straight from Meta's own _fbc/_fbp browser cookies --
+        // unlike em, they're sent raw, never hashed (Meta's own format).
+        if (!string.IsNullOrWhiteSpace(fbc))
+        {
+            userData["fbc"] = fbc;
+        }
+        if (!string.IsNullOrWhiteSpace(fbp))
+        {
+            userData["fbp"] = fbp;
         }
         return userData;
     }

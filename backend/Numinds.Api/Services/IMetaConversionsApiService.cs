@@ -12,6 +12,8 @@ public interface IMetaConversionsApiService
         string? clientIpAddress,
         string? userAgent,
         string eventSourceUrl,
+        string? fbc,
+        string? fbp,
         CancellationToken cancellationToken);
 
     // Reports a confirmed sale the moment an admin manually marks an order

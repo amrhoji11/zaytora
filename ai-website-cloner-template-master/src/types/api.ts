@@ -254,6 +254,10 @@ export interface RegisterRequest {
   email: string;
   password: string;
   phoneNumber?: string;
+  // Meta's own _fbc/_fbp browser cookies, forwarded so the server-side
+  // Conversions API event can include them for better event match quality.
+  fbc?: string;
+  fbp?: string;
 }
 
 // PATCH /api/account/me — empty string clears the phone number.

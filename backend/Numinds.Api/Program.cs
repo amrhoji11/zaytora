@@ -264,6 +264,14 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
     KnownNetworks = { },
     KnownProxies = { },
+    // Traffic actually crosses two proxy hops before this container
+    // (Cloudflare, then Render's own edge), but ForwardedHeadersMiddleware's
+    // default ForwardLimit of 1 only unwraps one -- leaving
+    // RemoteIpAddress as the first hop's proxy IP instead of the visitor's
+    // real one (this is what Meta's Conversions API event match quality
+    // page was flagging as an unusable IP). Null removes the hop limit so
+    // it walks the whole X-Forwarded-For chain back to the original client.
+    ForwardLimit = null,
 });
 
 // If wwwroot doesn't exist yet at startup (first run — nothing's been

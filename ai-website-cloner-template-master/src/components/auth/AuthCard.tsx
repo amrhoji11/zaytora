@@ -20,6 +20,16 @@ import {
 
 const MIN_PASSWORD_LENGTH = 8;
 
+// Meta's Pixel script sets these itself once fbevents.js loads (see
+// MetaPixel.tsx) -- reading them here lets the server-side Conversions API
+// event carry the same Click ID/Browser ID as the client Pixel, which Meta
+// uses for event match quality. Undefined (not empty string) when absent,
+// so the backend's own "was this actually provided" check works.
+function readMetaCookie(name: "_fbc" | "_fbp"): string | undefined {
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : undefined;
+}
+
 type View = "signin" | "signup" | "forgot";
 
 const COPY = {
@@ -227,6 +237,8 @@ export function AuthCard({ initialView }: { initialView: "signin" | "signup" }) 
         email,
         password,
         phoneNumber: phone.trim() || undefined,
+        fbc: readMetaCookie("_fbc"),
+        fbp: readMetaCookie("_fbp"),
       });
       router.push(returnUrl);
     } catch (err) {
