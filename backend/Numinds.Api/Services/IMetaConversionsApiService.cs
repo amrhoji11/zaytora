@@ -28,4 +28,20 @@ public interface IMetaConversionsApiService
         decimal valueUsd,
         string eventSourceUrl,
         CancellationToken cancellationToken);
+
+    // Server-side backstop for the client Pixel's own PageView -- ad
+    // blockers and browser tracking protection silently drop the Pixel for
+    // a meaningful share of real visitors, and those visits are otherwise
+    // invisible to Meta entirely. eventId must be the exact same id the
+    // client passed to fbq('track', 'PageView', {}, {eventID}) so Meta
+    // deduplicates the two into one event instead of double-counting a
+    // visitor whose Pixel did fire.
+    Task SendPageViewAsync(
+        string eventId,
+        string eventSourceUrl,
+        string? clientIpAddress,
+        string? userAgent,
+        string? fbc,
+        string? fbp,
+        CancellationToken cancellationToken);
 }

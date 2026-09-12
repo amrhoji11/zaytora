@@ -29,7 +29,7 @@ public class MetaConversionsApiService(
         CancellationToken cancellationToken)
     {
         var userData = BuildUserData(email, clientIpAddress, userAgent, fbc, fbp);
-        return SendEventAsync("CompleteRegistration", userData, customData: null, actionSource: "website", eventSourceUrl, logContext: email, cancellationToken);
+        return SendEventAsync("CompleteRegistration", userData, customData: null, actionSource: "website", eventSourceUrl, eventId: null, logContext: email, cancellationToken);
     }
 
     public Task SendPurchaseAsync(
@@ -52,25 +52,45 @@ public class MetaConversionsApiService(
         // "system_generated" (not "website") -- accurately reflects that
         // this event originates from an internal admin action reconciling
         // an out-of-band bank transfer, not a customer's own website visit.
-        return SendEventAsync("Purchase", userData, customData, actionSource: "system_generated", eventSourceUrl, logContext: orderId, cancellationToken);
+        return SendEventAsync("Purchase", userData, customData, actionSource: "system_generated", eventSourceUrl, eventId: null, logContext: orderId, cancellationToken);
+    }
+
+    public Task SendPageViewAsync(
+        string eventId,
+        string eventSourceUrl,
+        string? clientIpAddress,
+        string? userAgent,
+        string? fbc,
+        string? fbp,
+        CancellationToken cancellationToken)
+    {
+        // No email at this point -- this fires on a plain page visit, not a
+        // form submission, so there's nothing to hash. IP/UA/fbc/fbp are
+        // whatever the visitor's browser actually carries; BuildUserData
+        // already tolerates a missing value for any of them.
+        var userData = BuildUserData(email: null, clientIpAddress, userAgent, fbc, fbp);
+        return SendEventAsync("PageView", userData, customData: null, actionSource: "website", eventSourceUrl, eventId, logContext: eventId, cancellationToken);
     }
 
     private static Dictionary<string, object> BuildUserData(
-        string email,
+        string? email,
         string? clientIpAddress,
         string? userAgent,
         string? fbc,
         string? fbp)
     {
-        // Meta requires user_data identifiers (email included) to arrive
-        // pre-hashed -- lowercase+trim first since the hash is otherwise
-        // sensitive to casing/whitespace a real user's input commonly
-        // varies by, which would silently degrade match quality for no
-        // reason.
-        var userData = new Dictionary<string, object>
+        var userData = new Dictionary<string, object>();
+        // Meta requires user_data identifiers to arrive pre-hashed --
+        // lowercase+trim first since the hash is otherwise sensitive to
+        // casing/whitespace a real user's input commonly varies by, which
+        // would silently degrade match quality for no reason. Absent
+        // entirely for a plain page visit (SendPageViewAsync), which has no
+        // email to hash -- client_ip_address/user_agent/fbc/fbp below are
+        // this event's only identifiers.
+        if (!string.IsNullOrWhiteSpace(email))
         {
-            ["em"] = new[] { Sha256Hex(email.Trim().ToLowerInvariant()) },
-        };
+            userData["em"] = new[] { Sha256Hex(email.Trim().ToLowerInvariant()) };
+        }
         if (!string.IsNullOrWhiteSpace(clientIpAddress))
         {
             userData["client_ip_address"] = clientIpAddress;
@@ -98,6 +118,7 @@ public class MetaConversionsApiService(
         Dictionary<string, object>? customData,
         string actionSource,
         string eventSourceUrl,
+        string? eventId,
         string logContext,
         CancellationToken cancellationToken)
     {
@@ -123,6 +144,14 @@ public class MetaConversionsApiService(
         if (customData is not null)
         {
             eventPayload["custom_data"] = customData;
+        }
+        // Must exactly match the id the client Pixel tagged its own copy of
+        // this same event with (see MetaPixel.tsx's PageView eventID) --
+        // this is the whole mechanism Meta dedups the pair by instead of
+        // double-counting one real visit.
+        if (!string.IsNullOrWhiteSpace(eventId))
+        {
+            eventPayload["event_id"] = eventId;
         }
 
         var body = new Dictionary<string, object>
