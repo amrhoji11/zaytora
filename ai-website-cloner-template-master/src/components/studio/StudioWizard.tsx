@@ -45,6 +45,7 @@ const COPY = {
     stepsRemaining: (count: number) => `${count} خطوة متبقية`,
     lastStep: "الخطوة الأخيرة",
     saveChanges: "حفظ التغييرات",
+    previewSaveError: "تعذّر حفظ آخر تعديلاتك، فالمعاينة الكاملة كانت ستعرض نسخة قديمة. تحقق من اتصالك وحاول مرة أخرى.",
     stepErrors: {
       missingEventTitle: "الرجاء إدخال عنوان المناسبة قبل المتابعة.",
       missingFirstName: "الرجاء إدخال الاسم قبل المتابعة.",
@@ -74,6 +75,7 @@ const COPY = {
     stepsRemaining: (count: number) => `${count} step${count === 1 ? "" : "s"} remaining`,
     lastStep: "Last step",
     saveChanges: "Save changes",
+    previewSaveError: "Couldn't save your latest changes, so the full preview would have shown an old version. Check your connection and try again.",
     stepErrors: {
       missingEventTitle: "Please enter an event title before continuing.",
       missingFirstName: "Please enter a name before continuing.",
@@ -155,6 +157,8 @@ export function StudioWizard() {
   const [phase, setPhase] = useState<Phase>("design");
   const [completedOrder, setCompletedOrder] = useState<OrderCreatedResponse | null>(null);
   const [saving, setSaving] = useState(false);
+  const [previewSaving, setPreviewSaving] = useState(false);
+  const [previewSaveError, setPreviewSaveError] = useState(false);
   const [loadError, setLoadError] = useState<"generic" | "limitReached" | "forbidden" | "notFound" | "connection" | null>(null);
   // Bumped by the "connection" error state's retry button to re-run the
   // load effect below without touching invitationIdParam itself.
@@ -276,17 +280,25 @@ export function StudioWizard() {
     router.replace(`/studio?${params.toString()}`, { scroll: false });
   }
 
-  async function saveProgress() {
-    if (!form) return;
+  // Returns whether the save actually succeeded -- callers that open a
+  // *separate* page reading this invitation fresh from the backend (the
+  // full preview link below) need to know before trusting that page to
+  // show anything current, since a failed save here would otherwise leave
+  // it silently showing whatever was last successfully persisted instead
+  // of the guest's latest edits.
+  async function saveProgress(): Promise<boolean> {
+    if (!form) return false;
     setSaving(true);
     try {
       await updateInvitation(form.id, buildPatch(form));
+      return true;
     } catch (error) {
       if (error instanceof ApiError && error.status === 403) {
         setLoadError("forbidden");
-        return;
+        return false;
       }
       console.error("[studio] auto-save failed:", error);
+      return false;
     } finally {
       setSaving(false);
     }
@@ -393,8 +405,31 @@ export function StudioWizard() {
         <div className="rounded-2xl border border-border bg-card shadow-sm">
           {phase === "preview" && (
             <PreviewPhase
-              onOpenFullPreview={() => {
-                window.open(`/invitationpublic?id=${form.id}&preview=true`, "_blank");
+              previewSaving={previewSaving}
+              previewSaveError={previewSaveError ? t.previewSaveError : null}
+              onOpenFullPreview={async () => {
+                // Opened synchronously (before the await below) so the
+                // browser still credits this call to the click's own user
+                // gesture -- popup blockers reject window.open() called
+                // after an async gap, even one this short. Navigated to the
+                // real URL once the save actually confirms, instead of
+                // opening straight to a page that fetches this invitation
+                // fresh from the backend and would otherwise show whatever
+                // was last *successfully* saved, not the guest's latest
+                // unsaved edits (see saveProgress's own comment).
+                const newTab = window.open("", "_blank");
+                setPreviewSaving(true);
+                setPreviewSaveError(false);
+                const saved = await saveProgress();
+                setPreviewSaving(false);
+                if (!saved) {
+                  newTab?.close();
+                  setPreviewSaveError(true);
+                  return;
+                }
+                if (newTab) {
+                  newTab.location.href = `/invitationpublic?id=${form.id}&preview=true`;
+                }
               }}
               // Already admin-approved (paid/shared) — this pass through the
               // wizard is an edit of a real, existing invitation, not a new

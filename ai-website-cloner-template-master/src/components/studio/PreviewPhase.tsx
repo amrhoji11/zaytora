@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeftIcon, ChevronRightIcon, EyeIcon } from "@/components/icons";
+import { ChevronLeftIcon, ChevronRightIcon, EyeIcon, LoaderIcon } from "@/components/icons";
 import { useLanguage } from "@/context/LanguageContext";
 
 const COPY = {
@@ -27,6 +27,8 @@ export function PreviewPhase({
   onContinue,
   onBack,
   continueLabel,
+  previewSaving,
+  previewSaveError,
 }: {
   onOpenFullPreview: () => void;
   onContinue: () => void;
@@ -35,6 +37,12 @@ export function PreviewPhase({
   // is already approved and continuing just saves the edit instead of
   // moving on to a next step (see StudioWizard's onContinue).
   continueLabel?: string;
+  // True while onOpenFullPreview's save is in flight -- disables the
+  // button so a second click can't open a second tab mid-save.
+  previewSaving?: boolean;
+  // Set when that save failed, so the full preview link wasn't followed
+  // (see StudioWizard's onOpenFullPreview).
+  previewSaveError?: string | null;
 }) {
   const { language } = useLanguage();
   const t = COPY[language];
@@ -53,11 +61,17 @@ export function PreviewPhase({
       <button
         type="button"
         onClick={onOpenFullPreview}
-        className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-gold/40 py-3 text-sm font-medium text-gold transition-colors hover:bg-gold/5"
+        disabled={previewSaving}
+        className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-gold/40 py-3 text-sm font-medium text-gold transition-colors hover:bg-gold/5 disabled:opacity-60"
       >
-        <EyeIcon className="size-4" />
+        {previewSaving ? <LoaderIcon className="size-4 animate-spin" /> : <EyeIcon className="size-4" />}
         {t.openFullPreview}
       </button>
+      {previewSaveError && (
+        <p className="text-xs text-rose-700 dark:text-rose-400" dir="auto">
+          {previewSaveError}
+        </p>
+      )}
 
       <div dir="ltr" className="flex w-full items-center justify-between gap-3">
         <button
