@@ -1345,6 +1345,40 @@ export function InvitationCanvas({
               </motion.p>
             )}
 
+            {/* Invitation copy — sits right after the event title/family
+                names per the guest's own fill-in order (event, then family,
+                then the invitation text itself), ahead of the couple's
+                names/photo below. archIslamic's own card already renders the
+                couple's names + family labels as part of its design, so it
+                intentionally duplicates what NamesLine shows further down
+                rather than needing this section reordered around it too. */}
+            {!templatePreviewMode && value.invitationText && template?.invitationCardStyle === "archIslamic" && (
+              <ArchIslamicInvitationCard
+                firstName={value.firstName ?? ""}
+                secondName={value.invitationType === "couple" ? value.secondName : null}
+                namesFont={namesFont}
+                familyName1={value.familyName1}
+                familyName2={value.familyName2}
+                invitationText={value.invitationText}
+                invitationTextFontSize={value.invitationTextFontSize}
+                isRtl={isRtl}
+                accent={theme.vars["--tpl-accent"]}
+              />
+            )}
+            {!templatePreviewMode && value.invitationText && template?.invitationCardStyle !== "archIslamic" && (
+              <motion.div
+                {...sectionReveal}
+                className={cn(sectionCardClass(undefined, transparentCards), "flex flex-col items-center gap-4 text-center")}
+              >
+                <p
+                  style={fontSizeStyle(1, value.invitationTextFontSize)}
+                  className={cn("text-base leading-relaxed", cardTextFont || "font-sans", TONE.body)}
+                >
+                  {value.invitationText}
+                </p>
+              </motion.div>
+            )}
+
             {/* Arched window image frame — a warm-backlit arch "window"
                 onto the template's photo. Doubles as two different things
                 depending on templateLayout: for full-bleed it's an accent
@@ -1490,37 +1524,6 @@ export function InvitationCanvas({
               exactly that one step. */}
           {!templatePreviewMode && (
             <>
-              {/* Main invitation card — the reference's calligraphic centerpiece:
-              formal invitation copy, the short day/date line, venue name, and
-              the "بانتظار تشريفكم" tag note, all inside one glass card rather
-              than a single plain paragraph. No names line or occasion-type
-              title of its own — the couple's names already open the hero
-              above, and the guest's own eventTitle covers the "what is this"
-              job, so repeating either here read as redundant. */}
-          {value.invitationText && template?.invitationCardStyle === "archIslamic" && (
-            <ArchIslamicInvitationCard
-              firstName={value.firstName ?? ""}
-              secondName={value.invitationType === "couple" ? value.secondName : null}
-              namesFont={namesFont}
-              familyName1={value.familyName1}
-              familyName2={value.familyName2}
-              invitationText={value.invitationText}
-              invitationTextFontSize={value.invitationTextFontSize}
-              isRtl={isRtl}
-              accent={theme.vars["--tpl-accent"]}
-            />
-          )}
-          {value.invitationText && template?.invitationCardStyle !== "archIslamic" && (
-            <motion.div {...sectionReveal} className={cn(sectionCardClass(undefined, transparentCards), "flex flex-col items-center gap-4 text-center")}>
-              <p
-                style={fontSizeStyle(1, value.invitationTextFontSize)}
-                className={cn("text-base leading-relaxed", cardTextFont || "font-sans", TONE.body)}
-              >
-                {value.invitationText}
-              </p>
-            </motion.div>
-          )}
-
           {/* Location/venue card — always-visible summary (hotel name +
               full address) distinct from the bottom-nav Location modal,
               which adds the embedded map/"Open Google Maps" action on top
