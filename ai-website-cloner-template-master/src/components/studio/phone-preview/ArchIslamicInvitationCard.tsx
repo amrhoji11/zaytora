@@ -23,6 +23,7 @@ export function ArchIslamicInvitationCard({
   familyName1,
   familyName2,
   invitationText,
+  invitationTextFontSize,
   isRtl,
   accent,
 }: {
@@ -32,6 +33,7 @@ export function ArchIslamicInvitationCard({
   familyName1?: string | null;
   familyName2?: string | null;
   invitationText?: string | null;
+  invitationTextFontSize?: number | null;
   isRtl: boolean;
   accent: string;
 }) {
@@ -107,7 +109,14 @@ export function ArchIslamicInvitationCard({
         )}
 
         {invitationText && (
-          <p className="mt-2 max-w-xs text-sm italic leading-relaxed text-[var(--tpl-text-strong)]">
+          <p
+            className="mt-2 max-w-xs text-sm italic leading-relaxed text-[var(--tpl-text-strong)]"
+            style={
+              invitationTextFontSize && invitationTextFontSize !== 100
+                ? { fontSize: `${(0.875 * invitationTextFontSize) / 100}rem` }
+                : undefined
+            }
+          >
             {invitationText}
           </p>
         )}

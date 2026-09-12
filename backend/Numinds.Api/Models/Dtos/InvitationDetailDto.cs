@@ -19,10 +19,12 @@ public class InvitationDetailDto
 
     public string? EventTitle { get; set; }
     public string? EventTitleFont { get; set; }
+    public int? EventTitleFontSize { get; set; }
     public string InvitationType { get; set; } = "couple";
     public string? FirstName { get; set; }
     public string? SecondName { get; set; }
     public string? NamesFont { get; set; }
+    public int? NamesFontSize { get; set; }
     public string? NamesLayout { get; set; }
     public bool UseNameImage { get; set; }
     public DateTime? EventDateTime { get; set; }
@@ -37,7 +39,9 @@ public class InvitationDetailDto
     public string? FamilyName1 { get; set; }
     public string? FamilyName2 { get; set; }
     public string? FamilyNamesFont { get; set; }
+    public int? FamilyNamesFontSize { get; set; }
     public string? InvitationText { get; set; }
+    public int? InvitationTextFontSize { get; set; }
 
     public List<VenueItemDto> Venues { get; set; } = [];
 

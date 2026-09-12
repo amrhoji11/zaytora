@@ -452,6 +452,19 @@ function sectionCardClass(padding: string = "p-8", transparent: boolean = false)
   );
 }
 
+// Scales one text element's font-size on top of its own Tailwind-set base
+// size (see FontSizeStepper) -- returns undefined at the 100%/unset default
+// so the Tailwind class keeps doing its normal job untouched, and an
+// explicit rem override only when the guest actually picked a size. A plain
+// `fontSize: "X%"` would instead resolve against the *parent's* computed
+// size once it lands on the same element as the Tailwind class, not against
+// that class's own rem value, which is why this takes the class's real base
+// size in rem and computes the absolute result itself.
+function fontSizeStyle(baseRem: number, percent?: number | null): CSSProperties | undefined {
+  if (!percent || percent === 100) return undefined;
+  return { fontSize: `${(baseRem * percent) / 100}rem` };
+}
+
 // Centralized typographic tone so every header/body/muted string across the
 // program, rules, accommodation, gallery, personal-message and footer
 // sections reads consistently — driven entirely by the --tpl-text-* custom
@@ -1309,17 +1322,10 @@ export function InvitationCanvas({
                 disconnected ampersands stacked on top of each other. One
                 authoritative "&", always attached to an actual name pair,
                 reads as an invitation instead of a broken glyph. */}
-            {!templatePreviewMode && familyNames && (
-              <motion.p
-                {...heroFade(0)}
-                className={cn("text-[11px] tracking-wide", familyNamesFont, TONE.body)}
-              >
-                {familyNames}
-              </motion.p>
-            )}
             {!templatePreviewMode && value.eventTitle && (
               <motion.p
-                {...heroFade(1)}
+                {...heroFade(0)}
+                style={fontSizeStyle(1, value.eventTitleFontSize)}
                 className={cn(
                   "text-base tracking-[0.2em] text-[var(--tpl-emphasis)]",
                   TEXT_SHADOW,
@@ -1327,6 +1333,15 @@ export function InvitationCanvas({
                 )}
               >
                 {value.eventTitle}
+              </motion.p>
+            )}
+            {!templatePreviewMode && familyNames && (
+              <motion.p
+                {...heroFade(1)}
+                style={fontSizeStyle(0.6875, value.familyNamesFontSize)}
+                className={cn("text-[11px] tracking-wide", familyNamesFont, TONE.body)}
+              >
+                {familyNames}
               </motion.p>
             )}
 
@@ -1391,6 +1406,7 @@ export function InvitationCanvas({
               ) : (
                 <motion.p
                   {...heroFade(3)}
+                  style={fontSizeStyle(2.25, value.namesFontSize)}
                   className={cn(
                     "text-4xl font-light",
                     namesFont,
@@ -1489,13 +1505,17 @@ export function InvitationCanvas({
               familyName1={value.familyName1}
               familyName2={value.familyName2}
               invitationText={value.invitationText}
+              invitationTextFontSize={value.invitationTextFontSize}
               isRtl={isRtl}
               accent={theme.vars["--tpl-accent"]}
             />
           )}
           {value.invitationText && template?.invitationCardStyle !== "archIslamic" && (
             <motion.div {...sectionReveal} className={cn(sectionCardClass(undefined, transparentCards), "flex flex-col items-center gap-4 text-center")}>
-              <p className={cn("text-base leading-relaxed", cardTextFont || "font-sans", TONE.body)}>
+              <p
+                style={fontSizeStyle(1, value.invitationTextFontSize)}
+                className={cn("text-base leading-relaxed", cardTextFont || "font-sans", TONE.body)}
+              >
                 {value.invitationText}
               </p>
             </motion.div>

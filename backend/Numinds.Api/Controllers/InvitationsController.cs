@@ -279,10 +279,12 @@ public class InvitationsController(
 
         if (request.EventTitle is not null) invitation.EventTitle = request.EventTitle;
         if (request.EventTitleFont is not null) invitation.EventTitleFont = request.EventTitleFont;
+        if (request.EventTitleFontSize is not null) invitation.EventTitleFontSize = request.EventTitleFontSize;
         if (request.InvitationType is not null) invitation.InvitationType = request.InvitationType;
         if (request.FirstName is not null) invitation.FirstName = request.FirstName;
         if (request.SecondName is not null) invitation.SecondName = request.SecondName;
         if (request.NamesFont is not null) invitation.NamesFont = request.NamesFont;
+        if (request.NamesFontSize is not null) invitation.NamesFontSize = request.NamesFontSize;
         if (request.NamesLayout is not null) invitation.NamesLayout = request.NamesLayout;
         if (request.UseNameImage is not null) invitation.UseNameImage = request.UseNameImage.Value;
         if (request.EventDateTime is not null)
@@ -324,7 +326,9 @@ public class InvitationsController(
         if (request.FamilyName1 is not null) invitation.FamilyName1 = request.FamilyName1;
         if (request.FamilyName2 is not null) invitation.FamilyName2 = request.FamilyName2;
         if (request.FamilyNamesFont is not null) invitation.FamilyNamesFont = request.FamilyNamesFont;
+        if (request.FamilyNamesFontSize is not null) invitation.FamilyNamesFontSize = request.FamilyNamesFontSize;
         if (request.InvitationText is not null) invitation.InvitationText = request.InvitationText;
+        if (request.InvitationTextFontSize is not null) invitation.InvitationTextFontSize = request.InvitationTextFontSize;
 
         if (request.Venues is not null) invitation.VenuesJson = JsonSerializer.Serialize(request.Venues);
 
@@ -805,10 +809,12 @@ public class InvitationsController(
 
         EventTitle = invitation.EventTitle,
         EventTitleFont = invitation.EventTitleFont,
+        EventTitleFontSize = invitation.EventTitleFontSize,
         InvitationType = invitation.InvitationType,
         FirstName = invitation.FirstName,
         SecondName = invitation.SecondName,
         NamesFont = invitation.NamesFont,
+        NamesFontSize = invitation.NamesFontSize,
         NamesLayout = invitation.NamesLayout,
         UseNameImage = invitation.UseNameImage,
         EventDateTime = invitation.EventDateTime,
@@ -823,7 +829,9 @@ public class InvitationsController(
         FamilyName1 = invitation.FamilyName1,
         FamilyName2 = invitation.FamilyName2,
         FamilyNamesFont = invitation.FamilyNamesFont,
+        FamilyNamesFontSize = invitation.FamilyNamesFontSize,
         InvitationText = invitation.InvitationText,
+        InvitationTextFontSize = invitation.InvitationTextFontSize,
 
         Venues = Deserialize<VenueItemDto>(invitation.VenuesJson),
 

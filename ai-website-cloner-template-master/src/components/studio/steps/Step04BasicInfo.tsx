@@ -5,6 +5,7 @@ import { TextField } from "@/components/studio/fields/TextField";
 import { DateTimeField } from "@/components/studio/fields/DateTimeField";
 import { ColorField } from "@/components/studio/fields/ColorField";
 import { FontSelect } from "@/components/studio/fields/FontSelect";
+import { FontSizeStepper } from "@/components/studio/fields/FontSizeStepper";
 import { ToggleField } from "@/components/studio/fields/ToggleField";
 import { PlusIcon, TrashIcon } from "@/components/icons";
 import { cn } from "@/lib/utils";
@@ -184,6 +185,10 @@ export function Step04BasicInfo({
         value={value.eventTitleFont ?? ""}
         onChange={(eventTitleFont) => onChange({ eventTitleFont })}
       />
+      <FontSizeStepper
+        value={value.eventTitleFontSize}
+        onChange={(eventTitleFontSize) => onChange({ eventTitleFontSize })}
+      />
       {value.eventTitle && (
         <div className="rounded-xl border border-border bg-gold/5 px-4 py-5 text-center">
           <p className={cn("text-lg text-foreground", value.eventTitleFont || "font-cinzel")}>{value.eventTitle}</p>
@@ -234,6 +239,7 @@ export function Step04BasicInfo({
         value={value.namesFont ?? ""}
         onChange={(namesFont) => onChange({ namesFont })}
       />
+      <FontSizeStepper value={value.namesFontSize} onChange={(namesFontSize) => onChange({ namesFontSize })} />
       {value.invitationType === "couple" && (
         <div>
           <p className="mb-1.5 text-sm text-body-foreground">{t.namesLayout}</p>

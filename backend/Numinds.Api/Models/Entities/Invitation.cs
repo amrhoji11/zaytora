@@ -33,10 +33,15 @@ public class Invitation
     // Step 4 — Basic Information
     public string? EventTitle { get; set; }
     public string? EventTitleFont { get; set; }
+    // Percentage scale (100 = the template's own default size) the guest
+    // picked via the studio's FontSizeStepper -- null/100 renders exactly as
+    // before this existed.
+    public int? EventTitleFontSize { get; set; }
     public string InvitationType { get; set; } = "couple"; // "individual" | "couple"
     public string? FirstName { get; set; }
     public string? SecondName { get; set; }
     public string? NamesFont { get; set; }
+    public int? NamesFontSize { get; set; }
     // "horizontal" (default when null) or "vertical" — only meaningful for a
     // couple invitation with both names set.
     public string? NamesLayout { get; set; }
@@ -60,7 +65,9 @@ public class Invitation
     public string? FamilyName1 { get; set; }
     public string? FamilyName2 { get; set; }
     public string? FamilyNamesFont { get; set; }
+    public int? FamilyNamesFontSize { get; set; }
     public string? InvitationText { get; set; }
+    public int? InvitationTextFontSize { get; set; }
 
     // Step 6 — Location (JSON array of { name, address, mapUrl })
     public string VenuesJson { get; set; } = "[]";

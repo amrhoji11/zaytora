@@ -45,6 +45,7 @@ export {
   Info as InfoIcon,
   Trash2 as TrashIcon,
   Plus as PlusIcon,
+  Minus as MinusIcon,
   Lightbulb as LightbulbIcon,
   ClipboardList as ClipboardListIcon,
   Building2 as BuildingIcon,

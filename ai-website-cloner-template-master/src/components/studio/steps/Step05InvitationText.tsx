@@ -4,6 +4,7 @@ import { ToggleField } from "@/components/studio/fields/ToggleField";
 import { TextField } from "@/components/studio/fields/TextField";
 import { TextareaField } from "@/components/studio/fields/TextareaField";
 import { FontSelect } from "@/components/studio/fields/FontSelect";
+import { FontSizeStepper } from "@/components/studio/fields/FontSizeStepper";
 import { HintBox } from "@/components/studio/fields/HintBox";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/context/LanguageContext";
@@ -80,6 +81,10 @@ export function Step05InvitationText({
             value={value.familyNamesFont ?? ""}
             onChange={(familyNamesFont) => onChange({ familyNamesFont })}
           />
+          <FontSizeStepper
+            value={value.familyNamesFontSize}
+            onChange={(familyNamesFontSize) => onChange({ familyNamesFontSize })}
+          />
           {(value.familyName1 || value.familyName2) && (
             <p className={cn("text-center text-base text-gold", value.familyNamesFont || "font-cinzel")}>
               {[value.familyName1, value.familyName2].filter(Boolean).join(" & ")}
@@ -98,6 +103,10 @@ export function Step05InvitationText({
         label={t.invitationTextFont}
         value={value.generalTextFont ?? ""}
         onChange={(generalTextFont) => onChange({ generalTextFont })}
+      />
+      <FontSizeStepper
+        value={value.invitationTextFontSize}
+        onChange={(invitationTextFontSize) => onChange({ invitationTextFontSize })}
       />
       {value.invitationText && (
         <p className={cn("text-center text-sm leading-relaxed text-body-foreground", value.generalTextFont || "font-sans")}>

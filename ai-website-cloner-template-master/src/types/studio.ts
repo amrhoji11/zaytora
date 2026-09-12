@@ -40,10 +40,14 @@ export interface InvitationDetail {
 
   eventTitle?: string | null;
   eventTitleFont?: string | null;
+  // Percentage scale (100 = the template's own default size) applied on top
+  // of eventTitleFont — see FontSizeStepper.
+  eventTitleFontSize?: number | null;
   invitationType: "individual" | "couple";
   firstName?: string | null;
   secondName?: string | null;
   namesFont?: string | null;
+  namesFontSize?: number | null;
   // "horizontal" (default when unset) or "vertical" — only meaningful for a
   // couple invitation with both names set; a solo invitation ignores it.
   namesLayout?: "horizontal" | "vertical" | null;
@@ -65,7 +69,9 @@ export interface InvitationDetail {
   familyName1?: string | null;
   familyName2?: string | null;
   familyNamesFont?: string | null;
+  familyNamesFontSize?: number | null;
   invitationText?: string | null;
+  invitationTextFontSize?: number | null;
 
   venues: VenueItem[];
 
