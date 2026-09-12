@@ -55,6 +55,7 @@ public class Invitation
     public bool UseHijriDate { get; set; }
     public string? ThankYouText { get; set; }
     public string? ThankYouTextColor { get; set; }
+    public int? ThankYouTextFontSize { get; set; }
     // Set when the user picked one of Step04BasicInfo's pre-made suggestion
     // cards instead of typing custom text — takes rendering priority over
     // ThankYouText when present (see InvitationCanvas.tsx).

@@ -435,6 +435,10 @@ export function Step04BasicInfo({
               value={value.eventTitleFont ?? ""}
               onChange={(eventTitleFont) => onChange({ eventTitleFont })}
             />
+            <FontSizeStepper
+              value={value.thankYouTextFontSize}
+              onChange={(thankYouTextFontSize) => onChange({ thankYouTextFontSize })}
+            />
             <ColorField
               label={t.thankYouTextColor}
               value={value.thankYouTextColor ?? "#111111"}

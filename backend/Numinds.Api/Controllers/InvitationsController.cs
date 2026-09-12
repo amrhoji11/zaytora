@@ -320,6 +320,7 @@ public class InvitationsController(
         if (request.UseHijriDate is not null) invitation.UseHijriDate = request.UseHijriDate.Value;
         if (request.ThankYouText is not null) invitation.ThankYouText = request.ThankYouText;
         if (request.ThankYouTextColor is not null) invitation.ThankYouTextColor = request.ThankYouTextColor;
+        if (request.ThankYouTextFontSize is not null) invitation.ThankYouTextFontSize = request.ThankYouTextFontSize;
         if (request.ThankYouImageUrl is not null) invitation.ThankYouImageUrl = request.ThankYouImageUrl;
 
         if (request.HideFamilyNames is not null) invitation.HideFamilyNames = request.HideFamilyNames.Value;
@@ -823,6 +824,7 @@ public class InvitationsController(
         UseHijriDate = invitation.UseHijriDate,
         ThankYouText = invitation.ThankYouText,
         ThankYouTextColor = invitation.ThankYouTextColor,
+        ThankYouTextFontSize = invitation.ThankYouTextFontSize,
         ThankYouImageUrl = invitation.ThankYouImageUrl,
 
         HideFamilyNames = invitation.HideFamilyNames,

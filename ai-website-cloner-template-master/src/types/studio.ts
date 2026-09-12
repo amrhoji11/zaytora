@@ -63,6 +63,7 @@ export interface InvitationDetail {
   useHijriDate: boolean;
   thankYouText?: string | null;
   thankYouTextColor?: string | null;
+  thankYouTextFontSize?: number | null;
   thankYouImageUrl?: string | null;
 
   hideFamilyNames: boolean;

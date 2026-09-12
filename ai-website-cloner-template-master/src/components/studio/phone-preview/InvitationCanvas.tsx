@@ -1466,7 +1466,10 @@ export function InvitationCanvas({
                 <motion.p
                   {...heroFade(4)}
                   className={cn("mt-1 text-[10px] uppercase tracking-widest", thankYouFont)}
-                  style={{ color: theme.isDark ? "#ffffff" : (value.thankYouTextColor ?? "#111111") }}
+                  style={{
+                    color: theme.isDark ? "#ffffff" : (value.thankYouTextColor ?? "#111111"),
+                    ...fontSizeStyle(0.625, value.thankYouTextFontSize),
+                  }}
                 >
                   {value.thankYouText}
                 </motion.p>

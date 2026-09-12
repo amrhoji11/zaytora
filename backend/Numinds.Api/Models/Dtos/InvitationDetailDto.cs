@@ -33,6 +33,7 @@ public class InvitationDetailDto
     public bool UseHijriDate { get; set; }
     public string? ThankYouText { get; set; }
     public string? ThankYouTextColor { get; set; }
+    public int? ThankYouTextFontSize { get; set; }
     public string? ThankYouImageUrl { get; set; }
 
     public bool HideFamilyNames { get; set; }
